@@ -1,6 +1,13 @@
-# game-recommend-app
+# game-recommend-be 백엔드
+
+경로와 명령은 저장소 루트를 기준으로 합니다.
+프론트엔드는 [game-recommend-fe](https://github.com/Game-Recommend/game-recommend-fe)에서 개발합니다.
 
 하드웨어·취향·인원 수·예산·플레이타임·플랫폼 조건을 자연어로 받아, 조건에 맞는 게임을 추천하는 FastAPI 서버입니다.
+
+현재는 **역할별 도구 4개와 실행 파이프라인을 구현한 단계**입니다. 외부 API·LLM 어댑터는
+아직 구현하지 않았습니다. 테스트에서는 가짜 연동을 주입해 흐름을 검증하며,
+기본 서버의 `POST /recommend`는 연동을 설정하기 전까지 503을 반환합니다.
 
 ## 예상 질문
 
@@ -14,17 +21,61 @@
 
 ```text
 질문
- ├─ 1. 질문 가공 (LLM)       자연어 → GameConditions
- ├─ 2. 도구 호출
- │    ├─ IGDB               장르·인원 수·플레이타임·플랫폼으로 후보 찾기
- │    ├─ Steam              원화 가격 · PC 사양 · 리뷰
- │    ├─ CheapShark         다른 스토어 최저가 (USD)
- │    ├─ RAWG               PC 사양 보조
- │    └─ 리뷰 요약 (LLM)     리뷰 본문 → 한줄평
- └─ 3. 최종 답변 (LLM)       게임 정보 + 한줄평 + 추천 이유
+  ↓
+질문 분해 LLM → GameConditions
+  ↓
+Tool 1: IGDB 후보 검색·조건 필터링
+  ├─ Tool 2: 가격 조회·예산 판정 ─────┐
+  └─ Tool 3: 요구 사양 조회·호환성 판정 ┤ 병렬 실행
+                                     ↓
+                       ID 기준 병합·조건 충족 후보 선택
+                                     ↓
+                       Tool 4: 선택한 후보의 리뷰 요약
+                                     ↓
+                       최종 답변 LLM → 근거와 함께 응답
 ```
 
-답변 뒤 이어지는 추가 질문을 대화 메모리로 받는 것은 선택 과제로 둡니다.
+호출 순서는 `pipeline/orchestrator.py`가 결정하며 가격·사양은 `asyncio.gather()`로
+동시에 실행합니다. LangGraph는 도입하지 않았습니다. 향후 사용자 응답을 기다리는
+조건 완화·재검색이나 실행 상태 저장·재개가 필요할 때 검토합니다.
+
+## 도구와 외부 연동의 역할
+
+| 서비스 도구 | 하는 일 | 연동 구현 위치 / 예정 출처 |
+| --- | --- | --- |
+| `GameSearchTool` | 조건에 맞는 후보 조회·중복 제거 | `GameCatalogClient` / IGDB |
+| `PriceTool` | 정규화된 원화 가격과 예산 비교 | `PriceClient` / Steam, 필요 시 CheapShark |
+| `HardwareTool` | 사양 평가 결과 정리, 사양 조건 없으면 생략 | `HardwareClient` / 사양 API 또는 Steam·RAWG + 비교 로직 |
+| `ReviewSummaryTool` | 선택된 후보의 리뷰 요약 요청 | `ReviewSummaryClient` / 리뷰 요약 API 또는 Steam 리뷰 + LLM |
+
+`tools/`는 서비스 역할, `clients/`는 외부 연동을 담당합니다. 외부 제공자 수와 서비스
+도구 수는 일치할 필요가 없습니다. 공급자별 `clients/*.py`는 현재 API 참고 문서이며,
+실제 호출 어댑터는 `clients/contracts/`의 역할별 비동기 Protocol을 구현해야 합니다.
+담당 파일과 역할별 테스트 명령은 [4인 개발 가이드](TEAM.md)에 정리되어 있습니다.
+
+### 데이터와 실패 처리
+
+- 후보와 결과는 `igdb_id`로 연결합니다. Steam 연결용 `steam_app_id`도 후보에 보관합니다.
+- 질문 조건은 온라인/로컬, 싱글/협동/경쟁, 전체 완료 시간/세션 시간, CPU·GPU·RAM,
+  추천 개수를 구분합니다. 없는 조건은 추측하지 않습니다.
+- 검색 어댑터는 명시된 필수 검색 조건을 검증한 후보를 우선순위순 반환해야 합니다.
+  IGDB의 완료 시간을 세션 시간으로 대체하지 않습니다. 검색 단계에서 필수 조건을
+  검증할 수 없는 게임은 충족 후보로 반환하지 않습니다.
+- 가격·사양은 `met`(충족), `unmet`(미충족), `unknown`(확인 불가)로 구분합니다.
+  사용자가 조건을 지정하지 않았을 때만 `skipped`(검사 생략)를 사용합니다.
+- 예산이 없더라도 답변용 가격은 조회합니다. `0원` 예산은 무료 게임 조건입니다.
+  USD를 그대로 원화 가격으로 취급하지 않으며 `PriceQuote`에는 검증한 원화 정수만 넣습니다.
+- 하드웨어 어댑터는 요구 사양 수집과 사용자 PC 비교를 수행해야 합니다.
+  요구 사양 문자열만으로 근거 없이 실행 가능하다고 판정하지 않습니다.
+- 가격·사양 실패나 누락은 필수 조건 통과로 처리하지 않습니다. 한쪽 실패 시에도
+  다른 쪽 결과는 보존합니다. 모든 조건 검사 후 추천 개수를 제한하고 리뷰를 요청합니다.
+- 후보가 없으면 후속 도구를 생략하고 답변 생성 단계에 빈 후보와 이유를 전달합니다.
+  조건은 임의로 완화하지 않습니다. 리뷰 실패 시 요약 없이 후보와 경고를 전달합니다.
+- 각 단계의 제한 시간은 기본 30초이며 생성자에서 변경할 수 있습니다.
+  질문 분해·검색·최종 답변 실패는 HTTP 502, 연동 미설정은 503입니다.
+
+현재 순위는 검색 어댑터가 반환한 순서를 유지합니다. 리뷰 점수 기반 재정렬,
+자동 재시도, 호출 제한, 캐시, 대화 메모리는 아직 구현하지 않았습니다.
 
 ## 외부 API
 
@@ -35,7 +86,7 @@
 | [CheapShark](https://apidocs.cheapshark.com/) | 스토어별 최저가 | 없음 | 가격이 USD. User-Agent 헤더가 없으면 거부 |
 | [RAWG](https://rawg.io/apidocs) | PC 사양 보조 | API 키 | |
 
-엔드포인트와 응답 필드는 `app/tools/` 각 모듈 상단에 정리해 두었습니다.
+엔드포인트와 응답 필드는 `app/clients/` 각 제공자 모듈 상단에 정리해 두었습니다.
 
 ## 시작하기
 
@@ -44,7 +95,7 @@ Python 3.12 이상이 필요합니다.
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
-cp .env.example .env    # IGDB·RAWG 키 채우기
+cp .env.example .env    # 실제 API 어댑터 연동 시 키 채우기
 make run                # http://127.0.0.1:8000/health
 ```
 
@@ -54,18 +105,99 @@ make run                # http://127.0.0.1:8000/health
 | `make lint` | ruff 검사 |
 | `make test` | pytest |
 
+역할별 파일과 테스트 명령은 [TEAM.md](TEAM.md)를 참고하세요.
+
+## Vercel
+
+- 연결 저장소: `Game-Recommend/game-recommend-be`
+- Root Directory: 저장소 루트 (`.`)
+- 프레임워크: FastAPI
+- 진입점: `app.main:app` (`pyproject.toml`의 `tool.vercel.entrypoint`)
+- 환경 변수: `.env.example`을 기준으로 Vercel 프로젝트에 설정
+
+프론트엔드는 별도 저장소와 Vercel 프로젝트로 배포합니다.
+브라우저가 BE를 직접 호출할 경우 FE 도메인에 대한 CORS 설정을 추가해야 합니다.
+PR과 `main` 푸시에는 GitHub Actions가 린트·테스트를 실행합니다.
+CI 성공을 머지 조건으로 사용하려면 GitHub 브랜치 규칙을 설정합니다.
+
+`GET /health`는 서버 생존 확인입니다. 추천 연동 준비 상태를 의미하지 않습니다.
+`POST /recommend`는 `{"question": "3만 원 이하 협동 게임 추천해줘"}`를 받고,
+`conditions`, `games`, `excluded_games`, `warnings`, `answer`를 반환합니다.
+`excluded_games`는 가격·사양 검사에서 제외한 후보입니다. 추천 개수 제한으로
+선택되지 않은 충족 후보는 포함하지 않습니다.
+
+## 실제 연동 연결하기
+
+질문 가공 담당자는 `pipeline/query_processing/`에서 `QueryParser.parse()`를,
+가격·하드웨어·최종 답변 담당자는 `pipeline/final_answer/`에서 `Answerer.generate()`를
+각각 별도 구현체로 작성합니다.
+LLM 결과는 `GameConditions`로 검증하고, 최종 답변은 전달한 후보와 근거만 사용해야 합니다.
+아래 함수의 인자들은 실제로 구현한 어댑터 인스턴스입니다. 키 설정만으로는 연결되지 않습니다.
+
+```python
+from app.main import app
+from app.pipeline.orchestrator import RecommendationOrchestrator
+from app.tools.game_search import GameSearchTool
+from app.tools.hardware import HardwareTool
+from app.tools.price import PriceTool
+from app.tools.review_summary import ReviewSummaryTool
+
+
+def configure_recommender(parser, catalog, prices, hardware, reviews, answerer):
+    app.state.recommender = RecommendationOrchestrator(
+        parser=parser,
+        game_search=GameSearchTool(catalog),
+        price=PriceTool(prices),
+        hardware=HardwareTool(hardware),
+        review_summary=ReviewSummaryTool(reviews),
+        answerer=answerer,
+    )
+```
+
+서버 시작 시 어댑터를 조립해 주입하고, HTTP 클라이언트 수명 관리도 함께 구현합니다.
+역할별 테스트 대역은 `tests/<담당 영역>/fakes.py`에 있고,
+통합 조립 예시는 `tests/integration/conftest.py`에 있습니다.
+
 ## 디렉터리
 
 ```text
 app/
 ├─ main.py                  FastAPI 앱
 ├─ config.py                .env 설정
-├─ api/routes.py            HTTP 엔드포인트
+├─ api/
+│  ├─ routes.py             /health, /recommend
+│  └─ dependencies.py       조립한 추천 파이프라인 주입
 ├─ pipeline/
-│  ├─ conditions.py         GameConditions — 1단계 출력이자 2단계 입력
-│  ├─ query_parser.py       1단계 질문 가공
-│  ├─ review_summarizer.py  리뷰 요약
-│  └─ answerer.py           3단계 최종 답변
-└─ tools/                   IGDB · Steam · CheapShark · RAWG
+│  ├─ query_processing/     질문 가공 담당
+│  │  ├─ conditions.py      질문 조건 모델
+│  │  └─ parser.py          질문 분해 LLM 계약
+│  ├─ final_answer/         가격·하드웨어·최종 답변 담당
+│  │  └─ answerer.py        최종 답변 LLM 계약
+│  └─ orchestrator.py       공통: 실행 순서·병렬 처리·병합·실패 처리
+├─ tools/
+│  ├─ game_search.py        Tool 1
+│  ├─ price.py              Tool 2
+│  ├─ hardware.py           Tool 3
+│  └─ review_summary.py     Tool 4
+├─ clients/
+│  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py
+│  ├─ igdb.py               IGDB API 참고 문서
+│  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API
+│  ├─ steam_reviews.py      리뷰 담당: Steam 리뷰 API
+│  ├─ cheapshark.py         CheapShark API 참고 문서
+│  └─ rawg.py               RAWG API 참고 문서
+└─ schemas/
+   ├─ game.py               IGDB 담당: 후보 모델
+   ├─ price.py              가격·하드웨어 담당: 가격 모델
+   ├─ hardware.py           가격·하드웨어 담당: 사양 모델
+   ├─ review.py             리뷰 담당: 요약 모델
+   ├─ common.py             공통: 조건 판정 상태
+   └─ recommendation.py     공통: 추천 근거·HTTP 요청/응답
 tests/
+├─ query_processing/        질문 가공 담당 테스트와 대역
+├─ igdb/                    IGDB 담당 테스트와 대역
+├─ price_hardware/          가격·하드웨어 담당 테스트와 대역
+│  └─ final_answer/         같은 담당자의 최종 답변 연결 테스트와 대역
+├─ reviews/                 리뷰 담당 테스트와 대역
+└─ integration/             전체 흐름·병렬 실행·API 테스트
 ```

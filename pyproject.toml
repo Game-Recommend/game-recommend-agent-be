@@ -1,5 +1,5 @@
 [project]
-name = "game-recommend-app"
+name = "game-recommend-be"
 version = "0.1.0"
 description = "자연어로 말한 조건에 맞춰 게임을 추천하는 FastAPI 서버"
 requires-python = ">=3.12"
@@ -23,6 +23,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
+
+[tool.vercel]
+entrypoint = "app.main:app"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
