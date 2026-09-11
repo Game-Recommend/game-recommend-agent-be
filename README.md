@@ -9,6 +9,21 @@
 아직 구현하지 않았습니다. 테스트에서는 가짜 연동을 주입해 흐름을 검증하며,
 기본 서버의 `POST /recommend`는 연동을 설정하기 전까지 503을 반환합니다.
 
+## 기술 구성
+
+| 구분 | 현재 구성 |
+| --- | --- |
+| 런타임 | Python 3.12 이상 |
+| HTTP 서버 | FastAPI, Uvicorn |
+| 데이터 검증·설정 | Pydantic, pydantic-settings |
+| HTTP 클라이언트 의존성 | `httpx2` (`pyproject.toml`에 선언) |
+| 파이프라인 | 비동기 Python 오케스트레이터, 가격·사양 병렬 실행 |
+| 개발 도구 | pytest, Ruff, Makefile |
+| CI | GitHub Actions: PR 및 `main` 푸시 시 린트·테스트 |
+
+의존성과 도구 설정은 [pyproject.toml](pyproject.toml), 실행 명령은
+[Makefile](Makefile), 역할별 개발 범위는 [TEAM.md](TEAM.md)에서 관리합니다.
+
 ## 예상 질문
 
 - **하드웨어**: "내 노트북이 i5-1240P, RAM 16GB, 내장그래픽인데 원활하게 할 수 있는 게임 중에서 평점 좋은 게임 추천해줘."
@@ -35,7 +50,7 @@ Tool 1: IGDB 후보 검색·조건 필터링
                        최종 답변 LLM → 근거와 함께 응답
 ```
 
-호출 순서는 `pipeline/orchestrator.py`가 결정하며 가격·사양은 `asyncio.gather()`로
+호출 순서는 `app/pipeline/orchestrator.py`가 결정하며 가격·사양은 `asyncio.gather()`로
 동시에 실행합니다. LangGraph는 도입하지 않았습니다. 향후 사용자 응답을 기다리는
 조건 완화·재검색이나 실행 상태 저장·재개가 필요할 때 검토합니다.
 
@@ -48,9 +63,9 @@ Tool 1: IGDB 후보 검색·조건 필터링
 | `HardwareTool` | 사양 평가 결과 정리, 사양 조건 없으면 생략 | `HardwareClient` / 사양 API 또는 Steam·RAWG + 비교 로직 |
 | `ReviewSummaryTool` | 선택된 후보의 리뷰 요약 요청 | `ReviewSummaryClient` / 리뷰 요약 API 또는 Steam 리뷰 + LLM |
 
-`tools/`는 서비스 역할, `clients/`는 외부 연동을 담당합니다. 외부 제공자 수와 서비스
-도구 수는 일치할 필요가 없습니다. 공급자별 `clients/*.py`는 현재 API 참고 문서이며,
-실제 호출 어댑터는 `clients/contracts/`의 역할별 비동기 Protocol을 구현해야 합니다.
+`app/tools/`는 서비스 역할, `app/clients/`는 외부 연동을 담당합니다. 외부 제공자 수와 서비스
+도구 수는 일치할 필요가 없습니다. 공급자별 `app/clients/*.py`는 현재 API 참고 문서이며,
+실제 호출 어댑터는 `app/clients/contracts/`의 역할별 비동기 Protocol을 구현해야 합니다.
 담당 파일과 역할별 테스트 명령은 [4인 개발 가이드](TEAM.md)에 정리되어 있습니다.
 
 ### 데이터와 실패 처리
@@ -77,16 +92,17 @@ Tool 1: IGDB 후보 검색·조건 필터링
 현재 순위는 검색 어댑터가 반환한 순서를 유지합니다. 리뷰 점수 기반 재정렬,
 자동 재시도, 호출 제한, 캐시, 대화 메모리는 아직 구현하지 않았습니다.
 
-## 외부 API
+## 외부 연동 예정 모듈
 
-| API | 용도 | 인증 | 알아둘 점 |
-| --- | --- | --- | --- |
-| [IGDB](https://api-docs.igdb.com/) | 후보 게임 필터링 | Twitch 앱 토큰 | 초당 4요청. 플레이타임은 `game_time_to_beats`, 온라인 협동 인원은 `multiplayer_modes` |
-| Steam 스토어 | 원화 가격 · PC 사양 · 리뷰 | 없음 | appid로 조회. `cc=kr`이면 가격이 원화 ×100 단위, 사양은 HTML 문자열 |
-| [CheapShark](https://apidocs.cheapshark.com/) | 스토어별 최저가 | 없음 | 가격이 USD. User-Agent 헤더가 없으면 거부 |
-| [RAWG](https://rawg.io/apidocs) | PC 사양 보조 | API 키 | |
+아래 파일은 호출 구현 없이 연동 참고 사항만 담고 있습니다.
 
-엔드포인트와 응답 필드는 `app/clients/` 각 제공자 모듈 상단에 정리해 두었습니다.
+| 모듈 | 예정 역할 |
+| --- | --- |
+| [igdb.py](app/clients/igdb.py) | 후보 게임 검색·필수 조건 검증 |
+| [steam_store.py](app/clients/steam_store.py) | Steam 앱 ID로 원화 가격·PC 요구 사양 조회 |
+| [steam_reviews.py](app/clients/steam_reviews.py) | Steam 리뷰 수집 |
+| [cheapshark.py](app/clients/cheapshark.py) | 스토어별 가격 보조 조회 |
+| [rawg.py](app/clients/rawg.py) | PC 요구 사양 보조 조회 |
 
 ## 시작하기
 
@@ -99,37 +115,113 @@ cp .env.example .env    # 실제 API 어댑터 연동 시 키 채우기
 make run                # http://127.0.0.1:8000/health
 ```
 
+`python3`가 Python 3.12 이상인지 먼저 확인하세요. Makefile은 `.venv/bin/python`이
+있으면 사용하고, 없으면 PATH의 `python3`를 사용합니다. 다른 인터프리터는
+`make run PY=python3.12`처럼 지정할 수 있습니다.
+
+서버 실행 후 다음 경로에서 확인할 수 있습니다.
+
+- 생존 확인: `http://127.0.0.1:8000/health`
+- Swagger UI: `http://127.0.0.1:8000/docs`
+- OpenAPI 스키마: `http://127.0.0.1:8000/openapi.json`
+
+### 환경 변수
+
+[app/config.py](app/config.py)의 `Settings`는 환경 변수와 루트의 `.env`를 읽습니다.
+현재 등록된 키의 기본값은 모두 빈 문자열이며, 서버 시작에 실제 키는 필요하지 않습니다.
+
+| 변수 | 연동 시 용도 |
+| --- | --- |
+| `IGDB_CLIENT_ID` | Twitch 개발자 앱 클라이언트 ID |
+| `IGDB_CLIENT_SECRET` | Twitch 개발자 앱 클라이언트 시크릿 |
+| `RAWG_API_KEY` | RAWG API 키 |
+
+키 목록의 기준은 [.env.example](.env.example)입니다. LLM 공급자와 키는 아직
+정해지지 않았습니다. 현재 앱에는 설정을 읽어 어댑터를 자동으로 조립하는 코드가
+없으므로, 키를 채우는 것만으로 추천 기능이 활성화되지는 않습니다.
+
+### 개발·검증 명령
+
 | 명령 | 하는 일 |
 | --- | --- |
 | `make run` | 개발 서버 (코드 변경 시 자동 재시작) |
 | `make lint` | ruff 검사 |
 | `make test` | pytest |
+| `make test-query-processing` | 질문 조건 모델 테스트 |
+| `make test-igdb` | 후보 검색 도구 테스트 |
+| `make test-price-hardware` | 가격·사양·최종 답변 테스트 |
+| `make test-final-answer` | 최종 답변 연결 테스트 |
+| `make test-reviews` | 리뷰 요약 도구 테스트 |
+| `make test-integration` | 파이프라인·병렬 실행·HTTP API 테스트 |
 
-역할별 파일과 테스트 명령은 [TEAM.md](TEAM.md)를 참고하세요.
+테스트 옵션은 `make test ARGS="-q"`처럼 전달합니다. `make test-llm`은
+`make test-query-processing`의 호환용 별칭입니다. 테스트는 역할별 가짜 연동을
+사용하며 실제 외부 API 호출이나 LLM 출력 품질은 검증하지 않습니다.
 
-## Vercel
+## HTTP API
 
-- 연결 저장소: `Game-Recommend/game-recommend-be`
+### `GET /health`
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+응답은 `200 OK`와 `{"status":"ok"}`입니다. 서버 생존 확인용이며 추천 연동 준비
+상태를 의미하지 않습니다.
+
+### `POST /recommend`
+
+```bash
+curl -X POST http://127.0.0.1:8000/recommend \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"3만 원 이하 협동 게임 3개 추천해줘"}'
+```
+
+`question`은 필수 문자열이며 1~5,000자이고 공백 외 문자를 포함해야 합니다.
+추천 개수는 질문 분해 결과의 `recommendation_count`로 전달되며 기본 3개, 범위 1~20개입니다.
+
+연동을 주입한 뒤 성공하면 다음 필드를 반환합니다.
+
+| 필드 | 내용 |
+| --- | --- |
+| `conditions` | 질문에서 추출한 `GameConditions` |
+| `games` | 추천 후보 목록. 각 항목은 `game`, `price`, `hardware`, `review`를 포함 |
+| `excluded_games` | 가격·사양 검사에서 제외한 후보 목록 |
+| `warnings` | 조회 실패·정보 누락·충족 후보 없음 등의 안내 |
+| `answer` | 최종 답변 생성기가 반환한 문자열 |
+
+`excluded_games`에는 추천 개수 제한으로 선택되지 않은 충족 후보는 포함하지 않습니다.
+정확한 중첩 필드는 [응답 모델](app/schemas/recommendation.py)과 Swagger UI에서 확인하세요.
+
+| 상태 코드 | 의미 |
+| --- | --- |
+| `200` | 추천 흐름 완료. 충족 후보가 없더라도 답변 생성이 성공하면 반환 |
+| `422` | 요청 검증 실패 (연동이 주입된 상태에서 검증 가능) |
+| `502` | 질문 분해·게임 검색·최종 답변 생성의 실패 또는 시간 초과 |
+| `503` | `app.state.recommender` 미설정 |
+
+기본 서버에서 위 추천 요청을 보내면 다음 오류를 반환합니다.
+
+```json
+{"detail":"추천 서비스의 외부 연동이 설정되지 않았습니다."}
+```
+
+## 배포 설정
+
 - Root Directory: 저장소 루트 (`.`)
-- 프레임워크: FastAPI
-- 진입점: `app.main:app` (`pyproject.toml`의 `tool.vercel.entrypoint`)
+- 앱: FastAPI
+- Vercel 진입점 선언: `app.main:app` (`pyproject.toml`의 `tool.vercel.entrypoint`)
 - 환경 변수: `.env.example`을 기준으로 Vercel 프로젝트에 설정
 
-프론트엔드는 별도 저장소와 Vercel 프로젝트로 배포합니다.
-브라우저가 BE를 직접 호출할 경우 FE 도메인에 대한 CORS 설정을 추가해야 합니다.
-PR과 `main` 푸시에는 GitHub Actions가 린트·테스트를 실행합니다.
+현재 `app/main.py`에는 CORS 미들웨어가 없습니다. 프론트엔드와 다른 출처에서
+브라우저가 BE를 직접 호출하려면 FE 도메인에 대한 CORS 설정을 추가해야 합니다.
+[GitHub Actions](.github/workflows/ci.yml)는 린트·테스트만 실행하며 배포 단계는 없습니다.
 CI 성공을 머지 조건으로 사용하려면 GitHub 브랜치 규칙을 설정합니다.
-
-`GET /health`는 서버 생존 확인입니다. 추천 연동 준비 상태를 의미하지 않습니다.
-`POST /recommend`는 `{"question": "3만 원 이하 협동 게임 추천해줘"}`를 받고,
-`conditions`, `games`, `excluded_games`, `warnings`, `answer`를 반환합니다.
-`excluded_games`는 가격·사양 검사에서 제외한 후보입니다. 추천 개수 제한으로
-선택되지 않은 충족 후보는 포함하지 않습니다.
 
 ## 실제 연동 연결하기
 
-질문 가공 담당자는 `pipeline/query_processing/`에서 `QueryParser.parse()`를,
-가격·하드웨어·최종 답변 담당자는 `pipeline/final_answer/`에서 `Answerer.generate()`를
+질문 가공 담당자는 `app/pipeline/query_processing/`에서 `QueryParser.parse()`를,
+가격·하드웨어·최종 답변 담당자는 `app/pipeline/final_answer/`에서 `Answerer.generate()`를
 각각 별도 구현체로 작성합니다.
 LLM 결과는 `GameConditions`로 검증하고, 최종 답변은 전달한 후보와 근거만 사용해야 합니다.
 아래 함수의 인자들은 실제로 구현한 어댑터 인스턴스입니다. 키 설정만으로는 연결되지 않습니다.
@@ -161,6 +253,11 @@ def configure_recommender(parser, catalog, prices, hardware, reviews, answerer):
 ## 디렉터리
 
 ```text
+.github/workflows/ci.yml    Python 3.12 린트·테스트
+.env.example               외부 연동용 환경 변수 예시
+pyproject.toml             의존성·빌드·pytest·Ruff·Vercel 설정
+Makefile                   개발 서버·검증 명령
+TEAM.md                    역할별 담당 파일·연결 계약
 app/
 ├─ main.py                  FastAPI 앱
 ├─ config.py                .env 설정
