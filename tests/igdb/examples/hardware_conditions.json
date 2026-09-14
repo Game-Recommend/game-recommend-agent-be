@@ -1,0 +1,13 @@
+{
+  "hardware": {"cpu": "i5-1240P", "gpu": "내장그래픽", "ram_gb": 16},
+  "genres": [],
+  "excluded_genres": [],
+  "preferences": ["평점 좋은 게임", "원활한 실행"],
+  "players": null,
+  "connection": null,
+  "play_mode": null,
+  "max_price_krw": null,
+  "max_playtime_hours": null,
+  "platforms": [],
+  "recommendation_count": 30
+}
