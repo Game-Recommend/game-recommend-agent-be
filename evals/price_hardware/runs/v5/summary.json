@@ -1,0 +1,69 @@
+{
+  "all": {
+    "case_runs": 71,
+    "passed_case_runs": 71,
+    "api_errors": 0,
+    "valid_verdicts": 75,
+    "matching_verdicts": 75,
+    "unmet_total": 16,
+    "false_met_from_unmet": 0,
+    "unknown_total": 16,
+    "false_met_from_unknown": 0,
+    "confusion": {
+      "met -> met": 34,
+      "skipped -> skipped": 9,
+      "unknown -> unknown": 16,
+      "unmet -> unmet": 16
+    }
+  },
+  "llm": {
+    "case_runs": 42,
+    "passed_case_runs": 42,
+    "api_errors": 0,
+    "valid_verdicts": 46,
+    "matching_verdicts": 46,
+    "unmet_total": 10,
+    "false_met_from_unmet": 0,
+    "unknown_total": 8,
+    "false_met_from_unknown": 0,
+    "confusion": {
+      "met -> met": 28,
+      "unknown -> unknown": 8,
+      "unmet -> unmet": 10
+    }
+  },
+  "deterministic": {
+    "case_runs": 29,
+    "passed_case_runs": 29,
+    "api_errors": 0,
+    "valid_verdicts": 29,
+    "matching_verdicts": 29,
+    "unmet_total": 6,
+    "false_met_from_unmet": 0,
+    "unknown_total": 8,
+    "false_met_from_unknown": 0,
+    "confusion": {
+      "skipped -> skipped": 9,
+      "unknown -> unknown": 8,
+      "unmet -> unmet": 6,
+      "met -> met": 6
+    }
+  },
+  "llm_without_provisional": {
+    "case_runs": 34,
+    "passed_case_runs": 34,
+    "api_errors": 0,
+    "valid_verdicts": 38,
+    "matching_verdicts": 38,
+    "unmet_total": 6,
+    "false_met_from_unmet": 0,
+    "unknown_total": 6,
+    "false_met_from_unknown": 0,
+    "confusion": {
+      "met -> met": 26,
+      "unknown -> unknown": 6,
+      "unmet -> unmet": 6
+    }
+  },
+  "inconsistent_cases": []
+}

@@ -9,12 +9,14 @@
 | --- | --- | --- | --- |
 | 질문 가공 | `app/pipeline/query_processing/`의 parser·LLM 구현·프롬프트 | `app/pipeline/query_processing/conditions.py`, `app/pipeline/query_processing/parser.py` | `tests/query_processing/` |
 | IGDB 필터링 | `app/clients/igdb.py`, `app/tools/game_search.py` | `app/clients/contracts/catalog.py`, `app/schemas/game.py` | `tests/igdb/` |
-| 가격·하드웨어·최종 답변 | `app/clients/steam_store.py`, `app/clients/cheapshark.py`, `app/clients/rawg.py`; `app/tools/price.py`, `app/tools/hardware.py`; `app/pipeline/final_answer/`의 answerer·LLM 구현·프롬프트 | `app/clients/contracts/price.py`, `app/clients/contracts/hardware.py`; `app/schemas/price.py`, `app/schemas/hardware.py`; `app/pipeline/final_answer/answerer.py` | `tests/price_hardware/`, `tests/price_hardware/final_answer/` |
+| 가격·하드웨어·최종 답변 | `app/clients/steam_store.py`, `app/clients/hardware_assessor.py`, `app/clients/routing.py`, `app/clients/cheapshark.py`, `app/clients/exchange_rate.py`, `app/clients/free_games.py`, `app/clients/pcgamingwiki.py`; `app/tools/price.py`, `app/tools/hardware.py`; `app/pipeline/final_answer/`의 answerer·LLM 구현·프롬프트 | `app/clients/contracts/price.py`, `app/clients/contracts/hardware.py`; `app/schemas/price.py`, `app/schemas/hardware.py`; `app/pipeline/final_answer/answerer.py` | `tests/price_hardware/`, `tests/price_hardware/final_answer/` |
 | 리뷰 요약 | `app/clients/steam_reviews.py`, `app/tools/review_summary.py`; 별도 요약 API를 쓰면 리뷰 담당자가 전용 클라이언트 추가 | `app/clients/contracts/reviews.py`, `app/schemas/review.py` | `tests/reviews/` |
 
 Steam 상세 조회는 가격·하드웨어 담당, Steam 리뷰 조회는 리뷰 담당입니다.
 양쪽 모두 IGDB 담당자가 제공한 `GameCandidate.steam_app_id`를 사용합니다.
-식별자가 없을 때 게임명으로 임의 연결하지 말고 조회 불가로 처리합니다.
+`steam_app_id`가 없는 후보는 `app/clients/routing.py`가 CheapShark·PCGamingWiki 폴백으로 보냅니다.
+폴백은 정규화한 게임명이 정확히 같은 결과만 인정하고, 유사 이름으로 임의 연결하지 않습니다.
+못 찾으면 조회 불가(`unknown`)로 처리합니다.
 
 ## 연결 계약
 

@@ -21,3 +21,15 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: make lint
       - run: make test
+
+  # 커밋 이력에 API 키 등 시크릿이 섞이지 않았는지 검사한다
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks scan
+        uses: docker://ghcr.io/gitleaks/gitleaks:latest
+        with:
+          args: detect --source=. --redact -v

@@ -12,7 +12,7 @@ def test_filters_by_id_before_limiting_and_only_reviews_survivors(recommender, s
     assert [result.game.igdb_id for result in response.games] == [3]
     assert [result.game.igdb_id for result in response.excluded_games] == [1, 2]
     assert response.excluded_games[0].price.check.status == "unmet"
-    assert response.excluded_games[1].hardware.status == "unknown"
+    assert response.excluded_games[1].hardware.check.status == "unknown"
     assert services.reviews.reviewed_ids == [3]
     assert services.calls[:2] == ["parse", "search"]
     assert services.calls[-2:] == ["reviews", "answer"]
@@ -80,10 +80,10 @@ def test_failed_branch_preserves_other_branch_results(recommender, services, mon
     third = response.excluded_games[2]
     if method == "fetch_prices":
         assert third.price.check.status == "unknown"
-        assert third.hardware.status == "met"
+        assert third.hardware.check.status == "met"
     else:
         assert third.price.check.status == "met"
-        assert third.hardware.status == "unknown"
+        assert third.hardware.check.status == "unknown"
 
 
 def test_no_candidates_skips_all_enrichment(recommender, services):
@@ -93,14 +93,15 @@ def test_no_candidates_skips_all_enrichment(recommender, services):
     assert services.calls == ["parse", "search", "answer"]
 
 
-def test_absent_conditions_skip_checks_but_keep_price_lookup(recommender, services):
+def test_absent_conditions_skip_checks_but_keep_lookups(recommender, services):
     services.parser.conditions = GameConditions()
     services.price_hardware.quotes = []
     response = asyncio.run(recommender.run("추천"))
     assert len(response.games) == 3
-    assert "hardware" not in services.calls
+    # 조건이 없어도 답변에 표시할 가격·요구 사양은 조회한다
+    assert "hardware" in services.calls
     assert "price" in services.calls
-    assert all(game.hardware.status == "skipped" for game in response.games)
+    assert all(game.hardware.check.status == "skipped" for game in response.games)
     assert all(game.price.check.status == "skipped" for game in response.games)
     assert any("원화 가격 확인 불가" in warning for warning in response.warnings)
 

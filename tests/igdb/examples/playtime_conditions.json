@@ -1,0 +1,13 @@
+{
+  "hardware": null,
+  "genres": [],
+  "excluded_genres": [],
+  "preferences": ["가볍게 즐기기", "한 번에 30분~1시간"],
+  "players": 1,
+  "connection": null,
+  "play_mode": "singleplayer",
+  "max_price_krw": null,
+  "max_playtime_hours": 2,
+  "platforms": [],
+  "recommendation_count": 30
+}

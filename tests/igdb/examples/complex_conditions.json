@@ -1,0 +1,13 @@
+{
+  "hardware": {"gpu": "RTX 3060", "ram_gb": 16},
+  "genres": ["Adventure"],
+  "excluded_genres": ["Horror"],
+  "preferences": [],
+  "players": 2,
+  "connection": "online",
+  "play_mode": "cooperative",
+  "max_price_krw": 30000,
+  "max_playtime_hours": 30,
+  "platforms": ["PC"],
+  "recommendation_count": 30
+}

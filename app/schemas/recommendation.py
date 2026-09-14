@@ -3,8 +3,8 @@
 from pydantic import BaseModel, Field
 
 from app.pipeline.query_processing.conditions import GameConditions
-from app.schemas.common import ConditionCheck
 from app.schemas.game import GameCandidate
+from app.schemas.hardware import HardwareResult
 from app.schemas.price import PriceResult
 from app.schemas.review import ReviewSummary
 
@@ -12,7 +12,7 @@ from app.schemas.review import ReviewSummary
 class EvaluatedGame(BaseModel):
     game: GameCandidate
     price: PriceResult
-    hardware: ConditionCheck
+    hardware: HardwareResult
     review: ReviewSummary | None = None
 
 

@@ -1,0 +1,337 @@
+[
+  {
+    "id": "W01",
+    "kind": "wiki",
+    "name": "League of Legends",
+    "expected_match": true,
+    "note": "자체 런처 무료"
+  },
+  {
+    "id": "W02",
+    "kind": "wiki",
+    "name": "VALORANT",
+    "expected_match": true,
+    "note": "자체 런처 무료"
+  },
+  {
+    "id": "W03",
+    "kind": "wiki",
+    "name": "Teamfight Tactics",
+    "expected_match": null,
+    "note": "LoL 클라이언트 내 모드"
+  },
+  {
+    "id": "W04",
+    "kind": "wiki",
+    "name": "Legends of Runeterra",
+    "expected_match": null,
+    "note": ""
+  },
+  {
+    "id": "W05",
+    "kind": "wiki",
+    "name": "Fortnite",
+    "expected_match": true,
+    "note": "v3 정정: PCGamingWiki에는 'Fortnite'로 등록"
+  },
+  {
+    "id": "W06",
+    "kind": "wiki",
+    "name": "Genshin Impact",
+    "expected_match": true,
+    "note": "minGPU2에 Intel Iris Xe: 대안 GPU 결합 확인"
+  },
+  {
+    "id": "W07",
+    "kind": "wiki",
+    "name": "Honkai: Star Rail",
+    "expected_match": null,
+    "note": "콜론 포함 제목"
+  },
+  {
+    "id": "W08",
+    "kind": "wiki",
+    "name": "Zenless Zone Zero",
+    "expected_match": null,
+    "note": ""
+  },
+  {
+    "id": "W09",
+    "kind": "wiki",
+    "name": "Wuthering Waves",
+    "expected_match": null,
+    "note": ""
+  },
+  {
+    "id": "W10",
+    "kind": "wiki",
+    "name": "Roblox",
+    "expected_match": null,
+    "note": "템플릿에 GPU 없음"
+  },
+  {
+    "id": "W11",
+    "kind": "wiki",
+    "name": "Hearthstone",
+    "expected_match": null,
+    "note": ""
+  },
+  {
+    "id": "W12",
+    "kind": "wiki",
+    "name": "World of Warcraft",
+    "expected_match": null,
+    "note": "구독제, Battle.net"
+  },
+  {
+    "id": "W13",
+    "kind": "wiki",
+    "name": "Diablo Immortal",
+    "expected_match": null,
+    "note": ""
+  },
+  {
+    "id": "W14",
+    "kind": "wiki",
+    "name": "Minecraft",
+    "expected_match": null,
+    "note": "자체 런처 유료"
+  },
+  {
+    "id": "W15",
+    "kind": "wiki",
+    "name": "Escape from Tarkov",
+    "expected_match": null,
+    "note": "자체 런처 유료"
+  },
+  {
+    "id": "W16",
+    "kind": "wiki",
+    "name": "Alan Wake 2",
+    "expected_match": true,
+    "note": "Epic 독점 유료. 'Alan Wake II'로 리다이렉트"
+  },
+  {
+    "id": "W17",
+    "kind": "wiki",
+    "name": "Kingdom Hearts III",
+    "expected_match": null,
+    "note": "Epic 선출시"
+  },
+  {
+    "id": "W18",
+    "kind": "wiki",
+    "name": "Rocket League",
+    "expected_match": null,
+    "note": "Epic 무료 전환"
+  },
+  {
+    "id": "W19",
+    "kind": "wiki",
+    "name": "Final Fantasy VII Remake Intergrade",
+    "expected_match": null,
+    "note": "긴 제목"
+  },
+  {
+    "id": "W20",
+    "kind": "wiki",
+    "name": "Some Nonexistent Game 9999",
+    "expected_match": false,
+    "note": "음성 대조군"
+  },
+  {
+    "id": "P01",
+    "kind": "price",
+    "name": "League of Legends",
+    "expected": "free",
+    "krw_range": null,
+    "note": ""
+  },
+  {
+    "id": "P02",
+    "kind": "price",
+    "name": "VALORANT",
+    "expected": "free",
+    "krw_range": null,
+    "note": ""
+  },
+  {
+    "id": "P03",
+    "kind": "price",
+    "name": "Genshin Impact",
+    "expected": "free",
+    "krw_range": null,
+    "note": ""
+  },
+  {
+    "id": "P04",
+    "kind": "price",
+    "name": "Fortnite",
+    "expected": "free",
+    "krw_range": null,
+    "note": ""
+  },
+  {
+    "id": "P05",
+    "kind": "price",
+    "name": "Roblox",
+    "expected": "free",
+    "krw_range": null,
+    "note": ""
+  },
+  {
+    "id": "P06",
+    "kind": "price",
+    "name": "honkai star rail",
+    "expected": "free",
+    "krw_range": null,
+    "note": "정규화 비교: 콜론·대소문자 차이"
+  },
+  {
+    "id": "P07",
+    "kind": "price",
+    "name": "Alan Wake 2",
+    "expected": "quoted",
+    "krw_range": [
+      20000,
+      150000
+    ],
+    "note": "CheapShark 정확 일치"
+  },
+  {
+    "id": "P08",
+    "kind": "price",
+    "name": "Kingdom Hearts III",
+    "expected": "omitted",
+    "krw_range": null,
+    "note": "v2 정정: CheapShark에 이 제목의 단독 항목 없음"
+  },
+  {
+    "id": "P09",
+    "kind": "price",
+    "name": "Alan Wake",
+    "expected": "quoted",
+    "krw_range": [
+      1000,
+      60000
+    ],
+    "note": "'Alan Wake 2'와 섞이면 안 됨"
+  },
+  {
+    "id": "P10",
+    "kind": "price",
+    "name": "Alan Wake 2 Deluxe Edition",
+    "expected": "quoted",
+    "krw_range": [
+      10000,
+      150000
+    ],
+    "note": "v2 정정: CheapShark에 같은 이름의 에디션 항목이 있어 정확 일치. 본편과 섞이면 안 됨"
+  },
+  {
+    "id": "P11",
+    "kind": "price",
+    "name": "Alan Wake 2: Night Springs",
+    "expected": "omitted",
+    "krw_range": null,
+    "note": "DLC 이름은 정확 일치 실패"
+  },
+  {
+    "id": "P12",
+    "kind": "price",
+    "name": "Escape from Tarkov",
+    "expected": "quoted",
+    "krw_range": [
+      20000,
+      100000
+    ],
+    "note": "v2 정정: CheapShark 취급"
+  },
+  {
+    "id": "P13",
+    "kind": "price",
+    "name": "World of Warcraft",
+    "expected": "omitted",
+    "krw_range": null,
+    "note": "구독제, 무료 표에도 없음"
+  },
+  {
+    "id": "P14",
+    "kind": "price",
+    "name": "Some Nonexistent Game 9999",
+    "expected": "omitted",
+    "krw_range": null,
+    "note": "음성 대조군"
+  },
+  {
+    "id": "P15",
+    "kind": "price",
+    "name": "Minecraft",
+    "expected": "omitted",
+    "krw_range": null,
+    "note": "자체 런처, CheapShark 미취급"
+  },
+  {
+    "id": "C01",
+    "kind": "consistency",
+    "category": "RAM 부족",
+    "hardware": {
+      "ram_gb": 4
+    },
+    "steam_html": "<strong>Minimum:</strong><br><ul class=\"bb_ul\"><li><strong>OS:</strong> Windows 10 64-bit<br></li><li><strong>Processor:</strong> Intel Core i5-4460<br></li><li><strong>Memory:</strong> 8 GB RAM<br></li><li><strong>Graphics:</strong> NVIDIA GeForce GT 1030<br></li><li><strong>DirectX:</strong> Version 11<br></li></ul>",
+    "wikitext": "{{System requirements\n|OSfamily = Windows\n|ref=<ref name=\"SysReqs\"/>\n\n|minOS    = 10 64-bit\n|minCPU   = Intel Core i5-4460\n|minRAM   = 8 GB\n|minGPU   = [[NVIDIA GeForce GT 1030]]\n|minDX    = 11\n|notes    = {{ii}} [https://example.com/official Official system requirements]\n}}",
+    "expected": "unmet",
+    "expects_llm": false
+  },
+  {
+    "id": "C02",
+    "kind": "consistency",
+    "category": "RAM 충족만",
+    "hardware": {
+      "ram_gb": 16
+    },
+    "steam_html": "<strong>Minimum:</strong><br><ul class=\"bb_ul\"><li><strong>OS:</strong> Windows 10 64-bit<br></li><li><strong>Processor:</strong> Intel Core i5-4460<br></li><li><strong>Memory:</strong> 8 GB RAM<br></li><li><strong>Graphics:</strong> NVIDIA GeForce GT 1030<br></li><li><strong>DirectX:</strong> Version 11<br></li></ul>",
+    "wikitext": "{{System requirements\n|OSfamily = Windows\n|ref=<ref name=\"SysReqs\"/>\n\n|minOS    = 10 64-bit\n|minCPU   = Intel Core i5-4460\n|minRAM   = 8 GB\n|minGPU   = [[NVIDIA GeForce GT 1030]]\n|minDX    = 11\n|notes    = {{ii}} [https://example.com/official Official system requirements]\n}}",
+    "expected": "met",
+    "expects_llm": false
+  },
+  {
+    "id": "C03",
+    "kind": "consistency",
+    "category": "GPU 동일",
+    "hardware": {
+      "gpu": "NVIDIA GeForce GT 1030",
+      "ram_gb": 16
+    },
+    "steam_html": "<strong>Minimum:</strong><br><ul class=\"bb_ul\"><li><strong>OS:</strong> Windows 10 64-bit<br></li><li><strong>Processor:</strong> Intel Core i5-4460<br></li><li><strong>Memory:</strong> 8 GB RAM<br></li><li><strong>Graphics:</strong> NVIDIA GeForce GT 1030<br></li><li><strong>DirectX:</strong> Version 11<br></li></ul>",
+    "wikitext": "{{System requirements\n|OSfamily = Windows\n|ref=<ref name=\"SysReqs\"/>\n\n|minOS    = 10 64-bit\n|minCPU   = Intel Core i5-4460\n|minRAM   = 8 GB\n|minGPU   = [[NVIDIA GeForce GT 1030]]\n|minDX    = 11\n|notes    = {{ii}} [https://example.com/official Official system requirements]\n}}",
+    "expected": "met",
+    "expects_llm": true
+  },
+  {
+    "id": "C04",
+    "kind": "consistency",
+    "category": "CPU 동일",
+    "hardware": {
+      "cpu": "Intel Core i5-4460",
+      "ram_gb": 8
+    },
+    "steam_html": "<strong>Minimum:</strong><br><ul class=\"bb_ul\"><li><strong>OS:</strong> Windows 10 64-bit<br></li><li><strong>Processor:</strong> Intel Core i5-4460<br></li><li><strong>Memory:</strong> 8 GB RAM<br></li><li><strong>Graphics:</strong> NVIDIA GeForce GT 1030<br></li><li><strong>DirectX:</strong> Version 11<br></li></ul>",
+    "wikitext": "{{System requirements\n|OSfamily = Windows\n|ref=<ref name=\"SysReqs\"/>\n\n|minOS    = 10 64-bit\n|minCPU   = Intel Core i5-4460\n|minRAM   = 8 GB\n|minGPU   = [[NVIDIA GeForce GT 1030]]\n|minDX    = 11\n|notes    = {{ii}} [https://example.com/official Official system requirements]\n}}",
+    "expected": "met",
+    "expects_llm": true
+  },
+  {
+    "id": "C05",
+    "kind": "consistency",
+    "category": "모델 불명 GPU",
+    "hardware": {
+      "gpu": "GeForce",
+      "ram_gb": 16
+    },
+    "steam_html": "<strong>Minimum:</strong><br><ul class=\"bb_ul\"><li><strong>OS:</strong> Windows 10 64-bit<br></li><li><strong>Processor:</strong> Intel Core i5-4460<br></li><li><strong>Memory:</strong> 8 GB RAM<br></li><li><strong>Graphics:</strong> NVIDIA GeForce GT 1030<br></li><li><strong>DirectX:</strong> Version 11<br></li></ul>",
+    "wikitext": "{{System requirements\n|OSfamily = Windows\n|ref=<ref name=\"SysReqs\"/>\n\n|minOS    = 10 64-bit\n|minCPU   = Intel Core i5-4460\n|minRAM   = 8 GB\n|minGPU   = [[NVIDIA GeForce GT 1030]]\n|minDX    = 11\n|notes    = {{ii}} [https://example.com/official Official system requirements]\n}}",
+    "expected": "skipped",
+    "expects_llm": false
+  }
+]

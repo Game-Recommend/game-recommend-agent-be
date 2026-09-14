@@ -59,8 +59,8 @@ Tool 1: IGDB 후보 검색·조건 필터링
 | 서비스 도구 | 하는 일 | 연동 구현 위치 / 예정 출처 |
 | --- | --- | --- |
 | `GameSearchTool` | 조건에 맞는 후보 조회·중복 제거 | `GameCatalogClient` / IGDB |
-| `PriceTool` | 정규화된 원화 가격과 예산 비교 | `PriceClient` / Steam, 필요 시 CheapShark |
-| `HardwareTool` | 사양 평가 결과 정리, 사양 조건 없으면 생략 | `HardwareClient` / 사양 API 또는 Steam·RAWG + 비교 로직 |
+| `PriceTool` | 정규화된 원화 가격과 예산 비교 | `PriceClient` / Steam (`SteamStoreClient`); Steam에 없는 후보는 무료 게임 표 → CheapShark + Frankfurter 환율 (`CheapSharkClient`) |
+| `HardwareTool` | 사양 평가 결과 정리, 사양 조건 없으면 생략 | `HardwareClient` / Steam (`SteamStoreClient`), Steam에 없는 후보는 PCGamingWiki (`PcGamingWikiClient`); 공통 메모리 규칙 + GPU·CPU LLM 판정 (`hardware_assessor.py`, `OpenAISpecJudge`) |
 | `ReviewSummaryTool` | 선택된 후보의 리뷰 요약 요청 | `ReviewSummaryClient` / 리뷰 요약 API 또는 Steam 리뷰 + LLM |
 
 `app/tools/`는 서비스 역할, `app/clients/`는 외부 연동을 담당합니다. 외부 제공자 수와 서비스
@@ -71,6 +71,10 @@ Tool 1: IGDB 후보 검색·조건 필터링
 ### 데이터와 실패 처리
 
 - 후보와 결과는 `igdb_id`로 연결합니다. Steam 연결용 `steam_app_id`도 후보에 보관합니다.
+- `steam_app_id`가 없는 후보만 폴백을 탑니다 (`app/clients/routing.py`). 가격은 무료 게임 표
+  (`free_games.py`) → CheapShark USD 최저가 × Frankfurter 환율 순서이고, 사양은 PCGamingWiki입니다.
+  두 폴백 모두 정규화한 게임명이 정확히 같은 결과만 인정하며, 못 찾으면 `unknown`입니다.
+  환율을 받지 못하면 USD 가격을 원화로 내지 않습니다. 폴백 실패는 Steam 결과를 지우지 않습니다.
 - 질문 조건은 온라인/로컬, 싱글/협동/경쟁, 전체 완료 시간/세션 시간, CPU·GPU·RAM,
   추천 개수를 구분합니다. 없는 조건은 추측하지 않습니다.
 - 검색 어댑터는 명시된 필수 검색 조건을 검증한 후보를 우선순위순 반환해야 합니다.
@@ -82,6 +86,8 @@ Tool 1: IGDB 후보 검색·조건 필터링
   USD를 그대로 원화 가격으로 취급하지 않으며 `PriceQuote`에는 검증한 원화 정수만 넣습니다.
 - 하드웨어 어댑터는 요구 사양 수집과 사용자 PC 비교를 수행해야 합니다.
   요구 사양 문자열만으로 근거 없이 실행 가능하다고 판정하지 않습니다.
+  사양 조건이 없어도 답변용 요구 사양은 조회해 `HardwareResult.requirement`에 담습니다.
+  메모리는 숫자로 비교하고, GPU·CPU는 LLM 판정기(`OpenAISpecJudge`)가 후보 전체를 한 번에 판정합니다.
 - 가격·사양 실패나 누락은 필수 조건 통과로 처리하지 않습니다. 한쪽 실패 시에도
   다른 쪽 결과는 보존합니다. 모든 조건 검사 후 추천 개수를 제한하고 리뷰를 요청합니다.
 - 후보가 없으면 후속 도구를 생략하고 답변 생성 단계에 빈 후보와 이유를 전달합니다.
@@ -99,10 +105,17 @@ Tool 1: IGDB 후보 검색·조건 필터링
 | 모듈 | 예정 역할 |
 | --- | --- |
 | [igdb.py](app/clients/igdb.py) | 후보 게임 검색·필수 조건 검증 |
-| [steam_store.py](app/clients/steam_store.py) | Steam 앱 ID로 원화 가격·PC 요구 사양 조회 |
 | [steam_reviews.py](app/clients/steam_reviews.py) | Steam 리뷰 수집 |
-| [cheapshark.py](app/clients/cheapshark.py) | 스토어별 가격 보조 조회 |
-| [rawg.py](app/clients/rawg.py) | PC 요구 사양 보조 조회 |
+
+Steam에 없는 후보용 폴백은 구현되어 있습니다.
+
+| 모듈 | 역할 |
+| --- | --- |
+| [routing.py](app/clients/routing.py) | `steam_app_id` 유무로 Steam·폴백 클라이언트 분기·병합 |
+| [cheapshark.py](app/clients/cheapshark.py) | 무료 게임 표 확인 후 CheapShark USD 최저가를 원화로 변환 |
+| [exchange_rate.py](app/clients/exchange_rate.py) | Frankfurter USD→KRW 환율 (키 불필요, 1시간 캐시) |
+| [free_games.py](app/clients/free_games.py) | 자체 런처 무료 게임 수동 목록 (LoL, 발로란트 등) |
+| [pcgamingwiki.py](app/clients/pcgamingwiki.py) | PCGamingWiki `System requirements` 템플릿에서 PC 요구 사양 조회, Steam과 같은 판정 규칙 적용 (키 불필요) |
 
 ## 시작하기
 
@@ -129,15 +142,18 @@ make run                # http://127.0.0.1:8000/health
 
 [app/config.py](app/config.py)의 `Settings`는 환경 변수와 루트의 `.env`를 읽습니다.
 현재 등록된 키의 기본값은 모두 빈 문자열이며, 서버 시작에 실제 키는 필요하지 않습니다.
+단, `API_KEY`가 비어 있으면 `/recommend`는 503을 돌려줍니다.
 
 | 변수 | 연동 시 용도 |
 | --- | --- |
+| `API_KEY` | `/recommend` 호출용 공유 비밀. 프론트 서버 환경 변수에 같은 값을 두고 `X-API-Key` 헤더로 보낸다 |
 | `IGDB_CLIENT_ID` | Twitch 개발자 앱 클라이언트 ID |
 | `IGDB_CLIENT_SECRET` | Twitch 개발자 앱 클라이언트 시크릿 |
-| `RAWG_API_KEY` | RAWG API 키 |
+| `OPENAI_API_KEY` | OpenAI API 키. GPU·CPU 사양 판정에 쓴다 |
+| `OPENAI_MODEL` | 사양 판정 모델. 기본값 `gpt-4o-mini` |
 
-키 목록의 기준은 [.env.example](.env.example)입니다. LLM 공급자와 키는 아직
-정해지지 않았습니다. 현재 앱에는 설정을 읽어 어댑터를 자동으로 조립하는 코드가
+키 목록의 기준은 [.env.example](.env.example)입니다. 사양 판정은 OpenAI를 쓰며,
+질문 가공·리뷰 요약·최종 답변의 LLM 키는 각 담당자가 구현하면서 추가합니다. 현재 앱에는 설정을 읽어 어댑터를 자동으로 조립하는 코드가
 없으므로, 키를 채우는 것만으로 추천 기능이 활성화되지는 않습니다.
 
 ### 개발·검증 명령
@@ -174,8 +190,13 @@ curl http://127.0.0.1:8000/health
 ```bash
 curl -X POST http://127.0.0.1:8000/recommend \
   -H 'Content-Type: application/json' \
+  -H "X-API-Key: $API_KEY" \
   -d '{"question":"3만 원 이하 협동 게임 3개 추천해줘"}'
 ```
+
+`X-API-Key` 헤더는 필수이며 환경 변수 `API_KEY`와 같아야 합니다. 이 키는 프론트 **서버**의
+환경 변수에만 두고 브라우저로 내리지 않습니다. 브라우저는 프론트 서버(API 라우트·서버 액션)를 거쳐
+BE를 호출해야 BE 주소와 키가 노출되지 않습니다. `/health`는 키 없이 열려 있습니다.
 
 `question`은 필수 문자열이며 1~5,000자이고 공백 외 문자를 포함해야 합니다.
 추천 개수는 질문 분해 결과의 `recommendation_count`로 전달되며 기본 3개, 범위 1~20개입니다.
@@ -196,9 +217,10 @@ curl -X POST http://127.0.0.1:8000/recommend \
 | 상태 코드 | 의미 |
 | --- | --- |
 | `200` | 추천 흐름 완료. 충족 후보가 없더라도 답변 생성이 성공하면 반환 |
+| `401` | `X-API-Key` 헤더가 없거나 `API_KEY`와 다름 |
 | `422` | 요청 검증 실패 (연동이 주입된 상태에서 검증 가능) |
 | `502` | 질문 분해·게임 검색·최종 답변 생성의 실패 또는 시간 초과 |
-| `503` | `app.state.recommender` 미설정 |
+| `503` | `API_KEY` 미설정 또는 `app.state.recommender` 미설정 |
 
 기본 서버에서 위 추천 요청을 보내면 다음 오류를 반환합니다.
 
@@ -213,8 +235,9 @@ curl -X POST http://127.0.0.1:8000/recommend \
 - Vercel 진입점 선언: `app.main:app` (`pyproject.toml`의 `tool.vercel.entrypoint`)
 - 환경 변수: `.env.example`을 기준으로 Vercel 프로젝트에 설정
 
-현재 `app/main.py`에는 CORS 미들웨어가 없습니다. 프론트엔드와 다른 출처에서
-브라우저가 BE를 직접 호출하려면 FE 도메인에 대한 CORS 설정을 추가해야 합니다.
+`app/main.py`에는 CORS 미들웨어가 없습니다. 브라우저가 BE를 직접 부르지 않고 프론트 서버가
+`X-API-Key`를 붙여 호출하는 구성을 전제로 하므로 CORS 허용이 필요 없습니다. BE 배포 주소는
+저장소·문서에 적지 않고 프론트 서버 환경 변수로만 전달합니다.
 [GitHub Actions](.github/workflows/ci.yml)는 린트·테스트만 실행하며 배포 단계는 없습니다.
 CI 성공을 머지 조건으로 사용하려면 GitHub 브랜치 규칙을 설정합니다.
 
@@ -279,10 +302,15 @@ app/
 ├─ clients/
 │  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py
 │  ├─ igdb.py               IGDB API 참고 문서
-│  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API
-│  ├─ steam_reviews.py      리뷰 담당: Steam 리뷰 API
-│  ├─ cheapshark.py         CheapShark API 참고 문서
-│  └─ rawg.py               RAWG API 참고 문서
+│  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API 클라이언트 (가격·사양)
+│  ├─ hardware_assessor.py  가격·하드웨어 담당: Steam·폴백 공통 사양 판정 규칙
+│  ├─ hardware_judge.py     가격·하드웨어 담당: GPU·CPU 판정기 계약과 OpenAI 구현
+│  ├─ routing.py            가격·하드웨어 담당: steam_app_id 유무로 Steam·폴백 분기
+│  ├─ cheapshark.py         가격·하드웨어 담당: 비Steam 가격 폴백 (무료 표 → CheapShark)
+│  ├─ exchange_rate.py      가격·하드웨어 담당: Frankfurter USD→KRW 환율
+│  ├─ free_games.py         가격·하드웨어 담당: 자체 런처 무료 게임 표
+│  ├─ pcgamingwiki.py       가격·하드웨어 담당: 비Steam 요구 사양 폴백
+│  └─ steam_reviews.py      리뷰 담당: Steam 리뷰 API
 └─ schemas/
    ├─ game.py               IGDB 담당: 후보 모델
    ├─ price.py              가격·하드웨어 담당: 가격 모델

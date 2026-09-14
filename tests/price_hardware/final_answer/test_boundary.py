@@ -9,6 +9,7 @@ from app.pipeline.orchestrator import PipelineStageError, RecommendationOrchestr
 from app.pipeline.query_processing.conditions import GameConditions
 from app.schemas.common import ConditionCheck
 from app.schemas.game import GameCandidate
+from app.schemas.hardware import HardwareResult
 from app.schemas.price import PriceQuote, PriceResult
 from app.schemas.review import ReviewSummary
 from tests.price_hardware.final_answer.fakes import FakeAnswerer
@@ -34,7 +35,13 @@ def answer_pipeline():
             )
         ),
         hardware=AsyncMock(
-            run=AsyncMock(return_value={1: ConditionCheck(status="skipped", reason="사양 미지정")})
+            run=AsyncMock(
+                return_value={
+                    1: HardwareResult(
+                        igdb_id=1, check=ConditionCheck(status="skipped", reason="사양 미지정")
+                    )
+                }
+            )
         ),
         review_summary=AsyncMock(
             run=AsyncMock(return_value={1: ReviewSummary(igdb_id=1, summary="리뷰 근거")})

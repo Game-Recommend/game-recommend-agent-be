@@ -1,0 +1,13 @@
+{
+  "hardware": null,
+  "genres": [],
+  "excluded_genres": [],
+  "preferences": ["경쟁보다 협동 선호", "짧은 한 판"],
+  "players": 4,
+  "connection": "online",
+  "play_mode": "cooperative",
+  "max_price_krw": null,
+  "max_playtime_hours": null,
+  "platforms": [],
+  "recommendation_count": 30
+}

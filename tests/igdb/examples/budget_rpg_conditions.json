@@ -1,0 +1,13 @@
+{
+  "hardware": null,
+  "genres": ["RPG"],
+  "excluded_genres": ["Turn-based strategy (TBS)"],
+  "preferences": ["스토리 중심"],
+  "players": null,
+  "connection": null,
+  "play_mode": null,
+  "max_price_krw": 20000,
+  "max_playtime_hours": null,
+  "platforms": [],
+  "recommendation_count": 30
+}

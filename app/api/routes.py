@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.dependencies import get_recommender
+from app.api.dependencies import get_recommender, require_api_key
 from app.pipeline.orchestrator import PipelineStageError, RecommendationOrchestrator
 from app.schemas.recommendation import RecommendationRequest, RecommendationResponse
 
@@ -14,7 +14,9 @@ async def health():
     return {"status": "ok"}
 
 
-@router.post("/recommend", response_model=RecommendationResponse)
+@router.post(
+    "/recommend", response_model=RecommendationResponse, dependencies=[Depends(require_api_key)]
+)
 async def recommend(
     body: RecommendationRequest,
     recommender: Annotated[RecommendationOrchestrator, Depends(get_recommender)],
