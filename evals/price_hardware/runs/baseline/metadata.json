@@ -1,0 +1,9 @@
+{
+  "started_at": "2026-09-14T05:26:25.944809+00:00",
+  "model": "gpt-4o-mini",
+  "dataset_sha256": "29c53d466e4d0e4a26402edd31d94aacb6c3163275ae6b56efd90b97d5d977dc",
+  "prompt_sha256": "f7b01d8d5865732cd463642e4779636e3dd977a2ca837215a3bbf81172852824",
+  "repeats_llm": 2,
+  "repeats_deterministic": 1,
+  "scope": "synthetic Steam fixtures + live existing OpenAISpecJudge; no question parser"
+}

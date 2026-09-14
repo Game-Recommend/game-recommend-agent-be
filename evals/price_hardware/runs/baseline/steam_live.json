@@ -1,0 +1,68 @@
+[
+  {
+    "app_id": 570,
+    "ok": true,
+    "details": {
+      "app_id": 570,
+      "available": true,
+      "is_free": true,
+      "coming_soon": false,
+      "price_krw": null,
+      "has_packages": true,
+      "requirements": {
+        "os": "Windows 7 or newer",
+        "cpu": "Dual core from Intel or AMD at 2.8 GHz",
+        "gpu": "NVIDIA GeForce 8600/9600GT, ATI/AMD Radeon HD2600/3600",
+        "ram_gb": 4.0,
+        "raw_text": "OS *: Windows 7 or newer Processor: Dual core from Intel or AMD at 2.8 GHz Memory: 4 GB RAM Graphics: NVIDIA GeForce 8600/9600GT, ATI/AMD Radeon HD2600/3600 DirectX: Version 11 Network: Broadband Internet connection Storage: 60 GB available space Sound Card: DirectX Compatible"
+      },
+      "recommended": null
+    }
+  },
+  {
+    "app_id": 620,
+    "ok": true,
+    "details": {
+      "app_id": 620,
+      "available": true,
+      "is_free": false,
+      "coming_soon": false,
+      "price_krw": 11000,
+      "has_packages": true,
+      "requirements": {
+        "os": "Windows 7 / Vista / XP",
+        "cpu": "3.0 GHz P4, Dual Core 2.0 (or higher) or AMD64X2 (or higher)",
+        "gpu": "Video card must be 128 MB or more and with support for Pixel Shader 2.0b (ATI Radeon X800 or higher / NVIDIA GeForce 7600 or higher / Intel HD Graphics 2000 or higher).",
+        "ram_gb": 2.0,
+        "raw_text": "OS *: Windows 7 / Vista / XP Processor: 3.0 GHz P4, Dual Core 2.0 (or higher) or AMD64X2 (or higher) Memory: 2 GB RAM Graphics: Video card must be 128 MB or more and with support for Pixel Shader 2.0b (ATI Radeon X800 or higher / NVIDIA GeForce 7600 or higher / Intel HD Graphics 2000 or higher). DirectX: Version 9.0c Storage: 8 GB available space Sound Card: DirectX 9.0c compatible"
+      },
+      "recommended": null
+    }
+  },
+  {
+    "app_id": 1245620,
+    "ok": true,
+    "details": {
+      "app_id": 1245620,
+      "available": true,
+      "is_free": false,
+      "coming_soon": false,
+      "price_krw": 64800,
+      "has_packages": true,
+      "requirements": {
+        "os": "Windows 10",
+        "cpu": "INTEL CORE I5-8400 or AMD RYZEN 3 3300X",
+        "gpu": "NVIDIA GEFORCE GTX 1060 3 GB or AMD RADEON RX 580 4 GB",
+        "ram_gb": 12.0,
+        "raw_text": "Requires a 64-bit processor and operating system OS: Windows 10 Processor: INTEL CORE I5-8400 or AMD RYZEN 3 3300X Memory: 12 GB RAM Graphics: NVIDIA GEFORCE GTX 1060 3 GB or AMD RADEON RX 580 4 GB DirectX: Version 12 Storage: 60 GB available space Sound Card: Windows Compatible Audio Device Additional Notes:"
+      },
+      "recommended": {
+        "os": "Windows 10/11",
+        "cpu": "INTEL CORE I7-8700K or AMD RYZEN 5 3600X",
+        "gpu": "NVIDIA GEFORCE GTX 1070 8 GB or AMD RADEON RX VEGA 56 8 GB",
+        "ram_gb": 16.0,
+        "raw_text": "Requires a 64-bit processor and operating system OS: Windows 10/11 Processor: INTEL CORE I7-8700K or AMD RYZEN 5 3600X Memory: 16 GB RAM Graphics: NVIDIA GEFORCE GTX 1070 8 GB or AMD RADEON RX VEGA 56 8 GB DirectX: Version 12 Storage: 60 GB available space Sound Card: Windows Compatible Audio Device Additional Notes:"
+      }
+    }
+  }
+]
