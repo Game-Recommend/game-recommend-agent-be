@@ -1,0 +1,7 @@
+{
+  "started_at": "2026-09-14T07:26:25.292212+00:00",
+  "model": "gpt-4o-mini",
+  "dataset_sha256": "783b0f0b2196a8e2cfbed8628c22b0086a8df69aee61c72636665e470c3f3f52",
+  "prompt_sha256": "86b29e9256c0facd86ec228ec37e1d2cd83b73464e203fed5f795643d36ca1fd",
+  "scope": "live PCGamingWiki + CheapShark + Frankfurter; consistency uses live OpenAISpecJudge"
+}

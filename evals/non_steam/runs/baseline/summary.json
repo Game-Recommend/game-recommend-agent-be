@@ -1,0 +1,38 @@
+{
+  "wiki": {
+    "cases": 20,
+    "errors": 0,
+    "matched": 19,
+    "with_minimum": 18,
+    "with_all_four_fields": 16,
+    "field_counts": {
+      "os": 18,
+      "cpu": 18,
+      "gpu": 16,
+      "ram_gb": 18
+    },
+    "expected_match_checked": 6,
+    "expected_match_passed": 6
+  },
+  "price": {
+    "cases": 15,
+    "errors": 0,
+    "passed": 15,
+    "by_actual": {
+      "free": 6,
+      "quoted": 4,
+      "omitted": 5,
+      "unavailable": 0
+    },
+    "false_unavailable": 0,
+    "usd_to_krw": 1342.79,
+    "rate_in_sane_range": true
+  },
+  "consistency": {
+    "cases": 5,
+    "judge_failures": 0,
+    "field_parity_all": 5,
+    "consistent": 5,
+    "passed": 5
+  }
+}
