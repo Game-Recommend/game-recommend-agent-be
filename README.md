@@ -142,9 +142,11 @@ make run                # http://127.0.0.1:8000/health
 
 [app/config.py](app/config.py)의 `Settings`는 환경 변수와 루트의 `.env`를 읽습니다.
 현재 등록된 키의 기본값은 모두 빈 문자열이며, 서버 시작에 실제 키는 필요하지 않습니다.
+단, `API_KEY`가 비어 있으면 `/recommend`는 503을 돌려줍니다.
 
 | 변수 | 연동 시 용도 |
 | --- | --- |
+| `API_KEY` | `/recommend` 호출용 공유 비밀. 프론트 서버 환경 변수에 같은 값을 두고 `X-API-Key` 헤더로 보낸다 |
 | `IGDB_CLIENT_ID` | Twitch 개발자 앱 클라이언트 ID |
 | `IGDB_CLIENT_SECRET` | Twitch 개발자 앱 클라이언트 시크릿 |
 | `OPENAI_API_KEY` | OpenAI API 키. GPU·CPU 사양 판정에 쓴다 |
@@ -188,8 +190,13 @@ curl http://127.0.0.1:8000/health
 ```bash
 curl -X POST http://127.0.0.1:8000/recommend \
   -H 'Content-Type: application/json' \
+  -H "X-API-Key: $API_KEY" \
   -d '{"question":"3만 원 이하 협동 게임 3개 추천해줘"}'
 ```
+
+`X-API-Key` 헤더는 필수이며 환경 변수 `API_KEY`와 같아야 합니다. 이 키는 프론트 **서버**의
+환경 변수에만 두고 브라우저로 내리지 않습니다. 브라우저는 프론트 서버(API 라우트·서버 액션)를 거쳐
+BE를 호출해야 BE 주소와 키가 노출되지 않습니다. `/health`는 키 없이 열려 있습니다.
 
 `question`은 필수 문자열이며 1~5,000자이고 공백 외 문자를 포함해야 합니다.
 추천 개수는 질문 분해 결과의 `recommendation_count`로 전달되며 기본 3개, 범위 1~20개입니다.
@@ -210,9 +217,10 @@ curl -X POST http://127.0.0.1:8000/recommend \
 | 상태 코드 | 의미 |
 | --- | --- |
 | `200` | 추천 흐름 완료. 충족 후보가 없더라도 답변 생성이 성공하면 반환 |
+| `401` | `X-API-Key` 헤더가 없거나 `API_KEY`와 다름 |
 | `422` | 요청 검증 실패 (연동이 주입된 상태에서 검증 가능) |
 | `502` | 질문 분해·게임 검색·최종 답변 생성의 실패 또는 시간 초과 |
-| `503` | `app.state.recommender` 미설정 |
+| `503` | `API_KEY` 미설정 또는 `app.state.recommender` 미설정 |
 
 기본 서버에서 위 추천 요청을 보내면 다음 오류를 반환합니다.
 
@@ -227,8 +235,9 @@ curl -X POST http://127.0.0.1:8000/recommend \
 - Vercel 진입점 선언: `app.main:app` (`pyproject.toml`의 `tool.vercel.entrypoint`)
 - 환경 변수: `.env.example`을 기준으로 Vercel 프로젝트에 설정
 
-현재 `app/main.py`에는 CORS 미들웨어가 없습니다. 프론트엔드와 다른 출처에서
-브라우저가 BE를 직접 호출하려면 FE 도메인에 대한 CORS 설정을 추가해야 합니다.
+`app/main.py`에는 CORS 미들웨어가 없습니다. 브라우저가 BE를 직접 부르지 않고 프론트 서버가
+`X-API-Key`를 붙여 호출하는 구성을 전제로 하므로 CORS 허용이 필요 없습니다. BE 배포 주소는
+저장소·문서에 적지 않고 프론트 서버 환경 변수로만 전달합니다.
 [GitHub Actions](.github/workflows/ci.yml)는 린트·테스트만 실행하며 배포 단계는 없습니다.
 CI 성공을 머지 조건으로 사용하려면 GitHub 브랜치 규칙을 설정합니다.
 
