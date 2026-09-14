@@ -11,6 +11,16 @@ class PriceQuote(BaseModel):
     source_url: str | None = None
 
 
+class PriceUnavailable(BaseModel):
+    """가격이 없는 이유를 확인한 경우. 미판매·미출시처럼 구매 자체가 불가능한 상태다.
+
+    이유를 모르는 조회 실패는 이 모델 대신 결과에서 생략한다 (→ unknown).
+    """
+
+    igdb_id: int = Field(gt=0)
+    reason: str
+
+
 class PriceResult(BaseModel):
     igdb_id: int
     quote: PriceQuote | None = None

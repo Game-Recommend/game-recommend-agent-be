@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     igdb_client_id: str = ""
     igdb_client_secret: str = ""
     rawg_api_key: str = ""
+    # GPU·CPU 사양 판정(app/clients/hardware_judge.py)에 쓴다
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
 
 
 @lru_cache
