@@ -255,3 +255,23 @@ def test_memory_shortfall_beats_ambiguous_gpu():
     client, _ = make_client({1: app_data()})
     result = asyncio.run(client.assess([game(1, 1)], HardwareSpecs(gpu="내장그래픽", ram_gb=4)))
     assert result[0].status == "unmet"
+
+
+def test_parse_requirements_accepts_alternate_labels():
+    # 개발사 원문을 그대로 실은 출처(원신 형식). Steam 라벨과 다르게 표기된 항목도 같은 키로 읽는다.
+    spec = parse_requirements(
+        "Minimum:\n\nOperating system: Windows 10 64-bit\n\nProcessor: Intel Core i5 or equivalent"
+        "\n\nMemory: 8 GB RAM\n\nGraphics card: NVIDIA® GeForce® GT 1030 and higher"
+        "\n\nDirectX version: 11\n\nStorage: 30 GB of space"
+    )
+    assert spec is not None
+    assert spec.os == "Windows 10 64-bit"
+    assert spec.cpu == "Intel Core i5 or equivalent"
+    assert spec.ram_gb == 8
+    assert spec.gpu == "NVIDIA® GeForce® GT 1030 and higher"
+
+    spec = parse_requirements("CPU: Ryzen 5 3600, RAM: 16 GB, GPU: RTX 2060, Video Memory: 6 GB")
+    assert spec is not None
+    assert (spec.cpu, spec.ram_gb, spec.gpu) == ("Ryzen 5 3600", 16, "RTX 2060")
+    # "macOS:"처럼 다른 단어에 붙은 "OS"는 라벨로 보지 않는다
+    assert parse_requirements("Notes: macOS: not supported") is None

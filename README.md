@@ -59,8 +59,8 @@ Tool 1: IGDB 후보 검색·조건 필터링
 | 서비스 도구 | 하는 일 | 연동 구현 위치 / 예정 출처 |
 | --- | --- | --- |
 | `GameSearchTool` | 조건에 맞는 후보 조회·중복 제거 | `GameCatalogClient` / IGDB |
-| `PriceTool` | 정규화된 원화 가격과 예산 비교 | `PriceClient` / Steam (`SteamStoreClient`) |
-| `HardwareTool` | 사양 평가 결과 정리, 사양 조건 없으면 생략 | `HardwareClient` / Steam (`SteamStoreClient`) + 메모리 규칙 + GPU·CPU LLM 판정 (`OpenAISpecJudge`) |
+| `PriceTool` | 정규화된 원화 가격과 예산 비교 | `PriceClient` / Steam (`SteamStoreClient`); Steam에 없는 후보는 무료 게임 표 → CheapShark + Frankfurter 환율 (`CheapSharkClient`) |
+| `HardwareTool` | 사양 평가 결과 정리, 사양 조건 없으면 생략 | `HardwareClient` / Steam (`SteamStoreClient`), Steam에 없는 후보는 PCGamingWiki (`PcGamingWikiClient`); 공통 메모리 규칙 + GPU·CPU LLM 판정 (`hardware_assessor.py`, `OpenAISpecJudge`) |
 | `ReviewSummaryTool` | 선택된 후보의 리뷰 요약 요청 | `ReviewSummaryClient` / 리뷰 요약 API 또는 Steam 리뷰 + LLM |
 
 `app/tools/`는 서비스 역할, `app/clients/`는 외부 연동을 담당합니다. 외부 제공자 수와 서비스
@@ -71,6 +71,10 @@ Tool 1: IGDB 후보 검색·조건 필터링
 ### 데이터와 실패 처리
 
 - 후보와 결과는 `igdb_id`로 연결합니다. Steam 연결용 `steam_app_id`도 후보에 보관합니다.
+- `steam_app_id`가 없는 후보만 폴백을 탑니다 (`app/clients/routing.py`). 가격은 무료 게임 표
+  (`free_games.py`) → CheapShark USD 최저가 × Frankfurter 환율 순서이고, 사양은 PCGamingWiki입니다.
+  두 폴백 모두 정규화한 게임명이 정확히 같은 결과만 인정하며, 못 찾으면 `unknown`입니다.
+  환율을 받지 못하면 USD 가격을 원화로 내지 않습니다. 폴백 실패는 Steam 결과를 지우지 않습니다.
 - 질문 조건은 온라인/로컬, 싱글/협동/경쟁, 전체 완료 시간/세션 시간, CPU·GPU·RAM,
   추천 개수를 구분합니다. 없는 조건은 추측하지 않습니다.
 - 검색 어댑터는 명시된 필수 검색 조건을 검증한 후보를 우선순위순 반환해야 합니다.
@@ -102,8 +106,16 @@ Tool 1: IGDB 후보 검색·조건 필터링
 | --- | --- |
 | [igdb.py](app/clients/igdb.py) | 후보 게임 검색·필수 조건 검증 |
 | [steam_reviews.py](app/clients/steam_reviews.py) | Steam 리뷰 수집 |
-| [cheapshark.py](app/clients/cheapshark.py) | 스토어별 가격 보조 조회 (1차 미사용) |
-| [rawg.py](app/clients/rawg.py) | PC 요구 사양 보조 조회 (1차 미사용) |
+
+Steam에 없는 후보용 폴백은 구현되어 있습니다.
+
+| 모듈 | 역할 |
+| --- | --- |
+| [routing.py](app/clients/routing.py) | `steam_app_id` 유무로 Steam·폴백 클라이언트 분기·병합 |
+| [cheapshark.py](app/clients/cheapshark.py) | 무료 게임 표 확인 후 CheapShark USD 최저가를 원화로 변환 |
+| [exchange_rate.py](app/clients/exchange_rate.py) | Frankfurter USD→KRW 환율 (키 불필요, 1시간 캐시) |
+| [free_games.py](app/clients/free_games.py) | 자체 런처 무료 게임 수동 목록 (LoL, 발로란트 등) |
+| [pcgamingwiki.py](app/clients/pcgamingwiki.py) | PCGamingWiki `System requirements` 템플릿에서 PC 요구 사양 조회, Steam과 같은 판정 규칙 적용 (키 불필요) |
 
 ## 시작하기
 
@@ -135,7 +147,6 @@ make run                # http://127.0.0.1:8000/health
 | --- | --- |
 | `IGDB_CLIENT_ID` | Twitch 개발자 앱 클라이언트 ID |
 | `IGDB_CLIENT_SECRET` | Twitch 개발자 앱 클라이언트 시크릿 |
-| `RAWG_API_KEY` | RAWG API 키 (1차 미사용) |
 | `OPENAI_API_KEY` | OpenAI API 키. GPU·CPU 사양 판정에 쓴다 |
 | `OPENAI_MODEL` | 사양 판정 모델. 기본값 `gpt-4o-mini` |
 
@@ -283,10 +294,14 @@ app/
 │  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py
 │  ├─ igdb.py               IGDB API 참고 문서
 │  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API 클라이언트 (가격·사양)
+│  ├─ hardware_assessor.py  가격·하드웨어 담당: Steam·폴백 공통 사양 판정 규칙
 │  ├─ hardware_judge.py     가격·하드웨어 담당: GPU·CPU 판정기 계약과 OpenAI 구현
-│  ├─ steam_reviews.py      리뷰 담당: Steam 리뷰 API
-│  ├─ cheapshark.py         CheapShark API 참고 문서
-│  └─ rawg.py               RAWG API 참고 문서
+│  ├─ routing.py            가격·하드웨어 담당: steam_app_id 유무로 Steam·폴백 분기
+│  ├─ cheapshark.py         가격·하드웨어 담당: 비Steam 가격 폴백 (무료 표 → CheapShark)
+│  ├─ exchange_rate.py      가격·하드웨어 담당: Frankfurter USD→KRW 환율
+│  ├─ free_games.py         가격·하드웨어 담당: 자체 런처 무료 게임 표
+│  ├─ pcgamingwiki.py       가격·하드웨어 담당: 비Steam 요구 사양 폴백
+│  └─ steam_reviews.py      리뷰 담당: Steam 리뷰 API
 └─ schemas/
    ├─ game.py               IGDB 담당: 후보 모델
    ├─ price.py              가격·하드웨어 담당: 가격 모델

@@ -21,6 +21,7 @@ class RequirementSpec(BaseModel):
     gpu: str | None = None
     ram_gb: float | None = Field(default=None, gt=0)
     raw_text: str
+    source_url: str | None = None  # 사양을 가져온 페이지 (Steam 스토어, PCGamingWiki)
 
 
 class HardwareAssessment(BaseModel):
