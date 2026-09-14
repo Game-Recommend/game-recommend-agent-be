@@ -7,6 +7,7 @@ from collections.abc import Awaitable
 from app.pipeline.final_answer.answerer import Answerer
 from app.pipeline.query_processing.parser import QueryParser
 from app.schemas.common import ConditionCheck
+from app.schemas.hardware import HardwareResult
 from app.schemas.price import PriceResult
 from app.schemas.recommendation import EvaluatedGame, RecommendationEvidence, RecommendationResponse
 from app.tools.game_search import GameSearchTool
@@ -50,9 +51,7 @@ class RecommendationOrchestrator:
             logger.warning("Required pipeline stage failed: %s (%s)", name, type(exc).__name__)
             raise PipelineStageError(f"{name} 단계를 완료하지 못했습니다.") from exc
 
-    async def _optional[T](
-        self, name: str, call: Awaitable[T], warnings: list[str]
-    ) -> T | None:
+    async def _optional[T](self, name: str, call: Awaitable[T], warnings: list[str]) -> T | None:
         try:
             return await asyncio.wait_for(call, timeout=self.stage_timeout_seconds)
         except Exception as exc:
@@ -82,14 +81,17 @@ class RecommendationOrchestrator:
                         reason="가격 확인 불가",
                     ),
                 )
-                hardware_result = (hardware or {}).get(game.igdb_id) or ConditionCheck(
-                    status="unknown" if conditions.hardware is not None else "skipped",
-                    reason="사양 확인 불가",
+                hardware_result = (hardware or {}).get(game.igdb_id) or HardwareResult(
+                    igdb_id=game.igdb_id,
+                    check=ConditionCheck(
+                        status="unknown" if conditions.hardware is not None else "skipped",
+                        reason="사양 확인 불가",
+                    ),
                 )
                 evaluated = EvaluatedGame(game=game, price=price_result, hardware=hardware_result)
                 if all(
                     check.status in {"met", "skipped"}
-                    for check in (price_result.check, hardware_result)
+                    for check in (price_result.check, hardware_result.check)
                 ):
                     evidence.games.append(evaluated)
                 else:

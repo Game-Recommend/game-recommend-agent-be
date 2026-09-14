@@ -59,8 +59,8 @@ Tool 1: IGDB 후보 검색·조건 필터링
 | 서비스 도구 | 하는 일 | 연동 구현 위치 / 예정 출처 |
 | --- | --- | --- |
 | `GameSearchTool` | 조건에 맞는 후보 조회·중복 제거 | `GameCatalogClient` / IGDB |
-| `PriceTool` | 정규화된 원화 가격과 예산 비교 | `PriceClient` / Steam, 필요 시 CheapShark |
-| `HardwareTool` | 사양 평가 결과 정리, 사양 조건 없으면 생략 | `HardwareClient` / 사양 API 또는 Steam·RAWG + 비교 로직 |
+| `PriceTool` | 정규화된 원화 가격과 예산 비교 | `PriceClient` / Steam (`SteamStoreClient`) |
+| `HardwareTool` | 사양 평가 결과 정리, 사양 조건 없으면 생략 | `HardwareClient` / Steam (`SteamStoreClient`) + 메모리 규칙 + GPU·CPU LLM 판정 (`OpenAISpecJudge`) |
 | `ReviewSummaryTool` | 선택된 후보의 리뷰 요약 요청 | `ReviewSummaryClient` / 리뷰 요약 API 또는 Steam 리뷰 + LLM |
 
 `app/tools/`는 서비스 역할, `app/clients/`는 외부 연동을 담당합니다. 외부 제공자 수와 서비스
@@ -82,6 +82,8 @@ Tool 1: IGDB 후보 검색·조건 필터링
   USD를 그대로 원화 가격으로 취급하지 않으며 `PriceQuote`에는 검증한 원화 정수만 넣습니다.
 - 하드웨어 어댑터는 요구 사양 수집과 사용자 PC 비교를 수행해야 합니다.
   요구 사양 문자열만으로 근거 없이 실행 가능하다고 판정하지 않습니다.
+  사양 조건이 없어도 답변용 요구 사양은 조회해 `HardwareResult.requirement`에 담습니다.
+  메모리는 숫자로 비교하고, GPU·CPU는 LLM 판정기(`OpenAISpecJudge`)가 후보 전체를 한 번에 판정합니다.
 - 가격·사양 실패나 누락은 필수 조건 통과로 처리하지 않습니다. 한쪽 실패 시에도
   다른 쪽 결과는 보존합니다. 모든 조건 검사 후 추천 개수를 제한하고 리뷰를 요청합니다.
 - 후보가 없으면 후속 도구를 생략하고 답변 생성 단계에 빈 후보와 이유를 전달합니다.
@@ -99,10 +101,9 @@ Tool 1: IGDB 후보 검색·조건 필터링
 | 모듈 | 예정 역할 |
 | --- | --- |
 | [igdb.py](app/clients/igdb.py) | 후보 게임 검색·필수 조건 검증 |
-| [steam_store.py](app/clients/steam_store.py) | Steam 앱 ID로 원화 가격·PC 요구 사양 조회 |
 | [steam_reviews.py](app/clients/steam_reviews.py) | Steam 리뷰 수집 |
-| [cheapshark.py](app/clients/cheapshark.py) | 스토어별 가격 보조 조회 |
-| [rawg.py](app/clients/rawg.py) | PC 요구 사양 보조 조회 |
+| [cheapshark.py](app/clients/cheapshark.py) | 스토어별 가격 보조 조회 (1차 미사용) |
+| [rawg.py](app/clients/rawg.py) | PC 요구 사양 보조 조회 (1차 미사용) |
 
 ## 시작하기
 
@@ -134,10 +135,12 @@ make run                # http://127.0.0.1:8000/health
 | --- | --- |
 | `IGDB_CLIENT_ID` | Twitch 개발자 앱 클라이언트 ID |
 | `IGDB_CLIENT_SECRET` | Twitch 개발자 앱 클라이언트 시크릿 |
-| `RAWG_API_KEY` | RAWG API 키 |
+| `RAWG_API_KEY` | RAWG API 키 (1차 미사용) |
+| `OPENAI_API_KEY` | OpenAI API 키. GPU·CPU 사양 판정에 쓴다 |
+| `OPENAI_MODEL` | 사양 판정 모델. 기본값 `gpt-4o-mini` |
 
-키 목록의 기준은 [.env.example](.env.example)입니다. LLM 공급자와 키는 아직
-정해지지 않았습니다. 현재 앱에는 설정을 읽어 어댑터를 자동으로 조립하는 코드가
+키 목록의 기준은 [.env.example](.env.example)입니다. 사양 판정은 OpenAI를 쓰며,
+질문 가공·리뷰 요약·최종 답변의 LLM 키는 각 담당자가 구현하면서 추가합니다. 현재 앱에는 설정을 읽어 어댑터를 자동으로 조립하는 코드가
 없으므로, 키를 채우는 것만으로 추천 기능이 활성화되지는 않습니다.
 
 ### 개발·검증 명령
@@ -279,7 +282,8 @@ app/
 ├─ clients/
 │  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py
 │  ├─ igdb.py               IGDB API 참고 문서
-│  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API
+│  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API 클라이언트 (가격·사양)
+│  ├─ hardware_judge.py     가격·하드웨어 담당: GPU·CPU 판정기 계약과 OpenAI 구현
 │  ├─ steam_reviews.py      리뷰 담당: Steam 리뷰 API
 │  ├─ cheapshark.py         CheapShark API 참고 문서
 │  └─ rawg.py               RAWG API 참고 문서
