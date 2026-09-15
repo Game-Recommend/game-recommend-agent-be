@@ -12,12 +12,11 @@ steam review가 충분하지 않을 경우 tavily 웹검색으로 보충
 ##steam만
 
 import asyncio
-import httpx
-from langchain_openai import ChatOpenAI
+import httpx2 as httpx
+from openai import AsyncOpenAI
 
 import os
 from dotenv import load_dotenv
-from tavily import TavilyClient
 
 from app.schemas.game import GameCandidate
 from app.schemas.review import ReviewSummary
@@ -28,13 +27,9 @@ class SteamReviewSummaryClient:
     """steam리뷰를 우선 사용하여 게임별 한줄평을 생성한다"""
 
     def __init__(self):
-        self.tavily = TavilyClient(
-            api_key=os.getenv("TAVILY_API_KEY")
-        )
-        self.llm = ChatOpenAI(
-            model = "gpt-4o-mini",
-            temperature=0
-        )
+        
+        self.llm = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.model = "gpt-4o-mini"
 
 
 
@@ -162,98 +157,20 @@ class SteamReviewSummaryClient:
 
       return selected
 
-# =========================================================
-# 3. 웹 리뷰 fallback
-# =========================================================
-
-    async def _get_web_reviews(
-        self,
-        game_name: str,
-        max_results: int = 10
-)->list[dict]:
-      query = f'"{game_name}" player review gameplay experience'
-    #tavily가 검색하는 것
-    #플레이 경험을 담은 리뷰 문서쪽으로 검색의도 좁힘
-      response = await asyncio.to_thread(
-        self.tavily.search,
-        query=query,
-        search_depth = "advanced",
-        max_results = max_results
-    )
-
-    #web은 10개만 가져오는데
-    #steam과 달리 품질편차가 너무 크고
-    #호출 비용과 검색비용의 한계
-    #주 소스가 아니고 fallback이기 때문에 5-10개가 적당
-
-      reviews = []
-
-      noise_keywords = [
-        "share on facebook",
-        "share on x",
-        "like loading",
-        "subscribe",
-        "newsletter"
-    ]
-
-    #처음 테스트했을 때
-    #Share on X
-    #Share on Facebook
-    #Like Loading...
-    #같은 웹페이지ui텍스트가 들어와서 잡음 제거해야됨
-
-      for result in response.get("results", []):
-        text = result.get("content", "").strip()
-        url = result.get("url","")
-        title = result.get("title", "")
-
-        #너무 짧은 텍스트 제거
-        if len(text) < 100:
-            continue
-
-        #steam보다 어머격하게 잡은 이유는 타빌리 결과가 snippet일수도있음
-        #짧은 웹 텍스트는 제목 조각/댓글 한줄/페이지소개 등일 가능성 높음
-
-
-        #페이지 잡음 제거
-        lower_text = text.lower()
-
-        if any(
-            keyword in lower_text for keyword in noise_keywords
-        ):
-            continue
-
-        #
-
-        reviews.append({
-            "text": text,
-            "source": "web",
-            "title":title,
-            "source_url": url
-        })
-
-      return reviews
 
 ##다 가져오기
     async def _collect_all_reviews(
         self,
-        game_name : str,
         steam_app_id : int,
         target_count: int = 20,
         min_steam_reviews:int = 5
 )->list[dict]:
-      selected = await self._collect_steam_reviews(
-        steam_app_id, 
-        target_count=target_count
-    )
+      
 
-      if len(selected) < min_steam_reviews:
-        web_reviews = await self._get_web_reviews(
-            game_name, max_results=10
+        return await self._collect_steam_reviews(
+            steam_app_id,
+            target_count=target_count
         )
-        selected += web_reviews
-
-      return selected[:target_count]
     #min_steam_reviews로 나눈 이유는 19개여도 웹검색하면 비효율적이라서
     #20개가 이상적인 최대 리뷰 수이고 5개는 스팀만으로 요약 가능한 최소 기준
 
@@ -318,9 +235,11 @@ class SteamReviewSummaryClient:
 {review_text}
 """
 
-        response = await self.llm.ainvoke(prompt)
-
-        return str(response.content)
+        response = await self.llm.responses.create(
+           model = self.model,
+           input = prompt,
+        )
+        return response.output_text.strip()
 
 ##로직 설명
 ##steam 리뷰 최대 100개 받고 80자 미만 제거, votes_up 높은 순 정렬
@@ -351,7 +270,6 @@ class SteamReviewSummaryClient:
             if game.steam_app_id is None:
                 continue
             reviews = await self._collect_all_reviews(
-                game_name = game.name,
                 steam_app_id = game.steam_app_id
         )
 
