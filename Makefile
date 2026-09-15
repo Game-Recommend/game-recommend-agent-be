@@ -4,7 +4,7 @@
 PY ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 
 .PHONY: run lint test test-query-processing test-igdb test-price-hardware test-final-answer
-.PHONY: test-reviews test-media test-integration test-llm
+.PHONY: test-reviews test-media test-integration test-llm test-agent graph
 
 run:
 	$(PY) -m uvicorn app.main:app --reload
@@ -38,3 +38,11 @@ test-media:
 
 test-integration:
 	$(PY) -m pytest tests/integration $(ARGS)
+
+# 에이전트 계층: 후보 저장소·Tool 어댑터·루프(대본 모델로 OpenAI 없이 검증)
+test-agent:
+	$(PY) -m pytest tests/agent $(ARGS)
+
+# 발표·문서용 에이전트 그래프(Mermaid)
+graph:
+	$(PY) -m app.agent.runner

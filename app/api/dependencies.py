@@ -5,7 +5,7 @@ from fastapi import Depends, Header, HTTPException, Request
 
 from app.assembly import ensure_assembled, missing_settings
 from app.config import Settings, get_settings
-from app.pipeline.orchestrator import RecommendationOrchestrator
+from app.pipeline.progress import Recommender
 
 
 def require_api_key(
@@ -21,7 +21,7 @@ def require_api_key(
 
 async def get_recommender(
     request: Request, settings: Annotated[Settings, Depends(get_settings)]
-) -> RecommendationOrchestrator:
+) -> Recommender:
     """app.state.recommender를 주입한다. 없으면 설정으로 한 번 조립하고, 키가 없으면 503이다."""
     recommender = await ensure_assembled(request.app.state, settings)
     if recommender is None:

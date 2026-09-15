@@ -5,6 +5,7 @@ import asyncio
 import pytest
 from fastapi.testclient import TestClient
 
+from app.agent.runner import AgentRecommender
 from app.assembly import assemble, missing_settings
 from app.clients.igdb import IgdbCatalogClient
 from app.clients.media import MediaResolver
@@ -19,6 +20,7 @@ from app.pipeline.query_processing.llm_parser import LLMQueryParser
 
 FULL = {
     "api_key": "k",
+    "recommender_mode": "pipeline",
     "openai_api_key": "sk-test",
     "igdb_client_id": "id",
     "igdb_client_secret": "secret",
@@ -109,3 +111,26 @@ def test_lifespan_assembles_from_overridden_settings_and_releases(monkeypatch):
         assert isinstance(app.state.recommender, RecommendationOrchestrator)
         assert client.get("/health").status_code == 200
     assert getattr(app.state, "recommender", None) is None
+
+
+def test_agent_mode_wires_same_tools_into_agent_recommender():
+    assembled = assemble(settings(recommender_mode="agent", openai_agent_model="gpt-test"))
+    try:
+        recommender = assembled.recommender
+        assert isinstance(recommender, AgentRecommender)
+        assert isinstance(recommender.parser, LLMQueryParser)
+        tools = recommender.tools
+        assert isinstance(tools.game_search.client, IgdbCatalogClient)
+        assert isinstance(tools.price.client, RoutedPriceClient)
+        assert isinstance(tools.hardware.client, RoutedHardwareClient)
+        assert tools.hardware.client.steam is tools.price.client.steam
+        assert isinstance(tools.review_summary.client, SteamReviewSummaryClient)
+        assert isinstance(tools.media.client, MediaResolver)
+        assert recommender.agent is not None
+    finally:
+        asyncio.run(assembled.aclose())
+
+
+def test_default_mode_is_agent():
+    without_mode = {key: value for key, value in FULL.items() if key != "recommender_mode"}
+    assert Settings(**without_mode, _env_file=None).recommender_mode == "agent"
