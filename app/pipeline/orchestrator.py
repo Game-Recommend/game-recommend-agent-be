@@ -2,21 +2,24 @@
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable
 
 from app.pipeline.final_answer.answerer import Answerer
+from app.pipeline.progress import (
+    PipelineStageError,
+    Progress,
+    silent,
+    stream_progress,
+)
 from app.pipeline.query_processing.parser import QueryParser
 from app.schemas.common import ConditionCheck
 from app.schemas.hardware import HardwareResult
 from app.schemas.price import PriceResult
 from app.schemas.recommendation import (
-    ErrorEvent,
     EvaluatedGame,
     PipelineEvent,
     RecommendationEvidence,
     RecommendationResponse,
-    ResultEvent,
-    StageEvent,
 )
 from app.tools.game_search import GameSearchTool
 from app.tools.hardware import HardwareTool
@@ -27,15 +30,12 @@ from app.tools.review_summary import ReviewSummaryTool
 logger = logging.getLogger(__name__)
 
 
+# 진행 콜백·단계 실패 예외는 app/pipeline/progress.py에 있다.
+# routes.py 등 기존 import 경로를 유지하려고 다시 내보낸다.
+__all__ = ["PipelineStageError", "Progress", "RecommendationOrchestrator"]
+
+
 async def _none() -> None:
-    return None
-
-
-# (단계 이름, started/completed/failed, 부가 설명). SSE 진행 표시에 쓴다.
-Progress = Callable[[str, str, str | None], None]
-
-
-def _silent(stage: str, status: str, detail: str | None = None) -> None:
     return None
 
 
@@ -43,10 +43,6 @@ def _detail(stage: str, result: object) -> str | None:
     if stage == "게임 검색" and isinstance(result, list):
         return f"후보 {len(result)}개"
     return None
-
-
-class PipelineStageError(Exception):
-    """질문 분해·검색·답변 생성처럼 계속 진행할 수 없는 단계의 실패."""
 
 
 class RecommendationOrchestrator:
@@ -74,7 +70,7 @@ class RecommendationOrchestrator:
         self.media = media
         self.stage_timeout_seconds = stage_timeout_seconds
 
-    async def _required[T](self, name: str, call: Awaitable[T], progress: Progress = _silent) -> T:
+    async def _required[T](self, name: str, call: Awaitable[T], progress: Progress = silent) -> T:
         progress(name, "started", None)
         try:
             result = await asyncio.wait_for(call, timeout=self.stage_timeout_seconds)
@@ -86,7 +82,7 @@ class RecommendationOrchestrator:
         return result
 
     async def _optional[T](
-        self, name: str, call: Awaitable[T], warnings: list[str], progress: Progress = _silent
+        self, name: str, call: Awaitable[T], warnings: list[str], progress: Progress = silent
     ) -> T | None:
         progress(name, "started", None)
         try:
@@ -99,35 +95,11 @@ class RecommendationOrchestrator:
         progress(name, "completed", None)
         return result
 
-    async def stream(self, question: str) -> AsyncIterator[PipelineEvent]:
+    def stream(self, question: str) -> AsyncIterator[PipelineEvent]:
         """`run()`과 같은 흐름을 진행 이벤트로 흘리고, 마지막에 result나 error 이벤트를 낸다."""
-        queue: asyncio.Queue[PipelineEvent | None] = asyncio.Queue()
+        return stream_progress(self.run, question)
 
-        def progress(stage: str, status: str, detail: str | None) -> None:
-            queue.put_nowait(StageEvent(stage=stage, status=status, detail=detail))
-
-        async def runner() -> None:
-            try:
-                queue.put_nowait(ResultEvent(result=await self.run(question, progress)))
-            except PipelineStageError as exc:
-                queue.put_nowait(ErrorEvent(detail=str(exc)))
-            except Exception as exc:  # 예상 밖 오류도 스트림을 닫기 전에 알린다
-                logger.exception("Unexpected pipeline failure (%s)", type(exc).__name__)
-                queue.put_nowait(ErrorEvent(detail="추천 처리 중 오류가 발생했습니다."))
-            finally:
-                queue.put_nowait(None)
-
-        task = asyncio.create_task(runner())
-        try:
-            while (event := await queue.get()) is not None:
-                yield event
-        finally:
-            # 클라이언트가 먼저 끊으면 진행 중인 외부 호출도 멈춘다
-            if not task.done():
-                task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
-
-    async def run(self, question: str, progress: Progress = _silent) -> RecommendationResponse:
+    async def run(self, question: str, progress: Progress = silent) -> RecommendationResponse:
         conditions = await self._required("질문 분해", self.parser.parse(question), progress)
         games = await self._required("게임 검색", self.game_search.run(conditions), progress)
         evidence = RecommendationEvidence(conditions=conditions)

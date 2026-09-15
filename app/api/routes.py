@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 
 from app.api.dependencies import get_recommender, require_api_key
-from app.pipeline.orchestrator import PipelineStageError, RecommendationOrchestrator
+from app.pipeline.progress import PipelineStageError, Recommender
 from app.schemas.recommendation import (
     PipelineEvent,
     RecommendationRequest,
@@ -45,7 +45,7 @@ async def health():
 )
 async def recommend(
     body: RecommendationRequest,
-    recommender: Annotated[RecommendationOrchestrator, Depends(get_recommender)],
+    recommender: Annotated[Recommender, Depends(get_recommender)],
     accept: Annotated[str | None, Header()] = None,
 ):
     if accept and SSE_MEDIA_TYPE in accept:

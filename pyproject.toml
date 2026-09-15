@@ -8,6 +8,9 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "httpx2>=2.12",
     "openai>=3.13",
+    # 에이전트 계층(app/agent/): create_agent 루프·Tool 정의·구조화 출력. langgraph는 langchain이 끌어온다
+    "langchain>=1.4",
+    "langchain-openai>=1.6",
     "pydantic>=2.8",
     "pydantic-settings>=2.4",
     # 리뷰 요약(app/clients/steam_reviews.py)이 load_dotenv()로 .env를 직접 읽는다
