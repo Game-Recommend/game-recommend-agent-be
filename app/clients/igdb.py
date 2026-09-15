@@ -7,6 +7,8 @@ from pathlib import Path
 import httpx2 as httpx
 
 from app.config import get_settings
+from app.pipeline.query_processing.conditions import GameConditions
+from app.schemas.game import GameCandidate
 
 ALIASES = {
     "pc": "PC (Microsoft Windows)", "windows": "PC (Microsoft Windows)",
@@ -120,6 +122,28 @@ async def search(conditions: dict) -> list[dict]:
         if len(result) == 30:
             break
     return result
+
+
+def to_candidate(row: dict) -> GameCandidate:
+    """`search()`의 행 하나를 후보 모델로 바꾼다. 소개·분류·완료 시간은 최종 답변 재료다."""
+    return GameCandidate(
+        igdb_id=row["igdb_id"],
+        name=row["name"],
+        steam_app_id=row.get("steam_app_id"),
+        platforms=row.get("platforms") or [],
+        source_url=row.get("source_url"),
+        summary=row.get("summary") or None,
+        genres=row.get("genres") or [],
+        themes=row.get("themes") or [],
+        playtime_hours=row.get("playtime_hours"),
+    )
+
+
+class IgdbCatalogClient:
+    """`GameCatalogClient` 구현. 오케스트레이터에 주입할 때 이 클래스를 쓴다."""
+
+    async def search(self, conditions: GameConditions) -> list[GameCandidate]:
+        return [to_candidate(row) for row in await search(conditions.model_dump())]
 
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
 """통합 계약: 최종 답변 근거와 HTTP 요청·응답. 변경 시 소비자와 조율한다."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from app.pipeline.query_processing.conditions import GameConditions
@@ -31,3 +33,29 @@ class RecommendationResponse(RecommendationEvidence):
 
 class RecommendationRequest(BaseModel):
     question: str = Field(min_length=1, max_length=5000, pattern=r"\S")
+
+
+class StageEvent(BaseModel):
+    """SSE 진행 이벤트. 단계 이름은 오케스트레이터의 한국어 단계명이다."""
+
+    event: Literal["stage"] = "stage"
+    stage: str
+    status: Literal["started", "completed", "failed"]
+    detail: str | None = None
+
+
+class ResultEvent(BaseModel):
+    """SSE 마지막 이벤트. JSON 응답과 같은 `RecommendationResponse`를 담는다."""
+
+    event: Literal["result"] = "result"
+    result: RecommendationResponse
+
+
+class ErrorEvent(BaseModel):
+    """필수 단계 실패. JSON 응답의 502 detail과 같은 문장이다."""
+
+    event: Literal["error"] = "error"
+    detail: str
+
+
+PipelineEvent = StageEvent | ResultEvent | ErrorEvent

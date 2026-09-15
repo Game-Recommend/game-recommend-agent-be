@@ -2,14 +2,22 @@
 
 import asyncio
 import logging
-from collections.abc import Awaitable
+from collections.abc import AsyncIterator, Awaitable, Callable
 
 from app.pipeline.final_answer.answerer import Answerer
 from app.pipeline.query_processing.parser import QueryParser
 from app.schemas.common import ConditionCheck
 from app.schemas.hardware import HardwareResult
 from app.schemas.price import PriceResult
-from app.schemas.recommendation import EvaluatedGame, RecommendationEvidence, RecommendationResponse
+from app.schemas.recommendation import (
+    ErrorEvent,
+    EvaluatedGame,
+    PipelineEvent,
+    RecommendationEvidence,
+    RecommendationResponse,
+    ResultEvent,
+    StageEvent,
+)
 from app.tools.game_search import GameSearchTool
 from app.tools.hardware import HardwareTool
 from app.tools.media import MediaTool
@@ -20,6 +28,20 @@ logger = logging.getLogger(__name__)
 
 
 async def _none() -> None:
+    return None
+
+
+# (단계 이름, started/completed/failed, 부가 설명). SSE 진행 표시에 쓴다.
+Progress = Callable[[str, str, str | None], None]
+
+
+def _silent(stage: str, status: str, detail: str | None = None) -> None:
+    return None
+
+
+def _detail(stage: str, result: object) -> str | None:
+    if stage == "게임 검색" and isinstance(result, list):
+        return f"후보 {len(result)}개"
     return None
 
 
@@ -52,33 +74,77 @@ class RecommendationOrchestrator:
         self.media = media
         self.stage_timeout_seconds = stage_timeout_seconds
 
-    async def _required[T](self, name: str, call: Awaitable[T]) -> T:
+    async def _required[T](self, name: str, call: Awaitable[T], progress: Progress = _silent) -> T:
+        progress(name, "started", None)
         try:
-            return await asyncio.wait_for(call, timeout=self.stage_timeout_seconds)
+            result = await asyncio.wait_for(call, timeout=self.stage_timeout_seconds)
         except Exception as exc:
             logger.warning("Required pipeline stage failed: %s (%s)", name, type(exc).__name__)
+            progress(name, "failed", None)
             raise PipelineStageError(f"{name} 단계를 완료하지 못했습니다.") from exc
+        progress(name, "completed", _detail(name, result))
+        return result
 
-    async def _optional[T](self, name: str, call: Awaitable[T], warnings: list[str]) -> T | None:
+    async def _optional[T](
+        self, name: str, call: Awaitable[T], warnings: list[str], progress: Progress = _silent
+    ) -> T | None:
+        progress(name, "started", None)
         try:
-            return await asyncio.wait_for(call, timeout=self.stage_timeout_seconds)
+            result = await asyncio.wait_for(call, timeout=self.stage_timeout_seconds)
         except Exception as exc:
             logger.warning("Optional pipeline stage failed: %s (%s)", name, type(exc).__name__)
             warnings.append(f"{name} 호출 실패: 해당 정보를 확인할 수 없습니다.")
+            progress(name, "failed", None)
             return None
+        progress(name, "completed", None)
+        return result
 
-    async def run(self, question: str) -> RecommendationResponse:
-        conditions = await self._required("질문 분해", self.parser.parse(question))
-        games = await self._required("게임 검색", self.game_search.run(conditions))
+    async def stream(self, question: str) -> AsyncIterator[PipelineEvent]:
+        """`run()`과 같은 흐름을 진행 이벤트로 흘리고, 마지막에 result나 error 이벤트를 낸다."""
+        queue: asyncio.Queue[PipelineEvent | None] = asyncio.Queue()
+
+        def progress(stage: str, status: str, detail: str | None) -> None:
+            queue.put_nowait(StageEvent(stage=stage, status=status, detail=detail))
+
+        async def runner() -> None:
+            try:
+                queue.put_nowait(ResultEvent(result=await self.run(question, progress)))
+            except PipelineStageError as exc:
+                queue.put_nowait(ErrorEvent(detail=str(exc)))
+            except Exception as exc:  # 예상 밖 오류도 스트림을 닫기 전에 알린다
+                logger.exception("Unexpected pipeline failure (%s)", type(exc).__name__)
+                queue.put_nowait(ErrorEvent(detail="추천 처리 중 오류가 발생했습니다."))
+            finally:
+                queue.put_nowait(None)
+
+        task = asyncio.create_task(runner())
+        try:
+            while (event := await queue.get()) is not None:
+                yield event
+        finally:
+            # 클라이언트가 먼저 끊으면 진행 중인 외부 호출도 멈춘다
+            if not task.done():
+                task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
+    async def run(self, question: str, progress: Progress = _silent) -> RecommendationResponse:
+        conditions = await self._required("질문 분해", self.parser.parse(question), progress)
+        games = await self._required("게임 검색", self.game_search.run(conditions), progress)
         evidence = RecommendationEvidence(conditions=conditions)
 
         if games:
             prices, hardware = await asyncio.gather(
                 self._optional(
-                    "가격", self.price.run(games, conditions.max_price_krw), evidence.warnings
+                    "가격",
+                    self.price.run(games, conditions.max_price_krw),
+                    evidence.warnings,
+                    progress,
                 ),
                 self._optional(
-                    "하드웨어", self.hardware.run(games, conditions.hardware), evidence.warnings
+                    "하드웨어",
+                    self.hardware.run(games, conditions.hardware),
+                    evidence.warnings,
+                    progress,
                 ),
             )
             for game in games:
@@ -106,14 +172,21 @@ class RecommendationOrchestrator:
                     evidence.excluded_games.append(evaluated)
 
             # 검색 결과의 우선순위를 유지한다. 모든 필수 조건을 검사한 뒤 개수를 제한한다.
+            passed = len(evidence.games)
             evidence.games = evidence.games[: conditions.recommendation_count]
+            selected_count, excluded = len(evidence.games), len(evidence.excluded_games)
+            progress(
+                "조건 판정",
+                "completed",
+                f"통과 {passed}개 중 {selected_count}개 선택, 제외 {excluded}개",
+            )
             if evidence.games:
                 selected = [result.game for result in evidence.games]
                 reviews, media = await asyncio.gather(
                     self._optional(
-                        "리뷰 요약", self.review_summary.run(selected), evidence.warnings
+                        "리뷰 요약", self.review_summary.run(selected), evidence.warnings, progress
                     ),
-                    self._optional("미디어", self.media.run(selected), evidence.warnings)
+                    self._optional("미디어", self.media.run(selected), evidence.warnings, progress)
                     if self.media is not None
                     else _none(),
                 )
@@ -127,5 +200,7 @@ class RecommendationOrchestrator:
 
         if not evidence.games:
             evidence.warnings.append("모든 필수 조건을 충족한다고 확인된 후보가 없습니다.")
-        answer = await self._required("최종 답변 생성", self.answerer.generate(question, evidence))
+        answer = await self._required(
+            "최종 답변 생성", self.answerer.generate(question, evidence), progress
+        )
         return RecommendationResponse(**evidence.model_dump(), answer=answer)

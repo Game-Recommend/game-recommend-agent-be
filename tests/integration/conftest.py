@@ -20,6 +20,22 @@ from tests.query_processing.fakes import FakeQueryParser
 from tests.reviews.fakes import FakeReviews
 
 
+@pytest.fixture(autouse=True)
+def no_real_keys(monkeypatch):
+    """`steam_reviews.py`의 `load_dotenv()`가 로컬 .env 키를 os.environ에 올린다.
+
+    테스트가 실제 키로 파이프라인을 조립해 외부 API를 부르지 않도록 여기서 지운다.
+    """
+    for name in (
+        "OPENAI_API_KEY",
+        "IGDB_CLIENT_ID",
+        "IGDB_CLIENT_SECRET",
+        "STEAMGRIDDB_API_KEY",
+        "API_KEY",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+
 @pytest.fixture
 def services():
     calls = []

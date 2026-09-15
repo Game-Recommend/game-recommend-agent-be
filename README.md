@@ -5,9 +5,10 @@
 
 하드웨어·취향·인원 수·예산·플레이타임·플랫폼 조건을 자연어로 받아, 조건에 맞는 게임을 추천하는 FastAPI 서버입니다.
 
-현재는 **역할별 도구 4개와 실행 파이프라인을 구현한 단계**입니다. 외부 API·LLM 어댑터는
-아직 구현하지 않았습니다. 테스트에서는 가짜 연동을 주입해 흐름을 검증하며,
-기본 서버의 `POST /recommend`는 연동을 설정하기 전까지 503을 반환합니다.
+현재는 **역할별 도구와 실행 파이프라인, 질문 가공·IGDB·가격/사양·리뷰·미디어·최종 답변 어댑터를
+구현하고, 서버 시작 시 `.env` 설정으로 자동 조립하는 단계**입니다([app/assembly.py](app/assembly.py)).
+테스트에서는 가짜 연동을 주입해 흐름을 검증하며, 필수 키(`OPENAI_API_KEY`, `IGDB_CLIENT_ID`,
+`IGDB_CLIENT_SECRET`)가 비어 있으면 `POST /recommend`는 503을 반환합니다.
 
 ## 기술 구성
 
@@ -16,7 +17,8 @@
 | 런타임 | Python 3.12 이상 |
 | HTTP 서버 | FastAPI, Uvicorn |
 | 데이터 검증·설정 | Pydantic, pydantic-settings |
-| HTTP 클라이언트 의존성 | `httpx2` (`pyproject.toml`에 선언) |
+| HTTP 클라이언트 | `httpx2` |
+| LLM | OpenAI SDK (질문 가공·사양 판정·리뷰 한줄평·최종 답변) |
 | 파이프라인 | 비동기 Python 오케스트레이터, 가격·사양 병렬 실행 |
 | 개발 도구 | pytest, Ruff, Makefile |
 | CI | GitHub Actions: PR 및 `main` 푸시 시 린트·테스트 |
@@ -43,34 +45,43 @@ Tool 1: IGDB 후보 검색·조건 필터링
   ├─ Tool 2: 가격 조회·예산 판정 ─────┐
   └─ Tool 3: 요구 사양 조회·호환성 판정 ┤ 병렬 실행
                                      ↓
-                       ID 기준 병합·조건 충족 후보 선택
+                       ID 기준 병합·조건 충족 후보 선택·추천 개수 제한
+                       ├─ Tool 4: 선택한 후보의 리뷰 요약 ─┐
+                       └─ Tool 5: 로고·배너·트레일러      ┤ 병렬 실행
                                      ↓
-                       Tool 4: 선택한 후보의 리뷰 요약
-                                     ↓
-                       최종 답변 LLM → 근거와 함께 응답
+                       최종 답변 LLM → 상단 요약 문단 (answer)
 ```
 
-호출 순서는 `app/pipeline/orchestrator.py`가 결정하며 가격·사양은 `asyncio.gather()`로
-동시에 실행합니다. LangGraph는 도입하지 않았습니다. 향후 사용자 응답을 기다리는
+호출 순서는 `app/pipeline/orchestrator.py`가 결정하며 가격·사양, 리뷰·미디어는 각각
+`asyncio.gather()`로 동시에 실행합니다.
+
+최종 답변 LLM(`OpenAIAnswerer`)에는 사용자 질문, 추출 조건, **조건을 통과한 후보**의
+IGDB 정보(소개·분류·완료 시간)와 가격·사양 판정, 경고만 넣습니다
+([프롬프트 구성](app/pipeline/final_answer/prompts.py)). 제외 후보(`excluded_games`)는
+프롬프트에 넣지 않아 LLM이 추천할 수 없게 하고, 리뷰 요약·미디어는 카드 UI가 직접 표시하므로
+프롬프트에 넣지 않습니다. 응답에는 이들이 모두 그대로 실립니다. LangGraph는 도입하지 않았습니다. 향후 사용자 응답을 기다리는
 조건 완화·재검색이나 실행 상태 저장·재개가 필요할 때 검토합니다.
 
 ## 도구와 외부 연동의 역할
 
 | 서비스 도구 | 하는 일 | 연동 구현 위치 / 예정 출처 |
 | --- | --- | --- |
-| `GameSearchTool` | 조건에 맞는 후보 조회·중복 제거 | `GameCatalogClient` / IGDB |
+| `GameSearchTool` | 조건에 맞는 후보 조회·중복 제거 | `GameCatalogClient` / IGDB (`IgdbCatalogClient`) |
 | `PriceTool` | 정규화된 원화 가격과 예산 비교 | `PriceClient` / Steam (`SteamStoreClient`); Steam에 없는 후보는 무료 게임 표 → CheapShark + Frankfurter 환율 (`CheapSharkClient`) |
 | `HardwareTool` | 사양 평가 결과 정리, 사양 조건 없으면 생략 | `HardwareClient` / Steam (`SteamStoreClient`), Steam에 없는 후보는 PCGamingWiki (`PcGamingWikiClient`); 공통 메모리 규칙 + GPU·CPU LLM 판정 (`hardware_assessor.py`, `OpenAISpecJudge`) |
-| `ReviewSummaryTool` | 선택된 후보의 리뷰 요약 요청 | `ReviewSummaryClient` / 리뷰 요약 API 또는 Steam 리뷰 + LLM |
+| `ReviewSummaryTool` | 선택된 후보의 리뷰 요약 요청 | `ReviewSummaryClient` / Steam 리뷰 + LLM 한줄평 (`SteamReviewSummaryClient`, `steam_reviews.py`) |
+| `MediaTool` | 추천 카드의 로고·배너·트레일러 | `MediaClient` / SteamGridDB → Steam CDN → IGDB (`MediaResolver`) |
 
 `app/tools/`는 서비스 역할, `app/clients/`는 외부 연동을 담당합니다. 외부 제공자 수와 서비스
-도구 수는 일치할 필요가 없습니다. 공급자별 `app/clients/*.py`는 현재 API 참고 문서이며,
-실제 호출 어댑터는 `app/clients/contracts/`의 역할별 비동기 Protocol을 구현해야 합니다.
+도구 수는 일치할 필요가 없습니다. 공급자별 `app/clients/*.py`가 실제 호출을 담당하고,
+`app/clients/contracts/`의 역할별 비동기 Protocol을 만족하는 어댑터를 `app/assembly.py`가 조립합니다.
 담당 파일과 역할별 테스트 명령은 [4인 개발 가이드](TEAM.md)에 정리되어 있습니다.
 
 ### 데이터와 실패 처리
 
 - 후보와 결과는 `igdb_id`로 연결합니다. Steam 연결용 `steam_app_id`도 후보에 보관합니다.
+  후보에는 최종 답변 재료로 IGDB 소개(`summary`)·분류(`genres`, `themes`)·전체 완료 시간
+  (`playtime_hours`)도 담지만, 가격·사양·리뷰 도구는 이 필드를 판정에 쓰지 않습니다.
 - `steam_app_id`가 없는 후보만 폴백을 탑니다 (`app/clients/routing.py`). 가격은 무료 게임 표
   (`free_games.py`) → CheapShark USD 최저가 × Frankfurter 환율 순서이고, 사양은 PCGamingWiki입니다.
   두 폴백 모두 정규화한 게임명이 정확히 같은 결과만 인정하며, 못 찾으면 `unknown`입니다.
@@ -98,16 +109,17 @@ Tool 1: IGDB 후보 검색·조건 필터링
 현재 순위는 검색 어댑터가 반환한 순서를 유지합니다. 리뷰 점수 기반 재정렬,
 자동 재시도, 호출 제한, 캐시, 대화 메모리는 아직 구현하지 않았습니다.
 
-## 외부 연동 예정 모듈
+## 리뷰 요약
 
-아래 파일은 호출 구현 없이 연동 참고 사항만 담고 있습니다.
+리뷰 담당의 [steam_reviews.py](app/clients/steam_reviews.py)의 `SteamReviewSummaryClient`가
+`ReviewSummaryClient` 계약을 구현합니다. Steam 리뷰를 한국어 우선으로 최대 100개 받아 80자 미만을
+버리고 `votes_up` 순으로 20개를 고른 뒤 OpenAI(gpt-4o-mini)로 100자 내외 한줄평을 만듭니다.
+`steam_app_id`가 없는 게임은 건너뛰어 경고만 남습니다. 클라이언트는 `load_dotenv()`로 `.env`를 읽어
+환경 변수 `OPENAI_API_KEY`를 직접 사용합니다.
 
-| 모듈 | 예정 역할 |
-| --- | --- |
-| [igdb.py](app/clients/igdb.py) | 후보 게임 검색·필수 조건 검증 |
-| [steam_reviews.py](app/clients/steam_reviews.py) | Steam 리뷰 수집 |
+## 비Steam 폴백
 
-Steam에 없는 후보용 폴백은 구현되어 있습니다.
+Steam에 없는 후보용 가격·사양 폴백은 구현되어 있습니다.
 
 | 모듈 | 역할 |
 | --- | --- |
@@ -142,7 +154,8 @@ make run                # http://127.0.0.1:8000/health
 
 [app/config.py](app/config.py)의 `Settings`는 환경 변수와 루트의 `.env`를 읽습니다.
 현재 등록된 키의 기본값은 모두 빈 문자열이며, 서버 시작에 실제 키는 필요하지 않습니다.
-단, `API_KEY`가 비어 있으면 `/recommend`는 503을 돌려줍니다.
+단, `API_KEY`가 비어 있거나 필수 키(`OPENAI_API_KEY`, `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`)가
+비어 파이프라인이 조립되지 않으면 `/recommend`는 503을 돌려줍니다.
 
 | 변수 | 연동 시 용도 |
 | --- | --- |
@@ -150,12 +163,12 @@ make run                # http://127.0.0.1:8000/health
 | `IGDB_CLIENT_ID` | Twitch 개발자 앱 클라이언트 ID |
 | `IGDB_CLIENT_SECRET` | Twitch 개발자 앱 클라이언트 시크릿 |
 | `STEAMGRIDDB_API_KEY` | SteamGridDB API 키. 추천 카드의 로고·가로 배너에 쓴다 |
-| `OPENAI_API_KEY` | OpenAI API 키. GPU·CPU 사양 판정에 쓴다 |
-| `OPENAI_MODEL` | 사양 판정 모델. 기본값 `gpt-4o-mini` |
+| `OPENAI_API_KEY` | OpenAI API 키. 질문 가공, GPU·CPU 사양 판정, 리뷰 한줄평, 최종 답변에 쓴다 |
+| `OPENAI_MODEL` | 사양 판정·최종 답변 모델. 기본값 `gpt-4o-mini`. 질문 가공·리뷰 한줄평은 담당 모듈에서 `gpt-4o-mini` 고정 |
 
-키 목록의 기준은 [.env.example](.env.example)입니다. 사양 판정은 OpenAI를 쓰며,
-질문 가공·리뷰 요약·최종 답변의 LLM 키는 각 담당자가 구현하면서 추가합니다. 현재 앱에는 설정을 읽어 어댑터를 자동으로 조립하는 코드가
-없으므로, 키를 채우는 것만으로 추천 기능이 활성화되지는 않습니다.
+키 목록의 기준은 [.env.example](.env.example)입니다. 서버 시작 시 [app/assembly.py](app/assembly.py)가
+이 설정을 읽어 어댑터를 조립하므로, 키를 채우고 `make run`하면 추천 기능이 켜집니다.
+`steam_reviews.py`는 `load_dotenv()`로 `.env`를 직접 읽으므로 서버는 저장소 루트에서 실행합니다.
 
 ### 개발·검증 명령
 
@@ -208,12 +221,51 @@ BE를 호출해야 BE 주소와 키가 노출되지 않습니다. `/health`는 �
 | --- | --- |
 | `conditions` | 질문에서 추출한 `GameConditions` |
 | `games` | 추천 후보 목록. 각 항목은 `game`, `price`, `hardware`, `review`, `media`를 포함 |
-| `excluded_games` | 가격·사양 검사에서 제외한 후보 목록 |
+| `excluded_games` | 가격·사양 검사에서 제외한 후보 목록. `review`·`media`는 항상 `null` |
 | `warnings` | 조회 실패·정보 누락·충족 후보 없음 등의 안내 |
-| `answer` | 최종 답변 생성기가 반환한 문자열 |
+| `answer` | 최종 답변 LLM이 쓴 상단 요약 문단. 마크다운 없는 짧은 한국어 문단이며 게임 카드 위에 표시한다 |
 
 `excluded_games`에는 추천 개수 제한으로 선택되지 않은 충족 후보는 포함하지 않습니다.
+
+#### SSE 진행 스트림
+
+같은 `POST /recommend`에 `Accept: text/event-stream` 헤더를 보내면 JSON 대신 SSE로 응답합니다.
+단계가 시작·완료·실패할 때마다 `stage` 이벤트가 오고, 마지막에 `result` 또는 `error` 이벤트가
+옵니다. `Accept`가 없거나 `application/json`이면 기존 JSON 응답 그대로입니다.
+
+```bash
+curl -N -X POST http://127.0.0.1:8000/recommend \
+  -H 'Content-Type: application/json' -H 'Accept: text/event-stream' \
+  -H "X-API-Key: $API_KEY" -d '{"question":"3만 원 이하 협동 게임 3개 추천해줘"}'
+```
+
+```text
+event: stage
+data: {"event":"stage","stage":"질문 분해","status":"started","detail":null}
+
+event: stage
+data: {"event":"stage","stage":"게임 검색","status":"completed","detail":"후보 30개"}
+
+event: stage
+data: {"event":"stage","stage":"조건 판정","status":"completed","detail":"통과 5개 중 3개 선택, 제외 20개"}
+
+event: result
+data: {"event":"result","result":{ ...JSON 응답과 같은 본문... }}
+```
+
+| 이벤트 | `data` 필드 | 의미 |
+| --- | --- | --- |
+| `stage` | `stage`, `status`(`started`/`completed`/`failed`), `detail` | 단계 진행. 단계 이름은 질문 분해, 게임 검색, 가격, 하드웨어, 조건 판정, 리뷰 요약, 미디어, 최종 답변 생성. 가격·하드웨어, 리뷰 요약·미디어는 병렬이라 순서가 섞일 수 있다 |
+| `result` | `result` | 완료. JSON 응답(`RecommendationResponse`)과 같은 본문 |
+| `error` | `detail` | 필수 단계 실패. JSON 응답의 502 `detail`과 같은 문장. 선택 단계 실패는 `stage`의 `failed`와 `warnings`로만 나타난다 |
+
+스트림이 열린 뒤에는 HTTP 상태가 항상 200이고, 15초 동안 이벤트가 없으면 `: keep-alive` 주석 줄을
+보냅니다. 인증 실패(401)·미설정(503)·검증 실패(422)는 스트림이 열리기 전에 그대로 반환합니다.
+클라이언트가 연결을 끊으면 진행 중인 파이프라인을 취소합니다.
+프론트 서버는 현재 `Accept: application/json`으로 호출하므로 SSE를 쓰려면 프록시(`src/lib/backend.ts`)가
+`Accept: text/event-stream`을 보내고 응답 본문을 그대로 흘려보내도록 바꿔야 합니다.
 정확한 중첩 필드는 [응답 모델](app/schemas/recommendation.py)과 Swagger UI에서 확인하세요.
+FE 개발용 전체 예시는 [recommend_response.json](tests/integration/examples/recommend_response.json)입니다.
 
 `media`는 카드 UI용이며 미디어 도구를 주입했을 때만 채워집니다([모델](app/schemas/media.py)).
 
@@ -228,13 +280,13 @@ Steam에 없는 게임(LoL 등)은 Steam CDN 단계를 건너뛰고, SteamGridDB
 
 | 상태 코드 | 의미 |
 | --- | --- |
-| `200` | 추천 흐름 완료. 충족 후보가 없더라도 답변 생성이 성공하면 반환 |
+| `200` | 추천 흐름 완료. 충족 후보가 없더라도 답변 생성이 성공하면 반환. SSE는 스트림이 열리면 항상 200 |
 | `401` | `X-API-Key` 헤더가 없거나 `API_KEY`와 다름 |
 | `422` | 요청 검증 실패 (연동이 주입된 상태에서 검증 가능) |
 | `502` | 질문 분해·게임 검색·최종 답변 생성의 실패 또는 시간 초과 |
-| `503` | `API_KEY` 미설정 또는 `app.state.recommender` 미설정 |
+| `503` | `API_KEY` 미설정, 또는 필수 키가 비어 파이프라인이 조립되지 않음 (`app.state.recommender` 없음) |
 
-기본 서버에서 위 추천 요청을 보내면 다음 오류를 반환합니다.
+필수 키 없이 띄운 서버에 위 추천 요청을 보내면 다음 오류를 반환합니다.
 
 ```json
 {"detail":"추천 서비스의 외부 연동이 설정되지 않았습니다."}
@@ -253,55 +305,34 @@ Steam에 없는 게임(LoL 등)은 Steam CDN 단계를 건너뛰고, SteamGridDB
 [GitHub Actions](.github/workflows/ci.yml)는 린트·테스트만 실행하며 배포 단계는 없습니다.
 CI 성공을 머지 조건으로 사용하려면 GitHub 브랜치 규칙을 설정합니다.
 
-## 실제 연동 연결하기
+## 실제 연동 조립
 
-질문 가공 담당자는 `app/pipeline/query_processing/`에서 `QueryParser.parse()`를,
-가격·하드웨어·최종 답변 담당자는 `app/pipeline/final_answer/`에서 `Answerer.generate()`를
-각각 별도 구현체로 작성합니다.
-LLM 결과는 `GameConditions`로 검증하고, 최종 답변은 전달한 후보와 근거만 사용해야 합니다.
-아래 함수의 인자들은 실제로 구현한 어댑터 인스턴스입니다. 키 설정만으로는 연결되지 않습니다.
+`app/main.py`의 lifespan이 시작 시 [app/assembly.py](app/assembly.py)의 `assemble()`로 아래 구현체를
+잇고 `app.state.recommender`에 둡니다. 종료 시 공유 HTTP·OpenAI 클라이언트를 닫습니다.
+로직은 각 담당 모듈에 있고, `assembly.py`는 생성자 인자만 맞춥니다.
 
-```python
-from app.main import app
-from app.pipeline.orchestrator import RecommendationOrchestrator
-from app.tools.game_search import GameSearchTool
-from app.tools.hardware import HardwareTool
-from app.tools.media import MediaTool
-from app.tools.price import PriceTool
-from app.tools.review_summary import ReviewSummaryTool
+| 단계 | 구현체 | 담당 모듈 |
+| --- | --- | --- |
+| 질문 분해 | `LLMQueryParser` | `app/pipeline/query_processing/llm_parser.py` |
+| 게임 검색 | `IgdbCatalogClient` → `search()` | `app/clients/igdb.py` |
+| 가격 | `RoutedPriceClient(SteamStoreClient, CheapSharkClient)` | `app/clients/steam_store.py`, `routing.py`, `cheapshark.py` |
+| 사양 | `RoutedHardwareClient(SteamStoreClient, PcGamingWikiClient)` + `OpenAISpecJudge` | `app/clients/steam_store.py`, `pcgamingwiki.py`, `hardware_judge.py` |
+| 리뷰 요약 | `SteamReviewSummaryClient` | `app/clients/steam_reviews.py` |
+| 미디어 | `MediaResolver(SteamGridDBClient, IgdbMediaClient)` | `app/clients/media.py` |
+| 최종 답변 | `OpenAIAnswerer` | `app/pipeline/final_answer/llm_answerer.py` |
 
+가격·사양 도구는 같은 `SteamStoreClient` 인스턴스를 받아 appdetails를 한 번만 조회합니다.
+`STEAMGRIDDB_API_KEY`가 없으면 로고·배너는 Steam CDN·IGDB만 씁니다.
+HTTP 서버 없이 전체 흐름을 확인하려면 저장소 루트에서 실행합니다.
 
-def configure_recommender(parser, catalog, prices, hardware, reviews, answerer, media=None):
-    app.state.recommender = RecommendationOrchestrator(
-        parser=parser,
-        game_search=GameSearchTool(catalog),
-        price=PriceTool(prices),
-        hardware=HardwareTool(hardware),
-        review_summary=ReviewSummaryTool(reviews),
-        answerer=answerer,
-        media=MediaTool(media) if media is not None else None,
-    )
+```bash
+.venv/bin/python -m app.assembly "3만 원 이하 협동 게임 3개 추천해줘"
 ```
 
-미디어 어댑터는 키를 읽어 바로 만들 수 있습니다. 세 소스를 폴백 순서로 합치고 결과를 프로세스
-메모리에 캐시합니다. 단독 확인은 `python -m app.clients.media "Elden Ring" "League of Legends"`입니다.
-
-```python
-from app.clients.igdb_media import IgdbMediaClient
-from app.clients.media import MediaResolver
-from app.clients.steamgriddb import SteamGridDBClient
-from app.config import get_settings
-
-settings = get_settings()
-media = MediaResolver(
-    SteamGridDBClient(settings.steamgriddb_api_key),
-    IgdbMediaClient(settings.igdb_client_id, settings.igdb_client_secret),
-)
-```
-
-서버 시작 시 어댑터를 조립해 주입하고, HTTP 클라이언트 수명 관리도 함께 구현합니다.
-역할별 테스트 대역은 `tests/<담당 영역>/fakes.py`에 있고,
-통합 조립 예시는 `tests/integration/conftest.py`에 있습니다.
+미디어만 따로 보려면 `python -m app.clients.media "Elden Ring" "League of Legends"`입니다.
+다른 구현체를 끼우려면 서버 시작 전에 `app.state.recommender`를 직접 넣습니다. lifespan은 이미
+주입된 파이프라인을 덮어쓰지 않습니다. 역할별 테스트 대역은 `tests/<담당 영역>/fakes.py`에 있고,
+대역으로 조립하는 예시는 `tests/integration/conftest.py`에 있습니다.
 
 ## 디렉터리
 
@@ -312,26 +343,30 @@ pyproject.toml             의존성·빌드·pytest·Ruff·Vercel 설정
 Makefile                   개발 서버·검증 명령
 TEAM.md                    역할별 담당 파일·연결 계약
 app/
-├─ main.py                  FastAPI 앱
+├─ main.py                  FastAPI 앱. 시작 시 조립, 종료 시 클라이언트 정리
+├─ assembly.py              .env 설정으로 역할별 실제 구현체를 조립
 ├─ config.py                .env 설정
 ├─ api/
-│  ├─ routes.py             /health, /recommend
+│  ├─ routes.py             /health, /recommend (JSON 또는 SSE), SSE 인코더
 │  └─ dependencies.py       조립한 추천 파이프라인 주입
 ├─ pipeline/
 │  ├─ query_processing/     질문 가공 담당
 │  │  ├─ conditions.py      질문 조건 모델
 │  │  └─ parser.py          질문 분해 LLM 계약
 │  ├─ final_answer/         가격·하드웨어·최종 답변 담당
-│  │  └─ answerer.py        최종 답변 LLM 계약
-│  └─ orchestrator.py       공통: 실행 순서·병렬 처리·병합·실패 처리
+│  │  ├─ answerer.py        최종 답변 LLM 계약
+│  │  ├─ prompts.py         답변 지시문과 LLM 입력 구성 (제외 후보·리뷰·미디어 제외)
+│  │  └─ llm_answerer.py    OpenAI 구현 `OpenAIAnswerer`
+│  └─ orchestrator.py       공통: 실행 순서·병렬 처리·병합·실패 처리, 진행 이벤트 stream()
 ├─ tools/
 │  ├─ game_search.py        Tool 1
 │  ├─ price.py              Tool 2
 │  ├─ hardware.py           Tool 3
-│  └─ review_summary.py     Tool 4
+│  ├─ review_summary.py     Tool 4
+│  └─ media.py              Tool 5 (선택)
 ├─ clients/
-│  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py
-│  ├─ igdb.py               IGDB API 참고 문서
+│  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py · media.py
+│  ├─ igdb.py               IGDB 담당: 후보 검색 `search()`와 어댑터 `IgdbCatalogClient`
 │  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API 클라이언트 (가격·사양)
 │  ├─ hardware_assessor.py  가격·하드웨어 담당: Steam·폴백 공통 사양 판정 규칙
 │  ├─ hardware_judge.py     가격·하드웨어 담당: GPU·CPU 판정기 계약과 OpenAI 구현
@@ -340,12 +375,16 @@ app/
 │  ├─ exchange_rate.py      가격·하드웨어 담당: Frankfurter USD→KRW 환율
 │  ├─ free_games.py         가격·하드웨어 담당: 자체 런처 무료 게임 표
 │  ├─ pcgamingwiki.py       가격·하드웨어 담당: 비Steam 요구 사양 폴백
-│  └─ steam_reviews.py      리뷰 담당: Steam 리뷰 API
+│  ├─ steam_reviews.py      리뷰 담당: Steam·웹 리뷰 수집과 LLM 한줄평 (SteamReviewSummaryClient)
+│  ├─ steamgriddb.py        미디어 담당: SteamGridDB 로고·히어로
+│  ├─ igdb_media.py         미디어 담당: IGDB 아트워크·트레일러
+│  └─ media.py              미디어 담당: 세 소스를 폴백 순서로 합치는 MediaResolver
 └─ schemas/
    ├─ game.py               IGDB 담당: 후보 모델
    ├─ price.py              가격·하드웨어 담당: 가격 모델
    ├─ hardware.py           가격·하드웨어 담당: 사양 모델
    ├─ review.py             리뷰 담당: 요약 모델
+   ├─ media.py              미디어 담당: 카드 미디어 모델
    ├─ common.py             공통: 조건 판정 상태
    └─ recommendation.py     공통: 추천 근거·HTTP 요청/응답
 tests/
@@ -354,5 +393,6 @@ tests/
 ├─ price_hardware/          가격·하드웨어 담당 테스트와 대역
 │  └─ final_answer/         같은 담당자의 최종 답변 연결 테스트와 대역
 ├─ reviews/                 리뷰 담당 테스트와 대역
-└─ integration/             전체 흐름·병렬 실행·API 테스트
+├─ media/                   미디어 담당 테스트와 대역
+└─ integration/             전체 흐름·병렬 실행·API·조립 테스트
 ```

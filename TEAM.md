@@ -1,7 +1,7 @@
 # 역할별 개발 가이드
 
 경로는 저장소 루트 기준입니다. 각 담당자는 자신의 도구·클라이언트·계약·테스트를 수정합니다.
-실제 API·LLM 구현체는 아직 없으며, Protocol은 구현해야 할 비동기 입출력 계약입니다.
+Protocol은 역할별 비동기 입출력 계약이고, 실제 구현체는 `app/assembly.py`가 서버 시작 시 조립합니다.
 
 ## 담당 파일
 
@@ -10,7 +10,7 @@
 | 질문 가공 | `app/pipeline/query_processing/`의 parser·LLM 구현·프롬프트 | `app/pipeline/query_processing/conditions.py`, `app/pipeline/query_processing/parser.py` | `tests/query_processing/` |
 | IGDB 필터링 | `app/clients/igdb.py`, `app/tools/game_search.py` | `app/clients/contracts/catalog.py`, `app/schemas/game.py` | `tests/igdb/` |
 | 가격·하드웨어·최종 답변 | `app/clients/steam_store.py`, `app/clients/hardware_assessor.py`, `app/clients/routing.py`, `app/clients/cheapshark.py`, `app/clients/exchange_rate.py`, `app/clients/free_games.py`, `app/clients/pcgamingwiki.py`; `app/tools/price.py`, `app/tools/hardware.py`; `app/pipeline/final_answer/`의 answerer·LLM 구현·프롬프트 | `app/clients/contracts/price.py`, `app/clients/contracts/hardware.py`; `app/schemas/price.py`, `app/schemas/hardware.py`; `app/pipeline/final_answer/answerer.py` | `tests/price_hardware/`, `tests/price_hardware/final_answer/` |
-| 리뷰 요약 | `app/clients/steam_reviews.py`, `app/tools/review_summary.py`; 별도 요약 API를 쓰면 리뷰 담당자가 전용 클라이언트 추가 | `app/clients/contracts/reviews.py`, `app/schemas/review.py` | `tests/reviews/` |
+| 리뷰 요약 | `app/clients/steam_reviews.py`(`SteamReviewSummaryClient`: 수집·선별·한줄평), `app/tools/review_summary.py` | `app/clients/contracts/reviews.py`, `app/schemas/review.py` | `tests/reviews/` |
 | 미디어(카드 UI) | `app/clients/steamgriddb.py`, `app/clients/igdb_media.py`, `app/clients/media.py`; `app/tools/media.py` | `app/clients/contracts/media.py`, `app/schemas/media.py` | `tests/media/` |
 
 Steam 상세 조회는 가격·하드웨어 담당, Steam 리뷰 조회는 리뷰 담당입니다.
@@ -42,7 +42,9 @@ Steam 상세 조회는 가격·하드웨어 담당, Steam 리뷰 조회는 리�
 
 질문 가공의 `QueryParser`와 최종 답변의 `Answerer`는 별도 객체로 주입합니다.
 질문 분해 프롬프트는 `app/pipeline/query_processing/`, 답변 생성 프롬프트는
-`app/pipeline/final_answer/`에서 각각 관리합니다. 구현체를 한 LLM 클래스에 합치지 않습니다.
+`app/pipeline/final_answer/prompts.py`에서 각각 관리합니다. 구현체를 한 LLM 클래스에 합치지 않습니다.
+최종 답변 프롬프트에는 통과 후보의 IGDB 정보·가격·사양·경고만 넣고, `excluded_games`·리뷰 요약·미디어는
+넣지 않습니다. 리뷰·미디어는 응답의 `games[]`로 FE 카드에 직접 표시합니다.
 리뷰 담당자는 전달받은 후보만 요약하며, 후보 선택·예산 판정을 반복하지 않습니다.
 미디어는 추천 개수로 자른 후보에만 붙는 선택 단계입니다. 리뷰 요약과 병렬로 실행되고, 실패해도
 경고만 남기며 추천 판정에는 영향을 주지 않습니다. 오케스트레이터에 `media=`를 넘기지 않으면 건너뜁니다.
@@ -52,6 +54,7 @@ Steam 상세 조회는 가격·하드웨어 담당, Steam 리뷰 조회는 리�
 아래 파일은 통합 담당자가 관리하는 공통 영역입니다. 통합 담당자는 팀 내에서 정합니다.
 
 - `app/pipeline/orchestrator.py`: 단계 연결·병렬 호출·후보 선택·실패 처리
+- `app/assembly.py`: 설정을 읽어 역할별 구현체를 조립. 구현체 생성자 인자가 바뀌면 여기서 맞춘다
 - `app/schemas/common.py`: 조건 판정 상태
 - `app/schemas/recommendation.py`: 최종 답변 근거와 HTTP 요청·응답
 - `app/api/`, `app/main.py`: 엔드포인트와 구현체 연결
