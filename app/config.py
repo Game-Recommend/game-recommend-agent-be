@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     # IGDB는 Twitch 개발자 앱의 client credentials로 앱 토큰을 받아 쓴다
     igdb_client_id: str = ""
     igdb_client_secret: str = ""
+    # SteamGridDB 히어로·로고 조회(app/clients/steamgriddb.py). 프로필 설정에서 무료 발급
+    steamgriddb_api_key: str = ""
     # GPU·CPU 사양 판정(app/clients/hardware_judge.py)에 쓴다
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"

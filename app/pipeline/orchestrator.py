@@ -1,4 +1,4 @@
-"""고정 워크플로: 질문 분해 → 검색 → 가격/사양 병렬 → 병합 → 리뷰 → 답변."""
+"""고정 워크플로: 질문 분해 → 검색 → 가격/사양 병렬 → 병합 → 리뷰·미디어 병렬 → 답변."""
 
 import asyncio
 import logging
@@ -12,10 +12,15 @@ from app.schemas.price import PriceResult
 from app.schemas.recommendation import EvaluatedGame, RecommendationEvidence, RecommendationResponse
 from app.tools.game_search import GameSearchTool
 from app.tools.hardware import HardwareTool
+from app.tools.media import MediaTool
 from app.tools.price import PriceTool
 from app.tools.review_summary import ReviewSummaryTool
 
 logger = logging.getLogger(__name__)
+
+
+async def _none() -> None:
+    return None
 
 
 class PipelineStageError(Exception):
@@ -32,6 +37,7 @@ class RecommendationOrchestrator:
         review_summary: ReviewSummaryTool,
         answerer: Answerer,
         *,
+        media: MediaTool | None = None,
         stage_timeout_seconds: float = 30,
     ):
         if stage_timeout_seconds <= 0:
@@ -42,6 +48,8 @@ class RecommendationOrchestrator:
         self.hardware = hardware
         self.review_summary = review_summary
         self.answerer = answerer
+        # 카드 UI용 로고·배너·트레일러. 없어도 추천 판정은 그대로다.
+        self.media = media
         self.stage_timeout_seconds = stage_timeout_seconds
 
     async def _required[T](self, name: str, call: Awaitable[T]) -> T:
@@ -100,13 +108,18 @@ class RecommendationOrchestrator:
             # 검색 결과의 우선순위를 유지한다. 모든 필수 조건을 검사한 뒤 개수를 제한한다.
             evidence.games = evidence.games[: conditions.recommendation_count]
             if evidence.games:
-                reviews = await self._optional(
-                    "리뷰 요약",
-                    self.review_summary.run([result.game for result in evidence.games]),
-                    evidence.warnings,
+                selected = [result.game for result in evidence.games]
+                reviews, media = await asyncio.gather(
+                    self._optional(
+                        "리뷰 요약", self.review_summary.run(selected), evidence.warnings
+                    ),
+                    self._optional("미디어", self.media.run(selected), evidence.warnings)
+                    if self.media is not None
+                    else _none(),
                 )
                 for result in evidence.games:
                     result.review = (reviews or {}).get(result.game.igdb_id)
+                    result.media = (media or {}).get(result.game.igdb_id)
                     if result.review is None:
                         evidence.warnings.append(f"{result.game.name}: 리뷰 요약 확인 불가")
                     if result.price.quote is None:

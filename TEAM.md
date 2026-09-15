@@ -11,6 +11,7 @@
 | IGDB 필터링 | `app/clients/igdb.py`, `app/tools/game_search.py` | `app/clients/contracts/catalog.py`, `app/schemas/game.py` | `tests/igdb/` |
 | 가격·하드웨어·최종 답변 | `app/clients/steam_store.py`, `app/clients/hardware_assessor.py`, `app/clients/routing.py`, `app/clients/cheapshark.py`, `app/clients/exchange_rate.py`, `app/clients/free_games.py`, `app/clients/pcgamingwiki.py`; `app/tools/price.py`, `app/tools/hardware.py`; `app/pipeline/final_answer/`의 answerer·LLM 구현·프롬프트 | `app/clients/contracts/price.py`, `app/clients/contracts/hardware.py`; `app/schemas/price.py`, `app/schemas/hardware.py`; `app/pipeline/final_answer/answerer.py` | `tests/price_hardware/`, `tests/price_hardware/final_answer/` |
 | 리뷰 요약 | `app/clients/steam_reviews.py`, `app/tools/review_summary.py`; 별도 요약 API를 쓰면 리뷰 담당자가 전용 클라이언트 추가 | `app/clients/contracts/reviews.py`, `app/schemas/review.py` | `tests/reviews/` |
+| 미디어(카드 UI) | `app/clients/steamgriddb.py`, `app/clients/igdb_media.py`, `app/clients/media.py`; `app/tools/media.py` | `app/clients/contracts/media.py`, `app/schemas/media.py` | `tests/media/` |
 
 Steam 상세 조회는 가격·하드웨어 담당, Steam 리뷰 조회는 리뷰 담당입니다.
 양쪽 모두 IGDB 담당자가 제공한 `GameCandidate.steam_app_id`를 사용합니다.
@@ -27,6 +28,7 @@ Steam 상세 조회는 가격·하드웨어 담당, Steam 리뷰 조회는 리�
 | 가격 | `fetch_prices(games)` | `list[PriceQuote]` |
 | 하드웨어 | `assess(games, hardware)` | `list[HardwareAssessment]` |
 | 리뷰 | `summarize(games)` | `list[ReviewSummary]` |
+| 미디어 | `fetch_media(games)` | `list[GameMedia]` |
 | 최종 답변 | `generate(question, evidence)` | `str` |
 
 모든 함수는 `async def`입니다. 각 역할의 모듈에서 모델과 Protocol을 직접 import합니다.
@@ -42,6 +44,8 @@ Steam 상세 조회는 가격·하드웨어 담당, Steam 리뷰 조회는 리�
 질문 분해 프롬프트는 `app/pipeline/query_processing/`, 답변 생성 프롬프트는
 `app/pipeline/final_answer/`에서 각각 관리합니다. 구현체를 한 LLM 클래스에 합치지 않습니다.
 리뷰 담당자는 전달받은 후보만 요약하며, 후보 선택·예산 판정을 반복하지 않습니다.
+미디어는 추천 개수로 자른 후보에만 붙는 선택 단계입니다. 리뷰 요약과 병렬로 실행되고, 실패해도
+경고만 남기며 추천 판정에는 영향을 주지 않습니다. 오케스트레이터에 `media=`를 넘기지 않으면 건너뜁니다.
 
 ## 공통 영역
 
@@ -68,6 +72,7 @@ make test-igdb ARGS="-q"
 make test-price-hardware ARGS="-q"   # 가격·사양·최종 답변 모두
 make test-final-answer ARGS="-q"     # 최종 답변만
 make test-reviews ARGS="-q"
+make test-media ARGS="-q"
 make test-integration ARGS="-q"
 make test ARGS="-q"
 make lint

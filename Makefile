@@ -4,7 +4,7 @@
 PY ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 
 .PHONY: run lint test test-query-processing test-igdb test-price-hardware test-final-answer
-.PHONY: test-reviews test-integration test-llm
+.PHONY: test-reviews test-media test-integration test-llm
 
 run:
 	$(PY) -m uvicorn app.main:app --reload
@@ -32,6 +32,9 @@ test-final-answer:
 
 test-reviews:
 	$(PY) -m pytest tests/reviews $(ARGS)
+
+test-media:
+	$(PY) -m pytest tests/media $(ARGS)
 
 test-integration:
 	$(PY) -m pytest tests/integration $(ARGS)
