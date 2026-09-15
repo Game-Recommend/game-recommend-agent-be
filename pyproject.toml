@@ -10,6 +10,8 @@ dependencies = [
     "openai>=3.13",
     "pydantic>=2.8",
     "pydantic-settings>=2.4",
+    # 리뷰 요약(app/clients/steam_reviews.py)이 load_dotenv()로 .env를 직접 읽는다
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]
