@@ -1,7 +1,4 @@
-"""파이프라인·에이전트 공통.
-
-진행 콜백, 단계 실패 예외, `run()`을 SSE 이벤트 스트림으로 바꾸는 helper.
-"""
+"""진행 콜백, 단계 실패 예외, `run()`을 SSE 이벤트 스트림으로 바꾸는 helper, 추천기 계약."""
 
 import asyncio
 import logging
@@ -27,11 +24,11 @@ def silent(stage: str, status: str, detail: str | None = None) -> None:
 
 
 class PipelineStageError(Exception):
-    """질문 분해·검색·답변 생성처럼 계속 진행할 수 없는 단계의 실패. HTTP 502가 된다."""
+    """질문 분해나 에이전트 루프처럼 계속 진행할 수 없는 단계의 실패. HTTP 502가 된다."""
 
 
 class Recommender(Protocol):
-    """`/recommend`가 기대하는 추천기. 고정 파이프라인과 에이전트가 모두 만족한다."""
+    """`/recommend`가 기대하는 추천기 계약. `AgentRecommender`가 구현한다."""
 
     async def run(self, question: str, progress: Progress = silent) -> RecommendationResponse: ...
 

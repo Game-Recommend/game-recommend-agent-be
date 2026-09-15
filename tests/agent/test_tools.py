@@ -125,7 +125,7 @@ def test_run_stage_turns_failures_into_error_json_with_warning(context):
     assert context.store.warnings == ["가격 호출 실패: 해당 정보를 확인할 수 없습니다."]
 
 
-def test_run_stage_times_out_like_pipeline_stage(context):
+def test_run_stage_times_out(context):
     context.stage_timeout_seconds = 0.01
 
     async def hang():

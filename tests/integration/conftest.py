@@ -1,10 +1,14 @@
-"""통합 테스트 전용 조립. 역할별 대역의 구현은 각 담당 디렉터리에 둔다."""
+"""통합 테스트 전용 조립.
+
+역할별 대역은 각 담당 디렉터리에, 대본 모델은 tests/agent/fakes.py에 둔다.
+"""
 
 from types import SimpleNamespace
 
 import pytest
 
-from app.pipeline.orchestrator import RecommendationOrchestrator
+from app.agent.context import ToolSet
+from app.agent.runner import AgentRecommender
 from app.pipeline.query_processing.conditions import GameConditions
 from app.schemas.game import GameCandidate
 from app.schemas.hardware import HardwareAssessment, HardwareSpecs
@@ -13,9 +17,9 @@ from app.tools.game_search import GameSearchTool
 from app.tools.hardware import HardwareTool
 from app.tools.price import PriceTool
 from app.tools.review_summary import ReviewSummaryTool
+from tests.agent.fakes import checks, draft, reviews, scripted, search
 from tests.igdb.fakes import FakeCatalog
 from tests.price_hardware.fakes import FakePriceHardware
-from tests.price_hardware.final_answer.fakes import FakeAnswerer
 from tests.query_processing.fakes import FakeQueryParser
 from tests.reviews.fakes import FakeReviews
 
@@ -24,7 +28,7 @@ from tests.reviews.fakes import FakeReviews
 def no_real_keys(monkeypatch):
     """`steam_reviews.py`의 `load_dotenv()`가 로컬 .env 키를 os.environ에 올린다.
 
-    테스트가 실제 키로 파이프라인을 조립해 외부 API를 부르지 않도록 여기서 지운다.
+    테스트가 실제 키로 추천기를 조립해 외부 API를 부르지 않도록 여기서 지운다.
     """
     for name in (
         "OPENAI_API_KEY",
@@ -66,17 +70,19 @@ def services():
             calls=calls,
         ),
         reviews=FakeReviews(calls),
-        answerer=FakeAnswerer(calls),
     )
+
+
+# 에이전트 대본: 검색 → 가격·사양 병렬 → 통과한 3번 리뷰 → 3번 추천
+SCRIPT = (search(genres=[]), checks([1, 2, 3]), reviews([3]), draft([3], "테스트 답변"))
 
 
 @pytest.fixture
 def recommender(services):
-    return RecommendationOrchestrator(
-        parser=services.parser,
+    tools = ToolSet(
         game_search=GameSearchTool(services.catalog),
         price=PriceTool(services.price_hardware),
         hardware=HardwareTool(services.price_hardware),
         review_summary=ReviewSummaryTool(services.reviews),
-        answerer=services.answerer,
     )
+    return AgentRecommender(services.parser, tools, scripted(*SCRIPT))

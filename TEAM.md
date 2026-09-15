@@ -19,7 +19,8 @@
   공통으로 처리합니다. 실패해도 예외를 올리지 않고 에이전트가 계속 진행합니다.
 - **docstring이 곧 LLM이 읽는 사용 설명서입니다.** 언제 부르고 언제 부르지 말지, 결과 필드의 뜻, 비용을 적습니다.
 - **LangChain은 에이전트 계층에만 씁니다.** 팀원 모듈을 LangChain으로 다시 쓰지 않습니다.
-- `RECOMMENDER_MODE=pipeline`이면 기존 고정 파이프라인이 그대로 돕니다. 발표의 전후 비교와 비상 복구용입니다.
+- 원본의 고정 파이프라인(오케스트레이터·최종 답변 LLM)은 이 저장소에서 제거했습니다. 전후 비교는 원본
+  `game-recommend-be`로 합니다.
 
 ## 구조
 
@@ -59,8 +60,8 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 | 완료 | `app/agent/runner.py` | `create_agent` 조립, 후검증·재시도, 안전망, 미디어 후처리, `stream()`, Mermaid 그래프 |
 | 완료 | `app/agent/schemas.py` | 최종 출력 `RecommendationDraft` |
 | 완료 | `app/agent/tools/__init__.py` | `build_tools()` Tool 목록 |
-| 완료 | `app/pipeline/progress.py` | 진행 콜백·`PipelineStageError`·`stream_progress()`·`Recommender` 계약 (파이프라인과 공유) |
-| 완료 | `app/config.py`, `app/assembly.py`, `.env.example` | `RECOMMENDER_MODE`, `OPENAI_AGENT_MODEL`, LangSmith 변수, 모드별 조립 |
+| 완료 | `app/agent/progress.py` | 진행 콜백·`PipelineStageError`·`stream_progress()`·`Recommender` 계약 |
+| 완료 | `app/config.py`, `app/assembly.py`, `.env.example` | `OPENAI_AGENT_MODEL`, LangSmith 변수, 에이전트 조립 |
 | 완료 | `tests/agent/` | 대본 모델(`ScriptedChatModel`)로 루프·후검증·안전망·SSE 검증 |
 | 남음 | 실제 키로 `python -m app.assembly "..."` 실행, README 예상 질문 5개 전후 비교 기록 | 발표 자료 |
 | 남음 | Vercel 프로젝트 생성·환경 변수, 패키지 크기 확인 | 배포 |
@@ -71,7 +72,7 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 
 | 파일 | 할 일 |
 | --- | --- |
-| `app/agent/prompts.py` | `AGENT_SYSTEM`(도구 사용 순서·답변 규칙·실패 처리) 다듬기. 답변 규칙은 `final_answer/prompts.py`의 `ANSWER_SYSTEM`에서 옮겨 온 초안이다 |
+| `app/agent/prompts.py` | `AGENT_SYSTEM`(도구 사용 순서·답변 규칙·실패 처리) 다듬기. 답변 규칙은 원본의 최종 답변 프롬프트에서 옮겨 온 초안이다 |
 | `app/agent/prompts.py` | `build_user_input()`(질문 + 추출 조건 + 검색 인자 JSON), `build_rejection()`(후검증 거부 문구) |
 | `tests/agent/test_prompts.py` (신규) | 입력 구성에 조건·검색 인자가 빠지지 않는지, 거부 문구에 문제 목록이 들어가는지 |
 | 평가 표 (Notion/README) | 질문 유형별(복합 조건, 가격만, 사양만, 특정 게임, 조건 없음) 실제 Tool 호출 순서·횟수와 답변 품질을 표로 기록. LangSmith 추적을 켜면 호출 기록이 그대로 남는다 |
@@ -95,7 +96,7 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 | `app/agent/tools/price.py` | 완료. 다른 Tool 파일의 참조 예시 |
 | `app/agent/tools/hardware.py` | 완료. `compact_spec()` 표현 다듬기 |
 | 미디어 | 변경 없음. 에이전트 밖 후처리(`runner._finalize`) |
-| `app/pipeline/final_answer/` | 파이프라인 모드용으로 유지. 에이전트 모드의 답변 규칙은 `app/agent/prompts.py`(질문 가공 담당)로 이관 |
+| 최종 답변 | 원본의 `final_answer/`는 제거. 답변 규칙은 `app/agent/prompts.py`(질문 가공 담당)로 이관 |
 
 ### 리뷰 담당
 
@@ -111,7 +112,7 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 참조 예시는 `app/agent/tools/price.py`입니다. 새 Tool은 이 순서로 씁니다.
 
 ```python
-STAGE = "가격"                       # SSE stage 이름. 기존 파이프라인 단계명과 같게 유지한다
+STAGE = "가격"                       # SSE stage 이름. FE가 아는 단계명과 같게 유지한다
 
 async def fetch_prices(ctx: AgentContext, igdb_ids: list[int]) -> dict:   # 실제 일. 테스트 대상
     games = ctx.store.resolve(igdb_ids)                   # 모르는 id면 UnknownCandidateError → LLM에 오류 JSON
@@ -153,8 +154,8 @@ async def get_prices(igdb_ids: list[int], runtime: ToolRuntime[AgentContext]) ->
 1. **9/16 오전 (통합)** 이 뼈대 PR을 머지한다. 나머지 셋은 `.venv`를 새로 만들고(`pip install -e ".[dev]"`)
    `make test-agent`가 통과하는지, `make graph`가 그래프를 내는지 확인한다.
 2. **9/16 오후 (각자)** 자기 Tool 파일의 docstring·압축 출력·테스트 PR. 질문 가공 담당은 시스템 프롬프트 초안 PR.
-3. **9/17 (전원)** 실제 키로 README 예상 질문 5개를 `RECOMMENDER_MODE=agent`와 `pipeline`으로 각각 실행해
-   Tool 호출 순서·횟수·지연·답변을 기록한다. 질문 가공 담당은 유형별 호출 표를 만든다. 발표 자료.
+3. **9/17 (전원)** 실제 키로 README 예상 질문 5개를 이 저장소(에이전트)와 원본 `game-recommend-be`(고정
+   파이프라인)로 각각 실행해 Tool 호출 순서·횟수·지연·답변을 기록한다. 질문 가공 담당은 유형별 호출 표를 만든다. 발표 자료.
 4. **9/18** 발표. 각자 자기 Tool, 통합 담당은 그래프와 루프·후검증, 질문 가공 담당은 프롬프트 개선 과정.
 
 ## PR 규칙과 테스트 명령
@@ -170,7 +171,7 @@ make test-igdb ARGS="-q"           # 역할별 기존 명령은 그대로
 make test-price-hardware ARGS="-q"
 make test-reviews ARGS="-q"
 make test-query-processing ARGS="-q"
-make test-integration ARGS="-q"    # 조립·API·SSE (파이프라인·에이전트 모드 모두)
+make test-integration ARGS="-q"    # 조립·API·SSE
 make test ARGS="-q"
 make lint
 make graph                         # Mermaid 그래프 출력

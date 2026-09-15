@@ -9,8 +9,8 @@
 하드웨어·취향·인원 수·예산·플레이타임·플랫폼 조건을 자연어로 받아, 조건에 맞는 게임을 추천하는 FastAPI 서버입니다.
 
 현재는 **에이전트 계층([app/agent/](app/agent/))이 IGDB 검색·가격·사양·리뷰 Tool 4개를 골라 호출하고
-최종 답변까지 쓰는 단계**입니다. 기존 고정 파이프라인은 `RECOMMENDER_MODE=pipeline`으로 그대로 쓸 수 있어
-발표의 전후 비교와 비상 복구에 씁니다. 서버 시작 시 `.env` 설정으로 자동 조립하며([app/assembly.py](app/assembly.py)),
+최종 답변까지 쓰는 단계**입니다. 원본의 고정 파이프라인(오케스트레이터·최종 답변 LLM)은 이 저장소에서 제거했으며
+전후 비교는 원본 저장소로 합니다. 서버 시작 시 `.env` 설정으로 자동 조립하며([app/assembly.py](app/assembly.py)),
 테스트에서는 가짜 연동과 대본 모델을 주입해 흐름을 검증합니다. 필수 키(`OPENAI_API_KEY`, `IGDB_CLIENT_ID`,
 `IGDB_CLIENT_SECRET`)가 비어 있으면 `POST /recommend`는 503을 반환합니다.
 
@@ -24,7 +24,6 @@
 | HTTP 클라이언트 | `httpx2` |
 | LLM | OpenAI SDK (질문 가공·사양 판정·리뷰 한줄평), `langchain-openai` `ChatOpenAI` (에이전트) |
 | 에이전트 | LangChain 1.x `create_agent` + LangGraph: Tool 호출 루프, 같은 턴 병렬 호출, 구조화된 최종 출력 |
-| 파이프라인 | 비동기 Python 오케스트레이터(`RECOMMENDER_MODE=pipeline`), 가격·사양 병렬 실행 |
 | 개발 도구 | pytest, Ruff, Makefile |
 | CI | GitHub Actions: PR 및 `main` 푸시 시 린트·테스트 |
 
@@ -39,7 +38,7 @@
 - **플레이타임 + 장르**: "취업 준비하면서 가볍게 할 게임을 찾고 있어. 한 번에 30분~1시간 정도 하기 좋고, 전체 플레이타임도 15시간을 넘지 않는 싱글 게임이면 좋겠어."
 - **복합 조건 (데모용)**: "RTX 3060, RAM 16GB PC를 사용하고 있어. 친구 한 명과 온라인으로 같이 할 수 있고, 공포 게임은 싫어. 3만 원 이하이면서 Steam 평가가 좋은 게임 3개만 추천해줘."
 
-## 에이전트 모드 (기본, `RECOMMENDER_MODE=agent`)
+## 에이전트 흐름
 
 ```text
 질문
@@ -58,7 +57,7 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 러너 후검증: 후보에 있는 id · 가격/사양 판정 통과 · 요청 개수 이하. 위반하면 거부 사유를 붙여 한 번 더 호출
 안전망: 추천 후보 중 가격·사양·리뷰를 조회하지 않은 게임은 러너가 직접 조회
   ↓
-미디어(로고·배너·트레일러) 후처리 → RecommendationResponse (고정 파이프라인과 같은 형태)
+미디어(로고·배너·트레일러) 후처리 → RecommendationResponse (원본 저장소와 같은 응답 형태)
 ```
 
 - Tool 하나는 기능 하나이고 인자는 `igdb_id` 목록(배치)입니다. 기준값(예산·사양)은 LLM이 넘기지 않고
@@ -68,34 +67,6 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
   에이전트 루프 실패(모델 오류·반복 상한·전체 120초 초과), 재시도 후에도 후검증 실패일 때만 납니다.
 - 에이전트 모델은 `OPENAI_AGENT_MODEL`(비어 있으면 `OPENAI_MODEL`)입니다. 그래프는 `make graph`로 출력합니다.
 - 설계 원칙과 역할별 할 일은 [TEAM.md](TEAM.md), 프롬프트는 [app/agent/prompts.py](app/agent/prompts.py)입니다.
-
-## 고정 파이프라인 (`RECOMMENDER_MODE=pipeline`)
-
-```text
-질문
-  ↓
-질문 분해 LLM → GameConditions
-  ↓
-Tool 1: IGDB 후보 검색·조건 필터링
-  ├─ Tool 2: 가격 조회·예산 판정 ─────┐
-  └─ Tool 3: 요구 사양 조회·호환성 판정 ┤ 병렬 실행
-                                     ↓
-                       ID 기준 병합·조건 충족 후보 선택·추천 개수 제한
-                       ├─ Tool 4: 선택한 후보의 리뷰 요약 ─┐
-                       └─ Tool 5: 로고·배너·트레일러      ┤ 병렬 실행
-                                     ↓
-                       최종 답변 LLM → 상단 요약 문단 (answer)
-```
-
-호출 순서는 `app/pipeline/orchestrator.py`가 결정하며 가격·사양, 리뷰·미디어는 각각
-`asyncio.gather()`로 동시에 실행합니다.
-
-최종 답변 LLM(`OpenAIAnswerer`)에는 사용자 질문, 추출 조건, **조건을 통과한 후보**의
-IGDB 정보(소개·분류·완료 시간)와 가격·사양 판정, 경고만 넣습니다
-([프롬프트 구성](app/pipeline/final_answer/prompts.py)). 제외 후보(`excluded_games`)는
-프롬프트에 넣지 않아 LLM이 추천할 수 없게 하고, 리뷰 요약·미디어는 카드 UI가 직접 표시하므로
-프롬프트에 넣지 않습니다. 응답에는 이들이 모두 그대로 실립니다. 사용자 응답을 기다리는 조건 완화·재검색이나
-실행 상태 저장·재개는 에이전트 모드에서 LangGraph의 interrupt·checkpointer로 확장할 수 있습니다.
 
 ## 도구와 외부 연동의 역할
 
@@ -191,7 +162,7 @@ make run                # http://127.0.0.1:8000/health
 [app/config.py](app/config.py)의 `Settings`는 환경 변수와 루트의 `.env`를 읽습니다.
 현재 등록된 키의 기본값은 모두 빈 문자열이며, 서버 시작에 실제 키는 필요하지 않습니다.
 단, `API_KEY`가 비어 있거나 필수 키(`OPENAI_API_KEY`, `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`)가
-비어 파이프라인이 조립되지 않으면 `/recommend`는 503을 돌려줍니다.
+비어 추천기가 조립되지 않으면 `/recommend`는 503을 돌려줍니다.
 
 | 변수 | 연동 시 용도 |
 | --- | --- |
@@ -201,7 +172,6 @@ make run                # http://127.0.0.1:8000/health
 | `STEAMGRIDDB_API_KEY` | SteamGridDB API 키. 추천 카드의 로고·가로 배너에 쓴다 |
 | `OPENAI_API_KEY` | OpenAI API 키. 질문 가공, GPU·CPU 사양 판정, 리뷰 한줄평, 최종 답변에 쓴다 |
 | `OPENAI_MODEL` | 사양 판정·최종 답변 모델. 기본값 `gpt-4o-mini`. 질문 가공·리뷰 한줄평은 담당 모듈에서 `gpt-4o-mini` 고정 |
-| `RECOMMENDER_MODE` | `agent`(기본): 에이전트가 Tool을 골라 호출. `pipeline`: 고정 워크플로 |
 | `OPENAI_AGENT_MODEL` | 에이전트(도구 선택·최종 답변) 모델. 비어 있으면 `OPENAI_MODEL` |
 | `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` | 선택. LangSmith 추적을 켜면 Tool 호출·프롬프트·토큰이 기록된다 |
 
@@ -218,10 +188,9 @@ make run                # http://127.0.0.1:8000/health
 | `make test` | pytest |
 | `make test-query-processing` | 질문 조건 모델 테스트 |
 | `make test-igdb` | 후보 검색 도구 테스트 |
-| `make test-price-hardware` | 가격·사양·최종 답변 테스트 |
-| `make test-final-answer` | 최종 답변 연결 테스트 |
+| `make test-price-hardware` | 가격·사양 테스트 |
 | `make test-reviews` | 리뷰 요약 도구 테스트 |
-| `make test-integration` | 파이프라인·병렬 실행·HTTP API·조립 테스트 |
+| `make test-integration` | HTTP API·SSE·조립 테스트 (대본 모델로 에이전트를 돌린다) |
 | `make test-agent` | 에이전트 계층 테스트 (대본 모델로 OpenAI 없이 루프·후검증·안전망 검증) |
 | `make graph` | 에이전트 그래프를 Mermaid로 출력 |
 
@@ -296,13 +265,13 @@ data: {"event":"result","result":{ ...JSON 응답과 같은 본문... }}
 
 | 이벤트 | `data` 필드 | 의미 |
 | --- | --- | --- |
-| `stage` | `stage`, `status`(`started`/`completed`/`failed`), `detail` | 단계 진행. 에이전트 모드의 단계 이름은 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 요약, 조건 판정, 미디어이며 Tool 단계는 에이전트 추론 안에서 LLM이 부른 순서대로 나온다. 파이프라인 모드는 질문 분해, 게임 검색, 가격, 하드웨어, 조건 판정, 리뷰 요약, 미디어, 최종 답변 생성. 병렬 단계는 순서가 섞일 수 있다 |
+| `stage` | `stage`, `status`(`started`/`completed`/`failed`), `detail` | 단계 진행. 단계 이름은 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 요약, 조건 판정, 미디어. Tool 단계는 에이전트 추론 안에서 LLM이 부른 순서대로 나오며 같은 턴의 병렬 호출은 순서가 섞일 수 있다 |
 | `result` | `result` | 완료. JSON 응답(`RecommendationResponse`)과 같은 본문 |
 | `error` | `detail` | 필수 단계 실패. JSON 응답의 502 `detail`과 같은 문장. 선택 단계 실패는 `stage`의 `failed`와 `warnings`로만 나타난다 |
 
 스트림이 열린 뒤에는 HTTP 상태가 항상 200이고, 15초 동안 이벤트가 없으면 `: keep-alive` 주석 줄을
 보냅니다. 인증 실패(401)·미설정(503)·검증 실패(422)는 스트림이 열리기 전에 그대로 반환합니다.
-클라이언트가 연결을 끊으면 진행 중인 파이프라인을 취소합니다.
+클라이언트가 연결을 끊으면 진행 중인 에이전트 실행을 취소합니다.
 프론트 서버는 현재 `Accept: application/json`으로 호출하므로 SSE를 쓰려면 프록시(`src/lib/backend.ts`)가
 `Accept: text/event-stream`을 보내고 응답 본문을 그대로 흘려보내도록 바꿔야 합니다.
 정확한 중첩 필드는 [응답 모델](app/schemas/recommendation.py)과 Swagger UI에서 확인하세요.
@@ -325,7 +294,7 @@ Steam에 없는 게임(LoL 등)은 Steam CDN 단계를 건너뛰고, SteamGridDB
 | `401` | `X-API-Key` 헤더가 없거나 `API_KEY`와 다름 |
 | `422` | 요청 검증 실패 (연동이 주입된 상태에서 검증 가능) |
 | `502` | 질문 분해·게임 검색·최종 답변 생성의 실패 또는 시간 초과 |
-| `503` | `API_KEY` 미설정, 또는 필수 키가 비어 파이프라인이 조립되지 않음 (`app.state.recommender` 없음) |
+| `503` | `API_KEY` 미설정, 또는 필수 키가 비어 추천기가 조립되지 않음 (`app.state.recommender` 없음) |
 
 필수 키 없이 띄운 서버에 위 추천 요청을 보내면 다음 오류를 반환합니다.
 
@@ -362,8 +331,7 @@ CI 성공을 머지 조건으로 사용하려면 GitHub 브랜치 규칙을 설�
 | 사양 | `RoutedHardwareClient(SteamStoreClient, PcGamingWikiClient)` + `OpenAISpecJudge` | `app/clients/steam_store.py`, `pcgamingwiki.py`, `hardware_judge.py` |
 | 리뷰 요약 | `SteamReviewSummaryClient` | `app/clients/steam_reviews.py` |
 | 미디어 | `MediaResolver(SteamGridDBClient, IgdbMediaClient)` | `app/clients/media.py` |
-| 추천기 (agent) | `AgentRecommender(LLMQueryParser, ToolSet, ChatOpenAI)` | `app/agent/runner.py` |
-| 추천기 (pipeline) | `RecommendationOrchestrator` + 최종 답변 `OpenAIAnswerer` | `app/pipeline/orchestrator.py`, `app/pipeline/final_answer/llm_answerer.py` |
+| 추천기 | `AgentRecommender(LLMQueryParser, ToolSet, ChatOpenAI)` | `app/agent/runner.py` |
 
 가격·사양 도구는 같은 `SteamStoreClient` 인스턴스를 받아 appdetails를 한 번만 조회합니다.
 `STEAMGRIDDB_API_KEY`가 없으면 로고·배너는 Steam CDN·IGDB만 씁니다.
@@ -375,7 +343,7 @@ HTTP 서버 없이 전체 흐름을 확인하려면 저장소 루트에서 실�
 
 미디어만 따로 보려면 `python -m app.clients.media "Elden Ring" "League of Legends"`입니다.
 다른 구현체를 끼우려면 서버 시작 전에 `app.state.recommender`를 직접 넣습니다. lifespan은 이미
-주입된 파이프라인을 덮어쓰지 않습니다. 역할별 테스트 대역은 `tests/<담당 영역>/fakes.py`에 있고,
+주입된 추천기를 덮어쓰지 않습니다. 역할별 테스트 대역은 `tests/<담당 영역>/fakes.py`에 있고,
 대역으로 조립하는 예시는 `tests/integration/conftest.py`에 있습니다.
 
 ## 디렉터리
@@ -388,12 +356,13 @@ Makefile                   개발 서버·검증 명령
 TEAM.md                    역할별 담당 파일·연결 계약
 app/
 ├─ main.py                  FastAPI 앱. 시작 시 조립, 종료 시 클라이언트 정리
-├─ assembly.py              .env 설정으로 ToolSet을 만들고 모드에 따라 에이전트/파이프라인 추천기를 조립
-├─ config.py                .env 설정 (RECOMMENDER_MODE, OPENAI_AGENT_MODEL 포함)
+├─ assembly.py              .env 설정으로 ToolSet을 만들고 에이전트 추천기를 조립
+├─ config.py                .env 설정 (OPENAI_AGENT_MODEL 포함)
 ├─ agent/                   에이전트 계층 (통합 담당이 뼈대, Tool 파일은 도메인 담당)
 │  ├─ context.py            공통 계약: ToolSet · AgentContext(run_stage) · CandidateStore
 │  ├─ runner.py             create_agent 루프 · 후검증·재시도 · 안전망 · 미디어 후처리 · stream()
-│  ├─ prompts.py            질문 가공 담당: 시스템 프롬프트 · 사용자 입력 · 거부 문구
+│  ├─ progress.py           진행 콜백 · PipelineStageError · stream_progress() · Recommender 계약
+│  ├─ prompts.py            질문 가공 담당: 시스템 프롬프트 · 조건 설명 · 사용자 입력 · 거부 문구
 │  ├─ schemas.py            최종 출력 RecommendationDraft
 │  └─ tools/
 │     ├─ search.py          IGDB 담당: search_games
@@ -402,17 +371,9 @@ app/
 │     └─ reviews.py         리뷰 담당: summarize_reviews
 ├─ api/
 │  ├─ routes.py             /health, /recommend (JSON 또는 SSE), SSE 인코더
-│  └─ dependencies.py       조립한 추천 파이프라인 주입
+│  └─ dependencies.py       조립한 추천기 주입
 ├─ pipeline/
-│  ├─ query_processing/     질문 가공 담당
-│  │  ├─ conditions.py      질문 조건 모델
-│  │  └─ parser.py          질문 분해 LLM 계약
-│  ├─ final_answer/         가격·하드웨어·최종 답변 담당
-│  │  ├─ answerer.py        최종 답변 LLM 계약
-│  │  ├─ prompts.py         답변 지시문과 LLM 입력 구성 (제외 후보·리뷰·미디어 제외)
-│  │  └─ llm_answerer.py    OpenAI 구현 `OpenAIAnswerer`
-│  ├─ orchestrator.py       공통: 고정 파이프라인 실행 순서·병렬 처리·병합·실패 처리
-│  └─ progress.py           공통: 진행 콜백 · PipelineStageError · stream_progress() · Recommender 계약
+│  └─ query_processing/     질문 가공 담당: 조건 모델 · 파서 계약 · LLM 구현 · 프롬프트
 ├─ tools/
 │  ├─ game_search.py        Tool 1
 │  ├─ price.py              Tool 2
@@ -447,8 +408,7 @@ tests/
 ├─ query_processing/        질문 가공 담당 테스트와 대역
 ├─ igdb/                    IGDB 담당 테스트와 대역
 ├─ price_hardware/          가격·하드웨어 담당 테스트와 대역
-│  └─ final_answer/         같은 담당자의 최종 답변 연결 테스트와 대역
 ├─ reviews/                 리뷰 담당 테스트와 대역
 ├─ media/                   미디어 담당 테스트와 대역
-└─ integration/             전체 흐름·병렬 실행·API·조립 테스트
+└─ integration/             HTTP API·SSE·조립 테스트 (대본 모델로 에이전트를 돌린다)
 ```

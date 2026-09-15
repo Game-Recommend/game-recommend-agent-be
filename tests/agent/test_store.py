@@ -28,7 +28,7 @@ def test_add_candidates_ignores_duplicates_and_keeps_search_order(store):
     assert store.candidates[2].name == "Game 2"
 
 
-def test_unchecked_items_default_like_orchestrator():
+def test_unchecked_items_default_by_condition_presence():
     with_conditions = CandidateStore(GameConditions(max_price_krw=100, hardware={"cpu": "x"}))
     without = CandidateStore(GameConditions())
     for s in (with_conditions, without):

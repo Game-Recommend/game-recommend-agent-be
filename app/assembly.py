@@ -10,11 +10,10 @@
 | GPU·CPU 판정 | `OpenAISpecJudge` (`routing.py`가 Steam 유무로 분기) |
 | 리뷰 요약 | `SteamReviewSummaryClient` (리뷰 담당, `steam_reviews.py`) |
 | 미디어 | `MediaResolver` (SteamGridDB → Steam CDN → IGDB) |
-| 추천기 | `RECOMMENDER_MODE=agent`(기본): `AgentRecommender`, 에이전트가 위 도구를 골라 호출 |
-| | `RECOMMENDER_MODE=pipeline`: `RecommendationOrchestrator` + `OpenAIAnswerer` 고정 흐름 |
+| 추천기 | `AgentRecommender`: LangChain 에이전트가 위 도구(`ToolSet`)를 골라 호출하고 답변을 쓴다 |
 
-두 추천기는 같은 `ToolSet`(서비스 도구 묶음)을 공유한다. OPENAI_API_KEY와 IGDB 키가 없으면 조립하지
-않는다(`/recommend`는 503). STEAMGRIDDB_API_KEY가 없으면 로고·배너는 Steam CDN·IGDB만 쓴다.
+OPENAI_API_KEY와 IGDB 키가 없으면 조립하지 않는다(`/recommend`는 503). STEAMGRIDDB_API_KEY가 없으면
+로고·배너는 Steam CDN·IGDB만 쓴다.
 리뷰 클라이언트는 생성자에서 환경 변수 OPENAI_API_KEY를 직접 읽는다.
 
 동작 확인: `python -m app.assembly "3만 원 이하 협동 게임 3개 추천해줘"`
@@ -32,6 +31,7 @@ from langchain_openai import ChatOpenAI
 from openai import AsyncOpenAI
 
 from app.agent.context import ToolSet
+from app.agent.progress import Recommender
 from app.agent.runner import AgentRecommender
 from app.clients.cheapshark import CheapSharkClient
 from app.clients.exchange_rate import ExchangeRateClient
@@ -45,9 +45,6 @@ from app.clients.steam_reviews import SteamReviewSummaryClient
 from app.clients.steam_store import SteamStoreClient
 from app.clients.steamgriddb import SteamGridDBClient
 from app.config import Settings, get_settings
-from app.pipeline.final_answer.llm_answerer import OpenAIAnswerer
-from app.pipeline.orchestrator import RecommendationOrchestrator
-from app.pipeline.progress import Recommender
 from app.pipeline.query_processing.llm_parser import LLMQueryParser
 from app.tools.game_search import GameSearchTool
 from app.tools.hardware import HardwareTool
@@ -79,7 +76,7 @@ class AssembledRecommender:
 
 
 def build_toolset(settings: Settings, http: httpx2.AsyncClient, openai: AsyncOpenAI) -> ToolSet:
-    """역할별 실제 어댑터로 서비스 도구 묶음을 만든다. 에이전트와 고정 파이프라인이 함께 쓴다."""
+    """역할별 실제 어댑터로 서비스 도구 묶음을 만든다."""
     judge = OpenAISpecJudge(openai, settings.openai_model)
     # 가격·사양 도구가 같은 인스턴스를 받아 appdetails를 한 번만 조회한다
     steam = SteamStoreClient(http, judge)
@@ -105,23 +102,12 @@ def build_toolset(settings: Settings, http: httpx2.AsyncClient, openai: AsyncOpe
     )
 
 
-def build_recommender(settings: Settings, tools: ToolSet, openai: AsyncOpenAI) -> Recommender:
-    """설정의 RECOMMENDER_MODE에 따라 에이전트 또는 고정 파이프라인을 만든다."""
-    parser = LLMQueryParser()
-    if settings.recommender_mode == "agent":
-        model = ChatOpenAI(
-            model=settings.agent_model, api_key=settings.openai_api_key, timeout=25, max_retries=1
-        )
-        return AgentRecommender(parser, tools, model)
-    return RecommendationOrchestrator(
-        parser=parser,
-        game_search=tools.game_search,
-        price=tools.price,
-        hardware=tools.hardware,
-        review_summary=tools.review_summary,
-        answerer=OpenAIAnswerer(openai, settings.openai_model),
-        media=tools.media,
+def build_recommender(settings: Settings, tools: ToolSet) -> Recommender:
+    """질문 파서와 에이전트 모델로 추천기를 만든다."""
+    model = ChatOpenAI(
+        model=settings.agent_model, api_key=settings.openai_api_key, timeout=25, max_retries=1
     )
+    return AgentRecommender(LLMQueryParser(), tools, model)
 
 
 def assemble(settings: Settings | None = None) -> AssembledRecommender | None:
@@ -136,8 +122,7 @@ def assemble(settings: Settings | None = None) -> AssembledRecommender | None:
     http = httpx2.AsyncClient(timeout=20)
     openai = AsyncOpenAI(api_key=settings.openai_api_key, timeout=25, max_retries=1)
     tools = build_toolset(settings, http, openai)
-    recommender = build_recommender(settings, tools, openai)
-    logger.info("Recommender mode: %s", settings.recommender_mode)
+    recommender = build_recommender(settings, tools)
     return AssembledRecommender(recommender, http, openai)
 
 
