@@ -8,8 +8,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 
+from app.agent.progress import PipelineStageError, Recommender
 from app.api.dependencies import get_recommender, require_api_key
-from app.pipeline.progress import PipelineStageError, Recommender
 from app.schemas.recommendation import (
     PipelineEvent,
     RecommendationRequest,

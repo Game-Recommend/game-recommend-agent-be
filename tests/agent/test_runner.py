@@ -5,7 +5,7 @@ import asyncio
 import pytest
 from langchain_core.messages import HumanMessage
 
-from app.pipeline.progress import PipelineStageError
+from app.agent.progress import PipelineStageError
 from app.schemas.recommendation import ErrorEvent, ResultEvent, StageEvent
 from tests.agent.fakes import checks, draft, reviews, search
 
@@ -16,7 +16,7 @@ def run(recommender, question="어드벤처 게임 2개"):
     return asyncio.run(recommender.run(question))
 
 
-def test_agent_flow_builds_same_response_shape_as_pipeline(make_recommender, services):
+def test_agent_flow_builds_full_response(make_recommender, services):
     recommender = make_recommender(
         search(**SEARCH), checks([1, 2, 3]), reviews([3]), draft([3], "답변")
     )
@@ -149,6 +149,17 @@ def test_tool_failure_becomes_warning_and_agent_continues(make_recommender, serv
     assert response.answer == "가격 확인 불가"
     assert response.warnings.count("가격 호출 실패: 해당 정보를 확인할 수 없습니다.") == 1
     assert "모든 필수 조건을 충족한다고 확인된 후보가 없습니다." in response.warnings
+
+
+def test_media_failure_only_adds_warning(make_recommender, services):
+    services.media.error = RuntimeError("down")
+    recommender = make_recommender(search(**SEARCH), checks([1, 2, 3]), reviews([3]), draft([3]))
+
+    response = run(recommender)
+
+    assert response.games[0].game.igdb_id == 3
+    assert response.games[0].media is None
+    assert any(w.startswith("미디어 호출 실패") for w in response.warnings)
 
 
 def test_no_candidates_yields_empty_recommendation(make_recommender, services):

@@ -3,9 +3,9 @@ from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, Request
 
+from app.agent.progress import Recommender
 from app.assembly import ensure_assembled, missing_settings
 from app.config import Settings, get_settings
-from app.pipeline.progress import Recommender
 
 
 def require_api_key(

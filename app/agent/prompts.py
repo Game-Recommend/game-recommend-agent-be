@@ -1,12 +1,14 @@
 """질문 가공 담당: 에이전트 시스템 프롬프트와 사용자 입력·거부 메시지 구성.
 
 Tool 이름(search_games, get_prices, assess_hardware, summarize_reviews)과 최종 출력 이름
-(RecommendationDraft)은 코드와 맞아야 한다. 답변 규칙은 app/pipeline/final_answer/prompts.py의
-ANSWER_SYSTEM에서 옮겨 왔다. 문구를 고칠 때는 tests/agent와 질문 유형별 Tool 호출 표로 확인한다.
+(RecommendationDraft)은 코드와 맞아야 한다. 문구를 고칠 때는 tests/agent와 질문 유형별
+Tool 호출 표로 확인한다.
 """
 
-from app.pipeline.final_answer.prompts import describe_conditions
 from app.pipeline.query_processing.conditions import GameConditions
+
+CONNECTION_LABELS = {"online": "온라인", "local": "로컬(한 화면)"}
+PLAY_MODE_LABELS = {"singleplayer": "싱글", "cooperative": "협동", "competitive": "경쟁"}
 
 AGENT_SYSTEM = """당신은 게임 추천 서비스의 에이전트입니다. 도구를 골라 호출해 근거를 모은 뒤,
 사용자 조건에 맞는 게임을 추천합니다. 도구가 돌려준 정보만 근거로 씁니다.
@@ -43,6 +45,49 @@ AGENT_SYSTEM = """당신은 게임 추천 서비스의 에이전트입니다. �
 - 후보 목록에 없는 igdb_id를 넘기지 않는다.
 - 제출한 초안이 거부되면 거부 사유를 반영해 다시 제출한다.
 """
+
+
+def describe_conditions(conditions: GameConditions) -> list[str]:
+    """None·빈 목록은 생략한 사용자 조건 설명."""
+    lines: list[str] = []
+    hardware = conditions.hardware
+    if hardware is not None:
+        parts = [
+            f"{label} {value}"
+            for label, value in (
+                ("CPU", hardware.cpu),
+                ("GPU", hardware.gpu),
+                ("RAM", f"{hardware.ram_gb:g}GB" if hardware.ram_gb else None),
+                ("OS", hardware.os),
+            )
+            if value
+        ]
+        lines.append(f"사용자 PC: {', '.join(parts) if parts else hardware.raw_text or '미상'}")
+    if conditions.genres:
+        lines.append(f"선호 분류: {', '.join(conditions.genres)}")
+    if conditions.excluded_genres:
+        lines.append(f"제외 분류: {', '.join(conditions.excluded_genres)}")
+    if conditions.preferences:
+        lines.append(f"취향: {', '.join(conditions.preferences)}")
+    if conditions.players is not None:
+        lines.append(f"인원: {conditions.players}명(사용자 포함)")
+    if conditions.connection is not None:
+        lines.append(f"연결: {CONNECTION_LABELS[conditions.connection]}")
+    if conditions.play_mode is not None:
+        lines.append(f"플레이 방식: {PLAY_MODE_LABELS[conditions.play_mode]}")
+    if conditions.max_price_krw is not None:
+        if conditions.max_price_krw == 0:
+            lines.append("예산: 무료 게임만")
+        else:
+            lines.append(f"예산: {conditions.max_price_krw:,}원 이하")
+    if conditions.max_playtime_hours is not None:
+        lines.append(f"전체 완료 시간: {conditions.max_playtime_hours:g}시간 이하")
+    if conditions.max_session_minutes is not None:
+        lines.append(f"한 판 시간: {conditions.max_session_minutes:g}분 이하")
+    if conditions.platforms:
+        lines.append(f"플랫폼: {', '.join(conditions.platforms)}")
+    lines.append(f"요청 개수: {conditions.recommendation_count}개")
+    return lines
 
 
 def build_user_input(question: str, conditions: GameConditions) -> str:

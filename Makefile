@@ -3,7 +3,7 @@
 
 PY ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 
-.PHONY: run lint test test-query-processing test-igdb test-price-hardware test-final-answer
+.PHONY: run lint test test-query-processing test-igdb test-price-hardware
 .PHONY: test-reviews test-media test-integration test-llm test-agent graph
 
 run:
@@ -27,9 +27,6 @@ test-igdb:
 test-price-hardware:
 	$(PY) -m pytest tests/price_hardware $(ARGS)
 
-test-final-answer:
-	$(PY) -m pytest tests/price_hardware/final_answer $(ARGS)
-
 test-reviews:
 	$(PY) -m pytest tests/reviews $(ARGS)
 
@@ -39,7 +36,7 @@ test-media:
 test-integration:
 	$(PY) -m pytest tests/integration $(ARGS)
 
-# 에이전트 계층: 후보 저장소·Tool 어댑터·루프(대본 모델로 OpenAI 없이 검증)
+# 에이전트: 후보 저장소·Tool 어댑터·루프(대본 모델로 OpenAI 없이 검증)
 test-agent:
 	$(PY) -m pytest tests/agent $(ARGS)
 

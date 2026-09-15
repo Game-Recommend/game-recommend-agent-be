@@ -13,8 +13,7 @@ LangChain `create_agent`로 Tool 호출 루프를 돌리고, 결과를 검증해
    메시지로 붙여 한 번 더 호출하고, 그래도 안 되면 502다.
 5. 후처리: 확정 후보의 리뷰 요약(미조회분)과 미디어를 붙이고 RecommendationResponse를 만든다.
 
-진행 이벤트는 Tool 안(`AgentContext.run_stage`)에서 나오므로 고정 파이프라인과 같은
-SSE 인코더를 쓴다.
+진행 이벤트는 Tool 안(`AgentContext.run_stage`)에서 나와 `stream_progress`가 SSE로 흘린다.
 단계 이름: 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 요약, 조건 판정, 미디어.
 """
 
@@ -28,13 +27,13 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 
 from app.agent.context import AgentContext, CandidateStore, ToolSet, unique
+from app.agent.progress import PipelineStageError, Progress, silent, stream_progress
 from app.agent.prompts import AGENT_SYSTEM, build_rejection, build_user_input
 from app.agent.schemas import RecommendationDraft
 from app.agent.tools import build_tools
 from app.agent.tools import hardware as hardware_tool
 from app.agent.tools import price as price_tool
 from app.agent.tools import reviews as reviews_tool
-from app.pipeline.progress import PipelineStageError, Progress, silent, stream_progress
 from app.pipeline.query_processing.parser import QueryParser
 from app.schemas.recommendation import PipelineEvent, RecommendationResponse
 
@@ -57,7 +56,7 @@ def count_tool_calls(messages: list[AnyMessage]) -> int:
 
 
 class AgentRecommender:
-    """`Recommender` 계약 구현. 고정 파이프라인(`RecommendationOrchestrator`)과 같은 응답을 낸다."""
+    """`Recommender` 계약 구현."""
 
     def __init__(
         self,

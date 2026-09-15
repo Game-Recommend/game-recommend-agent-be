@@ -14,9 +14,8 @@ import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
+from app.agent.progress import Progress, silent
 from app.agent.schemas import RecommendationDraft
-from app.pipeline.final_answer.prompts import STATUS_LABELS
-from app.pipeline.progress import Progress, silent
 from app.pipeline.query_processing.conditions import GameConditions
 from app.schemas.common import ConditionCheck
 from app.schemas.game import GameCandidate
@@ -33,8 +32,9 @@ from app.tools.review_summary import ReviewSummaryTool
 
 logger = logging.getLogger(__name__)
 
-# 오케스트레이터와 같은 통과 규칙: 필수 조건 판정이 met이거나 조건이 없어 skipped인 경우만 추천한다.
+# 통과 규칙: 필수 조건 판정이 met이거나 조건이 없어 skipped인 경우만 추천한다.
 PASSING = frozenset({"met", "skipped"})
+STATUS_LABELS = {"met": "충족", "unmet": "미충족", "unknown": "확인 불가", "skipped": "검사 생략"}
 
 
 def unique(igdb_ids: list[int]) -> list[int]:
@@ -107,7 +107,7 @@ class CandidateStore:
     def evaluate(self, igdb_id: int) -> EvaluatedGame:
         """후보 하나의 판정을 모은다.
 
-        조회하지 않은 항목은 오케스트레이터와 같은 규칙으로 unknown 또는 skipped다.
+        조회하지 않은 항목은 조건이 있으면 unknown, 없으면 skipped다.
         """
         conditions = self.conditions
         price = self.prices.get(igdb_id) or PriceResult(

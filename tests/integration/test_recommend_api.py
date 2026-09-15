@@ -63,7 +63,7 @@ def test_unconfigured_service_returns_503():
     assert response.status_code == 503
 
 
-def test_pipeline_can_be_injected_through_app_state(recommender, monkeypatch):
+def test_recommender_can_be_injected_through_app_state(recommender, monkeypatch):
     monkeypatch.setattr(app.state, "recommender", recommender, raising=False)
     with TestClient(app, headers=HEADERS) as client:
         response = client.post("/recommend", json={"question": "게임 추천"})
@@ -71,15 +71,22 @@ def test_pipeline_can_be_injected_through_app_state(recommender, monkeypatch):
     assert response.json()["games"][0]["game"]["igdb_id"] == 3
 
 
-@pytest.mark.parametrize("method", ["parse", "search", "generate"])
-def test_required_stage_failure_returns_502(client, services, monkeypatch, method):
+def test_parser_failure_returns_502(client, services, monkeypatch):
     async def fail(*args):
         raise ConnectionError("secret-provider-message")
 
-    target = {"parse": services.parser, "search": services.catalog, "generate": services.answerer}[
-        method
-    ]
-    monkeypatch.setattr(target, method, fail)
+    monkeypatch.setattr(services.parser, "parse", fail)
+    response = client.post("/recommend", json={"question": "게임 추천"})
+    assert response.status_code == 502
+    assert "secret-provider-message" not in response.text
+
+
+def test_search_failure_leaves_agent_unable_to_confirm(client, services, monkeypatch):
+    # 검색이 실패하면 후보가 없어 대본의 추천 id가 검증에 걸리고, 재시도할 대본도 없어 502가 된다
+    async def fail(*args):
+        raise ConnectionError("secret-provider-message")
+
+    monkeypatch.setattr(services.catalog, "search", fail)
     response = client.post("/recommend", json={"question": "게임 추천"})
     assert response.status_code == 502
     assert "secret-provider-message" not in response.text

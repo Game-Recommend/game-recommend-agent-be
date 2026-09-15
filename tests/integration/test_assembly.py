@@ -14,13 +14,10 @@ from app.clients.steam_reviews import SteamReviewSummaryClient
 from app.clients.steam_store import SteamStoreClient
 from app.config import Settings, get_settings
 from app.main import app
-from app.pipeline.final_answer.llm_answerer import OpenAIAnswerer
-from app.pipeline.orchestrator import RecommendationOrchestrator
 from app.pipeline.query_processing.llm_parser import LLMQueryParser
 
 FULL = {
     "api_key": "k",
-    "recommender_mode": "pipeline",
     "openai_api_key": "sk-test",
     "igdb_client_id": "id",
     "igdb_client_secret": "secret",
@@ -48,21 +45,22 @@ def test_missing_required_keys_skip_assembly():
 
 
 def test_full_settings_wire_each_role_implementation():
-    assembled = assemble(settings())
+    assembled = assemble(settings(openai_agent_model="gpt-test"))
     try:
         recommender = assembled.recommender
-        assert isinstance(recommender, RecommendationOrchestrator)
+        assert isinstance(recommender, AgentRecommender)
         assert isinstance(recommender.parser, LLMQueryParser)
-        assert isinstance(recommender.game_search.client, IgdbCatalogClient)
-        assert isinstance(recommender.price.client, RoutedPriceClient)
-        assert isinstance(recommender.hardware.client, RoutedHardwareClient)
-        assert isinstance(recommender.price.client.steam, SteamStoreClient)
+        tools = recommender.tools
+        assert isinstance(tools.game_search.client, IgdbCatalogClient)
+        assert isinstance(tools.price.client, RoutedPriceClient)
+        assert isinstance(tools.hardware.client, RoutedHardwareClient)
+        assert isinstance(tools.price.client.steam, SteamStoreClient)
         # 가격·사양이 같은 Steam 인스턴스를 써야 appdetails 조회를 공유한다
-        assert recommender.hardware.client.steam is recommender.price.client.steam
-        assert isinstance(recommender.review_summary.client, SteamReviewSummaryClient)
-        assert isinstance(recommender.answerer, OpenAIAnswerer)
-        assert isinstance(recommender.media.client, MediaResolver)
-        assert recommender.media.client.steamgriddb is not None
+        assert tools.hardware.client.steam is tools.price.client.steam
+        assert isinstance(tools.review_summary.client, SteamReviewSummaryClient)
+        assert isinstance(tools.media.client, MediaResolver)
+        assert tools.media.client.steamgriddb is not None
+        assert recommender.agent is not None
     finally:
         asyncio.run(assembled.aclose())
 
@@ -70,8 +68,8 @@ def test_full_settings_wire_each_role_implementation():
 def test_media_without_steamgriddb_key_still_uses_igdb():
     assembled = assemble(settings(steamgriddb_api_key=""))
     try:
-        assert assembled.recommender.media.client.steamgriddb is None
-        assert assembled.recommender.media.client.igdb is not None
+        assert assembled.recommender.tools.media.client.steamgriddb is None
+        assert assembled.recommender.tools.media.client.igdb is not None
     finally:
         asyncio.run(assembled.aclose())
 
@@ -108,29 +106,6 @@ def test_unconfigured_503_names_missing_keys(monkeypatch):
 def test_lifespan_assembles_from_overridden_settings_and_releases(monkeypatch):
     monkeypatch.setitem(app.dependency_overrides, get_settings, settings)
     with TestClient(app) as client:
-        assert isinstance(app.state.recommender, RecommendationOrchestrator)
+        assert isinstance(app.state.recommender, AgentRecommender)
         assert client.get("/health").status_code == 200
     assert getattr(app.state, "recommender", None) is None
-
-
-def test_agent_mode_wires_same_tools_into_agent_recommender():
-    assembled = assemble(settings(recommender_mode="agent", openai_agent_model="gpt-test"))
-    try:
-        recommender = assembled.recommender
-        assert isinstance(recommender, AgentRecommender)
-        assert isinstance(recommender.parser, LLMQueryParser)
-        tools = recommender.tools
-        assert isinstance(tools.game_search.client, IgdbCatalogClient)
-        assert isinstance(tools.price.client, RoutedPriceClient)
-        assert isinstance(tools.hardware.client, RoutedHardwareClient)
-        assert tools.hardware.client.steam is tools.price.client.steam
-        assert isinstance(tools.review_summary.client, SteamReviewSummaryClient)
-        assert isinstance(tools.media.client, MediaResolver)
-        assert recommender.agent is not None
-    finally:
-        asyncio.run(assembled.aclose())
-
-
-def test_default_mode_is_agent():
-    without_mode = {key: value for key, value in FULL.items() if key != "recommender_mode"}
-    assert Settings(**without_mode, _env_file=None).recommender_mode == "agent"
