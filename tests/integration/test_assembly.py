@@ -74,6 +74,35 @@ def test_media_without_steamgriddb_key_still_uses_igdb():
         asyncio.run(assembled.aclose())
 
 
+def test_first_request_assembles_when_lifespan_did_not_run(recommender, monkeypatch):
+    from app import assembly
+    from app.api import dependencies
+
+    fake = assembly.AssembledRecommender(recommender, http=None, openai=None)
+    monkeypatch.setattr(assembly, "assemble", lambda settings: fake)
+    monkeypatch.setitem(app.dependency_overrides, get_settings, lambda: settings())
+    # with 블록이 아니어서 lifespan이 돌지 않는다
+    client = TestClient(app, headers={"X-API-Key": "k"})
+    try:
+        response = client.post("/recommend", json={"question": "게임 추천"})
+        assert response.status_code == 200
+        assert response.json()["answer"] == "테스트 답변"
+        assert app.state.recommender is recommender
+    finally:
+        app.state.recommender = None
+        app.state.assembled = None
+    assert dependencies.missing_settings(settings()) == []
+
+
+def test_unconfigured_503_names_missing_keys(monkeypatch):
+    empty = settings(openai_api_key="", igdb_client_id="", igdb_client_secret="")
+    monkeypatch.setitem(app.dependency_overrides, get_settings, lambda: empty)
+    with TestClient(app, headers={"X-API-Key": "k"}) as client:
+        response = client.post("/recommend", json={"question": "게임 추천"})
+    assert response.status_code == 503
+    assert "OPENAI_API_KEY" in response.json()["detail"]
+
+
 def test_lifespan_assembles_from_overridden_settings_and_releases(monkeypatch):
     monkeypatch.setitem(app.dependency_overrides, get_settings, settings)
     with TestClient(app) as client:

@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, Request
 
+from app.assembly import ensure_assembled, missing_settings
 from app.config import Settings, get_settings
 from app.pipeline.orchestrator import RecommendationOrchestrator
 
@@ -18,11 +19,15 @@ def require_api_key(
         raise HTTPException(status_code=401, detail="API 키가 없거나 올바르지 않습니다.")
 
 
-def get_recommender(request: Request) -> RecommendationOrchestrator:
-    """앱 시작 시 조립한 파이프라인을 app.state.recommender로 주입한다."""
-    recommender = getattr(request.app.state, "recommender", None)
+async def get_recommender(
+    request: Request, settings: Annotated[Settings, Depends(get_settings)]
+) -> RecommendationOrchestrator:
+    """app.state.recommender를 주입한다. 없으면 설정으로 한 번 조립하고, 키가 없으면 503이다."""
+    recommender = await ensure_assembled(request.app.state, settings)
     if recommender is None:
+        missing = ", ".join(missing_settings(settings))
         raise HTTPException(
-            status_code=503, detail="추천 서비스의 외부 연동이 설정되지 않았습니다."
+            status_code=503,
+            detail=f"추천 서비스의 외부 연동이 설정되지 않았습니다. 누락된 환경 변수: {missing}",
         )
     return recommender

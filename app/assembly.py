@@ -24,6 +24,7 @@ import json
 import logging
 import sys
 from dataclasses import dataclass
+from typing import Any
 
 import httpx2
 from openai import AsyncOpenAI
@@ -110,6 +111,42 @@ def assemble(settings: Settings | None = None) -> AssembledRecommender | None:
         media=MediaTool(media),
     )
     return AssembledRecommender(recommender, http, openai)
+
+
+async def ensure_assembled(state: Any, settings: Settings) -> RecommendationOrchestrator | None:
+    """앱 상태(`app.state`)에 파이프라인이 없으면 한 번만 조립해 둔다.
+
+    서버 시작(lifespan)과 첫 요청 양쪽에서 부른다. Vercel 같은 서버리스 환경은 lifespan을 실행하지
+    않을 수 있어 첫 요청에서도 조립한다. 동시 요청은 잠금으로 한 번만 조립한다.
+    """
+    if (recommender := getattr(state, "recommender", None)) is not None:
+        return recommender
+    lock = getattr(state, "assembly_lock", None)
+    if lock is None:
+        lock = state.assembly_lock = asyncio.Lock()
+    async with lock:
+        if (recommender := getattr(state, "recommender", None)) is not None:
+            return recommender
+        assembled = assemble(settings)
+        if assembled is None:
+            return None
+        state.assembled = assembled  # 종료 시 클라이언트를 닫기 위해 보관
+        state.recommender = assembled.recommender
+        logger.info("Recommender assembled from settings")
+        return assembled.recommender
+
+
+async def release_assembled(state: Any) -> None:
+    """`ensure_assembled`가 만든 파이프라인과 공유 클라이언트를 정리한다.
+
+    테스트가 직접 주입한 파이프라인은 건드리지 않는다.
+    """
+    assembled = getattr(state, "assembled", None)
+    if assembled is None:
+        return
+    state.assembled = None
+    state.recommender = None
+    await assembled.aclose()
 
 
 async def _main(question: str) -> None:

@@ -289,8 +289,10 @@ Steam에 없는 게임(LoL 등)은 Steam CDN 단계를 건너뛰고, SteamGridDB
 필수 키 없이 띄운 서버에 위 추천 요청을 보내면 다음 오류를 반환합니다.
 
 ```json
-{"detail":"추천 서비스의 외부 연동이 설정되지 않았습니다."}
+{"detail":"추천 서비스의 외부 연동이 설정되지 않았습니다. 누락된 환경 변수: OPENAI_API_KEY, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET"}
 ```
+
+lifespan을 실행하지 않는 환경(Vercel 서버리스 등)에서는 첫 `/recommend` 요청에서 같은 설정으로 조립합니다.
 
 ## 배포 설정
 
