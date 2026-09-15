@@ -149,6 +149,7 @@ make run                # http://127.0.0.1:8000/health
 | `API_KEY` | `/recommend` 호출용 공유 비밀. 프론트 서버 환경 변수에 같은 값을 두고 `X-API-Key` 헤더로 보낸다 |
 | `IGDB_CLIENT_ID` | Twitch 개발자 앱 클라이언트 ID |
 | `IGDB_CLIENT_SECRET` | Twitch 개발자 앱 클라이언트 시크릿 |
+| `STEAMGRIDDB_API_KEY` | SteamGridDB API 키. 추천 카드의 로고·가로 배너에 쓴다 |
 | `OPENAI_API_KEY` | OpenAI API 키. GPU·CPU 사양 판정에 쓴다 |
 | `OPENAI_MODEL` | 사양 판정 모델. 기본값 `gpt-4o-mini` |
 
@@ -206,13 +207,24 @@ BE를 호출해야 BE 주소와 키가 노출되지 않습니다. `/health`는 �
 | 필드 | 내용 |
 | --- | --- |
 | `conditions` | 질문에서 추출한 `GameConditions` |
-| `games` | 추천 후보 목록. 각 항목은 `game`, `price`, `hardware`, `review`를 포함 |
+| `games` | 추천 후보 목록. 각 항목은 `game`, `price`, `hardware`, `review`, `media`를 포함 |
 | `excluded_games` | 가격·사양 검사에서 제외한 후보 목록 |
 | `warnings` | 조회 실패·정보 누락·충족 후보 없음 등의 안내 |
 | `answer` | 최종 답변 생성기가 반환한 문자열 |
 
 `excluded_games`에는 추천 개수 제한으로 선택되지 않은 충족 후보는 포함하지 않습니다.
 정확한 중첩 필드는 [응답 모델](app/schemas/recommendation.py)과 Swagger UI에서 확인하세요.
+
+`media`는 카드 UI용이며 미디어 도구를 주입했을 때만 채워집니다([모델](app/schemas/media.py)).
+
+| 필드 | 내용 | 출처 순서 |
+| --- | --- | --- |
+| `logo_url` | 투명 배경 로고. 게임 목록에서 이름 대신 놓는다. 없으면 이름 텍스트 | SteamGridDB → Steam CDN |
+| `hero_url`, `hero_width`, `hero_height` | 가로 배너. 1920×620 계열이 우선이고 없으면 16:9 아트워크 | SteamGridDB → Steam CDN → IGDB |
+| `trailer_youtube_id` | 배너 위에 얹을 트레일러. `youtube.com/embed/{id}?autoplay=1&mute=1` | IGDB |
+
+Steam에 없는 게임(LoL 등)은 Steam CDN 단계를 건너뛰고, SteamGridDB는 정규화한 이름이 정확히
+같은 항목만 연결합니다. 각 `*_source` 필드로 어느 출처가 채웠는지 확인할 수 있습니다.
 
 | 상태 코드 | 의미 |
 | --- | --- |
@@ -254,11 +266,12 @@ from app.main import app
 from app.pipeline.orchestrator import RecommendationOrchestrator
 from app.tools.game_search import GameSearchTool
 from app.tools.hardware import HardwareTool
+from app.tools.media import MediaTool
 from app.tools.price import PriceTool
 from app.tools.review_summary import ReviewSummaryTool
 
 
-def configure_recommender(parser, catalog, prices, hardware, reviews, answerer):
+def configure_recommender(parser, catalog, prices, hardware, reviews, answerer, media=None):
     app.state.recommender = RecommendationOrchestrator(
         parser=parser,
         game_search=GameSearchTool(catalog),
@@ -266,7 +279,24 @@ def configure_recommender(parser, catalog, prices, hardware, reviews, answerer):
         hardware=HardwareTool(hardware),
         review_summary=ReviewSummaryTool(reviews),
         answerer=answerer,
+        media=MediaTool(media) if media is not None else None,
     )
+```
+
+미디어 어댑터는 키를 읽어 바로 만들 수 있습니다. 세 소스를 폴백 순서로 합치고 결과를 프로세스
+메모리에 캐시합니다. 단독 확인은 `python -m app.clients.media "Elden Ring" "League of Legends"`입니다.
+
+```python
+from app.clients.igdb_media import IgdbMediaClient
+from app.clients.media import MediaResolver
+from app.clients.steamgriddb import SteamGridDBClient
+from app.config import get_settings
+
+settings = get_settings()
+media = MediaResolver(
+    SteamGridDBClient(settings.steamgriddb_api_key),
+    IgdbMediaClient(settings.igdb_client_id, settings.igdb_client_secret),
+)
 ```
 
 서버 시작 시 어댑터를 조립해 주입하고, HTTP 클라이언트 수명 관리도 함께 구현합니다.
