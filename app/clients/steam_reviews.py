@@ -1,40 +1,49 @@
-"""리뷰 담당: Steam 리뷰 API 참고 문서. 실제 연동은 미구현.
+"""리뷰 담당: steam 리뷰 수집 + web fallback + llm 요약
 
-GameCandidate.steam_app_id로 리뷰를 조회한다. 가격·사양 API는 steam_store.py에서 담당한다.
-
+GameCandidate.steam_app_id로 리뷰를 조회한다. 
+steam review가 충분하지 않을 경우 tavily 웹검색으로 보충
 - 리뷰: `GET https://store.steampowered.com/appreviews/<appid>?json=1`
   - `query_summary`에 `review_score_desc`(예: "Overwhelmingly Positive"),
     `total_positive`, `total_negative`가 있다.
   - `reviews[].review`가 리뷰 본문이다 — 리뷰 요약(tools/review_summary.py)의 입력.
+  최종출력은 reviewsummaryclient 계약에 맞춰 list[reviewsummary]형태로 반환
 """
 
 ##steam만
 
-import requests
-from langchain_openai import ChatOpenAI
-
 import os
+
+import httpx2 as httpx
 from dotenv import load_dotenv
-from tavily import TavilyClient
+from openai import AsyncOpenAI
+
+from app.schemas.game import GameCandidate
+from app.schemas.review import ReviewSummary
 
 load_dotenv()
 
-tavily = TavilyClient(
-    api_key = os.getenv("TAVILY_API_KEY")
-)
+class SteamReviewSummaryClient:
+    """steam리뷰를 우선 사용하여 게임별 한줄평을 생성한다"""
 
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    temperature=0
-)
+    def __init__(self):
+        
+        self.llm = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.model = "gpt-4o-mini"
+
+
 
 ##1. steam review 가져오기
 
 
-def get_steam_reviews(app_id: int, language: str, max_reviews:int = 50):
-    url = f"https://store.steampowered.com/appreviews/{app_id}"
+    async def _get_steam_reviews(
+        self,
+        app_id: int, 
+        language: str, 
+        max_reviews:int = 50
+        )->list[dict]:
+        url = f"https://store.steampowered.com/appreviews/{app_id}"
 
-    params = {
+        params = {
         "json" : 1,
         "language" : language,
         "filter":"all",
@@ -48,59 +57,64 @@ def get_steam_reviews(app_id: int, language: str, max_reviews:int = 50):
     #num_per_page는 max_reviews는 최대 100이니까 그 중에서 좋은 리뷰만 추리는 구조
     #steam 구매자 여부 등으로 너무 좁게 제한하지 않고 전체 리뷰를 보기 위해 사용
 
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+            url,
+            params=params
+        )
+            response.raise_for_status()
 
-    response = requests.get(
-        url, params=params, timeout = 10)
-    response.raise_for_status()
+            data = response.json()
 
-    data = response.json()
+            reviews = []
 
-    reviews = []
+        for item in data.get("reviews", []):
+            text = item.get("review", "").strip()
 
-    for item in data.get("reviews", []):
-        text = item.get("review", "").strip()
+            if len(text) < 80: ##짧은 리뷰를 버리는건 정보량이 너무 적음
+                continue
 
-        if len(text) < 80: ##짧은 리뷰를 버리는건 정보량이 너무 적음
-            continue
-
-        reviews.append({
+            reviews.append({
             "text" : text,
             "source":"steam", ##web에서 가져온거랑 분리
             "language":item.get("language"),
             "positive": item.get("voted_up"), #추천 비추천 여부
             "votes_up" : item.get("votes_up", 0), #유저가 이 리뷰가 도움이 됐다 라고 평가한 수
-            "weighted_vote_score":float(
-                item.get("weighted_vote_score", 0) #안씀
+            "source_url":(
+                f"https://store.steampowered.com/"
+                f"appreviews/{app_id}?json=1&language={language}"
             )
-        })
+          })
 
-    return reviews
+        return reviews
 
 ##votes_up 순인 이유
-##2. 리뷰 좋아요 순으로 선별
+##2. 도움이 된 순으로 선별
 
-def select_helpful_reviews(
+    async def _select_helpful_reviews(
+        self,
         reviews: list[dict],
         limit: int = 10
-):
-    return sorted(
+        )->list[dict]:
+      return sorted(
         reviews,
         key = lambda x: (
             x["votes_up"]
         ),
         reverse = True
-    )[:limit]
+      )[:limit]
 
 #랜덤으로 20개 안뽑고 votes_up순으로 뽑냐면
 #리뷰가 100개이지만 모든 리뷰 품질이 같지 않아서 사용자들이 도움이 됐다고 펴가한 리뷰 우선
 
 # 한국어->영어 보충
-def collect_reviews(
-    app_id: int,
-    target_count: int = 20
-):
+    async def _collect_steam_reviews(
+        self,
+        app_id: int,
+        target_count: int = 20
+)->list[dict]:
     #한국어
-    korean = get_steam_reviews(
+      korean = await self._get_steam_reviews(
         app_id,
         language="koreana",
         max_reviews=100
@@ -111,8 +125,9 @@ def collect_reviews(
     #max_reviews는 후보군의 크기이고
     #target_count = 20은 실제로 llm에 넣을 리뷰 개수
 
-    selected = select_helpful_reviews(
-        korean, target_count
+      selected = await self._select_helpful_reviews(
+        korean, 
+        target_count
     )
 
     ##즉, steam_review100개 수집한 다음
@@ -121,115 +136,40 @@ def collect_reviews(
     #처리시간증가/중복의견많음/노이즈 증가
 
 
-    if len(selected) >= target_count:
+      if len(selected) >= target_count:
         return selected
 
     #한국어가 20개보다 부족하면 
     
-    english = get_steam_reviews(
+      english = await self._get_steam_reviews(
             app_id,
             language= "english",
             max_reviews=100
         )
     #영어를 가져옴
 
-    need = target_count - len(selected)
-    selected += select_helpful_reviews(
+      need = target_count - len(selected)
+      selected += await self._select_helpful_reviews(
         english, need
     )
     #필요한 만큼 보충
 
-    return selected
+      return selected
 
-# =========================================================
-# 3. 웹 리뷰 fallback
-# =========================================================
-
-def get_web_reviews(
-    game_name: str,
-    max_results: int = 10
-):
-    query = f'"{game_name}" player review gameplay experience'
-    #tavily가 검색하는 것
-    #플레이 경험을 담은 리뷰 문서쪽으로 검색의도 좁힘
-    response = tavily.search(
-        query=query,
-        search_depth="advanced",
-        max_results=max_results
-    )
-
-    #web은 10개만 가져오는데
-    #steam과 달리 품질편차가 너무 크고
-    #호출 비용과 검색비용의 한계
-    #주 소스가 아니고 fallback이기 때문에 5-10개가 적당
-
-    reviews = []
-
-    noise_keywords = [
-        "share on facebook",
-        "share on x",
-        "like loading",
-        "subscribe",
-        "newsletter"
-    ]
-
-    #처음 테스트했을 때
-    #Share on X
-    #Share on Facebook
-    #Like Loading...
-    #같은 웹페이지ui텍스트가 들어와서 잡음 제거해야됨
-
-    for result in response.get("results", []):
-        text = result.get("content", "").strip()
-        url = result.get("url","")
-        title = result.get("title", "")
-
-        #너무 짧은 텍스트 제거
-        if len(text) < 100:
-            continue
-
-        #steam보다 어머격하게 잡은 이유는 타빌리 결과가 snippet일수도있음
-        #짧은 웹 텍스트는 제목 조각/댓글 한줄/페이지소개 등일 가능성 높음
-
-
-        #페이지 잡음 제거
-        lower_text = text.lower()
-
-        if any(
-            keyword in lower_text for keyword in noise_keywords
-        ):
-            continue
-
-        #
-
-        reviews.append({
-            "text": text,
-            "source": "web",
-            "title":title,
-            "url": url
-        })
-
-    return reviews
 
 ##다 가져오기
-def collect_all_reviews(
-        game_name : str,
+    async def _collect_all_reviews(
+        self,
         steam_app_id : int,
         target_count: int = 20,
         min_steam_reviews:int = 5
-):
-    selected = collect_reviews(
-        steam_app_id, 
-        target_count=target_count
-    )
+)->list[dict]:
+      
 
-    if len(selected) < min_steam_reviews:
-        web_reviews = get_web_reviews(
-            game_name, max_results=10
+        return await self._collect_steam_reviews(
+            steam_app_id,
+            target_count=target_count
         )
-        selected += web_reviews
-
-    return selected[:target_count]
     #min_steam_reviews로 나눈 이유는 19개여도 웹검색하면 비효율적이라서
     #20개가 이상적인 최대 리뷰 수이고 5개는 스팀만으로 요약 가능한 최소 기준
 
@@ -242,37 +182,38 @@ def collect_all_reviews(
 ##steam과 web을 분리한 이유는 steam은 추천/비추천이라는 명시적 구조 가짐
 #but, web은 그런 필드가 없음
 #web에 억지로 positive/negative붙이면 감성분석 필요
-def summarize_reviews(
+    async def _summarize_reviews(
+        self,
     game_name: str,
     reviews: list[dict]
 ):
-    if not reviews:
-        return "리뷰 정보를 충분히 확보하지 못했습니다."
-    formatted_reviews = []
+        if not reviews:
+          return "리뷰 정보를 충분히 확보하지 못했습니다."
+        formatted_reviews = []
 
-    for review in reviews:
+        for review in reviews:
 
-        if review["source"] == "steam":
-            formatted_reviews.append(
-                f"""
+            if review["source"] == "steam":
+                formatted_reviews.append(
+                    f"""
 출처: Steam
 추천 여부: {"추천" if review["positive"] else "비추천"}
 리뷰: {review["text"][:1000]}
 """
             )
 
-        else:
-            formatted_reviews.append(
+            else:
+              formatted_reviews.append(
                 f"""
 출처: Web
 리뷰: {review["text"][:1000]}
 """
             )
 
-    review_text = "\n\n".join(formatted_reviews)
+        review_text = "\n\n".join(formatted_reviews)
 
-    prompt = f"""
-게임 이름: {game_name}
+        prompt = f"""
+    게임 이름: {game_name}
 
 아래 사용자 리뷰 및 웹 리뷰를 종합해서
 한국어 한줄평을 작성하세요.
@@ -293,9 +234,11 @@ def summarize_reviews(
 {review_text}
 """
 
-    response = llm.invoke(prompt)
-
-    return response.content
+        response = await self.llm.responses.create(
+           model = self.model,
+           input = prompt,
+        )
+        return response.output_text.strip()
 
 ##로직 설명
 ##steam 리뷰 최대 100개 받고 80자 미만 제거, votes_up 높은 순 정렬
@@ -317,33 +260,38 @@ def summarize_reviews(
 
 
 
-##테스트
-if __name__ == "__main__":
+    async def summarize(
+        self, games: list[GameCandidate]
+)->list[ReviewSummary]:
+        results = []
 
-    game_name = "Stardew Valley"
-    steam_app_id = 413150
-
-    
-    reviews = collect_all_reviews(
-        game_name,
-        steam_app_id
-    )
-
-    print("선택된 리뷰 수:", len(reviews))
-
-    print("\n===== 리뷰 출처 =====")
-
-    for review in reviews:
-        print(
-            review["source"],
-            review["text"][:150]
+        for game in games:
+            if game.steam_app_id is None:
+                continue
+            reviews = await self._collect_all_reviews(
+                steam_app_id = game.steam_app_id
         )
-        print("-" * 50)
 
-    summary = summarize_reviews(
-        game_name,
-        reviews
-    )
+            summary = await self._summarize_reviews(
+                game_name = game.name,
+                reviews = reviews
+        )
 
-    print("\n===== 한줄평 =====")
-    print(summary)
+            source_urls = []
+
+            for review in reviews:
+                source_url = review.get("source_url")
+
+                if(
+                source_url
+                and source_url not in source_urls
+            ):
+                    source_urls.append(source_url)
+            results.append(
+                ReviewSummary(
+                igdb_id=game.igdb_id,
+                summary=summary,
+                source_urls=source_urls
+            )
+        )
+        return results
