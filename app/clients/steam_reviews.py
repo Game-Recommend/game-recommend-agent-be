@@ -11,12 +11,11 @@ steam review가 충분하지 않을 경우 tavily 웹검색으로 보충
 
 ##steam만
 
-import asyncio
-import httpx2 as httpx
-from openai import AsyncOpenAI
-
 import os
+
+import httpx2 as httpx
 from dotenv import load_dotenv
+from openai import AsyncOpenAI
 
 from app.schemas.game import GameCandidate
 from app.schemas.review import ReviewSummary
