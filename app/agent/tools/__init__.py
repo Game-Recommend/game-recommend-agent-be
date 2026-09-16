@@ -4,9 +4,10 @@ from langchain_core.tools import BaseTool
 
 from app.agent.tools.hardware import assess_hardware
 from app.agent.tools.price import get_prices
+from app.agent.tools.review_score import get_review_scores
 from app.agent.tools.reviews import summarize_reviews
 from app.agent.tools.search import search_games
 
 
 def build_tools() -> list[BaseTool]:
-    return [search_games, get_prices, assess_hardware, summarize_reviews]
+    return [search_games, get_prices, assess_hardware, summarize_reviews, get_review_scores]

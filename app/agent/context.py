@@ -28,6 +28,7 @@ from app.tools.game_search import GameSearchTool
 from app.tools.hardware import HardwareTool
 from app.tools.media import MediaTool
 from app.tools.price import PriceTool
+from app.tools.review_score import ReviewScoreTool
 from app.tools.review_summary import ReviewSummaryTool
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,7 @@ class ToolSet:
     price: PriceTool
     hardware: HardwareTool
     review_summary: ReviewSummaryTool
+    review_score: ReviewScoreTool
     media: MediaTool | None = None
 
 
