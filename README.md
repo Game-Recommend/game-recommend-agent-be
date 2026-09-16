@@ -307,8 +307,10 @@ data: {"event":"result","result":{ ...JSON 응답과 같은 본문... }}
 스트림이 열린 뒤에는 HTTP 상태가 항상 200이고, 15초 동안 이벤트가 없으면 `: keep-alive` 주석 줄을
 보냅니다. 인증 실패(401)·미설정(503)·검증 실패(422)는 스트림이 열리기 전에 그대로 반환합니다.
 클라이언트가 연결을 끊으면 진행 중인 에이전트 실행을 취소합니다.
-프론트 서버는 현재 `Accept: application/json`으로 호출하므로 SSE를 쓰려면 프록시(`src/lib/backend.ts`)가
-`Accept: text/event-stream`을 보내고 응답 본문을 그대로 흘려보내도록 바꿔야 합니다.
+프론트 서버는 진행 표시를 켤 때 프록시(`src/lib/backend.ts`)가 `Accept: text/event-stream`을 붙여
+호출하고 본문을 버퍼링 없이 흘려보냅니다. 진행 표시가 아는 단계 이름은 FE의 `PIPELINE_FLOW`
+(질문 분해·에이전트 추론·조건 판정·미디어)와 `AGENT_TOOL_STAGES`(게임 검색·가격·하드웨어·리뷰 점수·리뷰 요약)이므로,
+Tool을 더하거나 `STAGE`를 바꾸면 FE와 함께 고쳐야 합니다.
 정확한 중첩 필드는 [응답 모델](app/schemas/recommendation.py)과 Swagger UI에서 확인하세요.
 FE 개발용 전체 예시는 [recommend_response.json](tests/integration/examples/recommend_response.json)입니다.
 
