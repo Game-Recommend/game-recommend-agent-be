@@ -68,6 +68,23 @@ Do not use game information that is absent from the user question and tool resul
    - Do not pass a budget or user hardware as Tool arguments.
      The server reads those values from AgentContext.conditions.
    - Do not call either Tool again for candidates already checked.
+   - Call get_prices at most once in the entire recommendation flow.
+   - Include every searched candidate igdb_id in that single batch call.
+   - Never emit more than one get_prices call in the same AI message.
+   - Do not split candidate IDs across multiple get_prices calls.
+   - A price result with status=unknown, status=unmet, or quote=null
+     is a completed result, not a reason to retry.
+   - Never call get_prices again to search for a different price,
+     a free price, or a missing quote.
+   - After the initial price results are returned, use those results
+     as final for candidate verification.
+   - When AgentContext.conditions.max_price_krw=0, only a candidate
+     with quote.amount_krw=0 and price status=met may be recommended.
+   - A candidate with quote=null or price status=unknown has not been
+     verified as free and must be excluded.
+   - If no candidate is verified as free after the first get_prices
+     call, submit an empty RecommendationDraft immediately.
+     Do not call get_prices again.
 
 3. Candidate Verification
    - Evaluate the price status and hardware status of each candidate independently.
@@ -110,6 +127,11 @@ Do not use game information that is absent from the user question and tool resul
      or ordering.
    - Do not call get_review_scores repeatedly for candidates whose
      scores have already been retrieved.
+   - Call get_review_scores at most once per recommendation flow.
+   - An empty or partial review_scores result is final.
+     Do not retry get_review_scores for missing igdb_ids.
+   - Treat an omitted igdb_id as unavailable instead of calling the
+     Tool again.
 
    4.2 summarize_reviews: qualitative review summary
    - summarize_reviews does not provide a review score and must not be
@@ -125,6 +147,11 @@ Do not use game information that is absent from the user question and tool resul
      Do not infer or fabricate missing review opinions.
    - Do not call summarize_reviews repeatedly for candidates whose
      summaries have already been retrieved.
+   - Call summarize_reviews at most once per recommendation flow.
+   - A partial result or null summary is final and must not trigger
+     another Tool call.
+   - After summarize_reviews returns, submit RecommendationDraft
+     without calling get_review_scores or summarize_reviews again.
 
 5. RecommendationDraft
    - Submit the final result as RecommendationDraft.
@@ -151,6 +178,13 @@ Do not use game information that is absent from the user question and tool resul
    - Call summarize_reviews only for the final selected IDs.
    - Review-score results and review summaries have different purposes:
      scores determine ranking, while summaries explain qualitative feedback.
+
+[Tool Call Deduplication]
+- Never emit two calls to the same Tool in one AI message.
+- When a Tool accepts igdb_ids, combine all required IDs into one
+  deduplicated list and make one batch call.
+- A completed Tool call must not be repeated, including when its
+  result contains null, unknown, unavailable, or unmet values.
 
 [Response Writing Rules]
 - Write the answer in Korean.
@@ -189,6 +223,17 @@ Do not use game information that is absent from the user question and tool resul
 - Do not present a positive review summary as proof of a high review score.
 - Do not expose wilson_score as a user-facing percentage.
   It is an internal ranking signal, not the actual positive-review ratio.
+- If max_price_krw is null, do not say that a game's price
+  satisfies, meets, or fits the user's budget.
+- A price-related value in preferences is a soft preference,
+  not a verified budget constraint.
+- You may state an actual verified price, but do not describe it
+  as budget-compliant unless max_price_krw is not null and the
+  price check status is met.
+- Never claim that a game guarantees fun, quality, satisfaction,
+  accessibility, or suitability.
+- Avoid absolute expressions such as "재미를 보장한다",
+  "무조건 재미있다", or "완벽하게 적합하다".
 
 [Tool Failure Handling]
 - If a Tool returns {"error": "..."}, do not repeat the same failed call.
@@ -302,6 +347,10 @@ def build_user_input(
         "- 예산, 하드웨어, 취향, 추천 개수는 서버 컨텍스트에 있으므로 "
         "Tool 인자로 추가하지 마세요.",
         "- Tool 결과로 검증되지 않은 정보를 답변에 사용하지 마세요.",
+        f"- RecommendationDraft의 recommended_igdb_ids는 최대 "
+        f"{conditions.recommendation_count}개만 포함하세요.",
+        "- Tool에서 더 많은 후보를 확인했더라도 요청 개수를 초과해 제출하지 마세요.",
+        "- RecommendationDraft 제출 직전에 recommended_igdb_ids의 개수를 직접 세어 확인하세요.",
         "- Steam 평가·평점·리뷰 품질이 선별 기준이면 가격·사양을 통과한 "
         "후보들의 igdb_id를 get_review_scores에 전달하세요.",
         "- get_review_scores는 후보 선별용 수치 통계이고, summarize_reviews는 "
@@ -319,6 +368,29 @@ def build_user_input(
         "처리하지 마세요."
         ),
     ]
+    
+    if conditions.max_price_krw == 0:
+        execution_instructions.extend(
+            [
+                "- 무료 게임만 허용됩니다. quote.amount_krw=0이고 "
+                "price status=met인 후보만 추천하세요.",
+                "- quote=null 또는 price status=unknown인 후보를 "
+                "무료 게임으로 간주하지 마세요.",
+                "- 최초 get_prices 결과에서 무료 후보가 없으면 "
+                "get_prices를 다시 호출하지 말고 빈 추천을 제출하세요.",
+            ]
+        )
+    
+    if conditions.max_price_krw is None:
+        execution_instructions.extend(
+            [
+                "- max_price_krw가 null이므로 확정된 예산 상한이 없습니다.",
+                "- 가격 정보를 제시할 수는 있지만 '예산 범위 내', "
+                "'예산 충족', '예산에 부합'이라고 표현하지 마세요.",
+                "- preferences의 가격 표현은 부드러운 선호일 뿐 "
+                "필수 가격 조건이 아닙니다.",
+            ]
+        )
 
     preferences = {
         preference.strip().casefold()
@@ -333,27 +405,33 @@ def build_user_input(
             "유료 후보를 무료 게임이라고 설명하지 마세요."
         )
 
-    review_required = any(
-        keyword in preference
-        for preference in preferences
-        for keyword in (
-            "steam 평가",
-            "steam 리뷰",
-            "스팀 평가",
-            "스팀 리뷰",
-            "사용자 평가",
-            "사용자 리뷰",
-            "review",
-        )
-    )
+    review_required = requires_review_selection(conditions)
 
     if review_required:
-        execution_instructions.append(
-            "- 이 요청은 Steam 평가를 추천 기준으로 포함합니다. "
-            "가격·사양 판정 후 RecommendationDraft를 제출하기 전에 "
-            "통과 후보에 summarize_reviews를 반드시 호출하세요."
-        )
-
+      execution_instructions.extend(
+          [
+              "- 이 요청은 Steam 평가를 추천 기준으로 포함합니다. "
+              "가격·사양 판정 후 통과 후보 전체의 igdb_id를 "
+              "get_review_scores에 한 번만 전달하세요.",
+              "- get_review_scores 결과의 wilson_score를 우선 기준으로 "
+              "recommend_ratio와 total_reviews를 함께 고려해 "
+              "최종 후보를 선택하세요.",
+              "- 리뷰 점수를 확인할 수 없는 후보를 Steam 평가가 좋은 "
+              "게임이라고 설명하지 마세요.",
+              "- 리뷰 점수로 최종 후보를 선택한 뒤 summarize_reviews에는 "
+              "최종 추천 후보의 igdb_id만 전달하세요.",
+          ]
+      )
+      
+      
+    if not review_required:
+      execution_instructions.append(
+          "- 이 요청은 리뷰 점수를 추천 기준으로 포함하지 않습니다. "
+          "get_review_scores를 호출하지 말고, 높은 평가·높은 추천 비율·"
+          "긍정 리뷰가 많다는 정량적 표현을 사용하지 마세요. "
+          "summarize_reviews 결과는 장점과 단점 같은 정성적 설명에만 사용하세요."
+      )
+      
     companion_mentioned = any(
         expression in question
         for expression in ("친구", "같이", "함께")
@@ -398,13 +476,17 @@ def build_rejection(problems: list[str]) -> str:
             "다음 문제 때문에 추천 초안을 확정할 수 없습니다.",
             *(f"- {problem}" for problem in problems),
             "",
-            "기존 후보와 Tool 결과만 사용해 모든 문제를 수정하세요.",
-            "거부된 recommended_igdb_ids 목록을 그대로 다시 제출하지 마세요.",
-            "추천 개수 문제가 있으면 조건을 만족하는 후보만 우선순위에 따라 "
-            "요청 개수 이하로 줄이세요.",
+            "기존 후보와 이미 완료된 Tool 결과만 사용해 모든 문제를 수정하세요.",
+            "다음 응답에서는 어떤 Tool도 호출하지 마세요.",
+            "search_games, get_prices, assess_hardware, get_review_scores, "
+            "summarize_reviews를 다시 호출하지 마세요.",
             "검색을 반복하거나 후보 목록에 없는 igdb_id를 추가하지 마세요.",
+            "거부된 recommended_igdb_ids 목록을 그대로 다시 제출하지 마세요.",
+            "추천 개수 문제가 있으면 조건을 만족하는 후보만 "
+            "우선순위에 따라 요청 개수 이하로 줄이세요.",
             "추천 ID를 바꾸면 answer의 게임 수와 내용도 함께 수정하세요.",
-            "RecommendationDraft를 다시 제출하세요. 단, 재제출은 한 번만 하세요.",
+            "다음 응답으로 수정된 RecommendationDraft를 다시 제출하세요.",
+            "단, 다른 응답이나 Tool 호출 없이 한 번만 제출하세요.",
         ]
     )
 
