@@ -10,15 +10,6 @@ from app.pipeline.query_processing.conditions import GameConditions
 from app.schemas.hardware import HardwareSpecs
 
 
-def flatten(text: str) -> str:
-    """가독성을 위해 줄바꿈된 프롬프트 문구를 한 줄로 펴서 비교한다."""
-    return " ".join(text.split())
-
-
-# 프롬프트를 다시 줄바꿈해도 문구 검사가 깨지지 않게 한다.
-FLAT_AGENT_SYSTEM = flatten(AGENT_SYSTEM)
-
-
 def make_conditions() -> GameConditions:
     return GameConditions(
         hardware=HardwareSpecs(
@@ -179,18 +170,18 @@ def test_agent_system_preserves_code_contracts():
     }
 
     for name in required_names:
-        assert name in FLAT_AGENT_SYSTEM
+        assert name in AGENT_SYSTEM
 
-    normalized_prompt = FLAT_AGENT_SYSTEM.lower()
+    normalized_prompt = AGENT_SYSTEM.lower()
 
-    assert "[추출한 조건]" in FLAT_AGENT_SYSTEM
-    assert "[search_games 검색 인자(JSON)]" in FLAT_AGENT_SYSTEM
+    assert "[추출한 조건]" in AGENT_SYSTEM
+    assert "[search_games 검색 인자(JSON)]" in AGENT_SYSTEM
     assert "same response turn" in normalized_prompt
     assert "unmet or unknown" in normalized_prompt
     assert "do not repeat the same" in normalized_prompt
-    assert '{"error": "..."}' in FLAT_AGENT_SYSTEM
+    assert '{"error": "..."}' in AGENT_SYSTEM
 
-def test_build_user_input_requires_reviews_before_draft():
+def test_build_user_input_requires_review_scores_for_selection():
     conditions = GameConditions(
         preferences=["좋은 Steam 평가"],
         recommendation_count=3,
@@ -201,9 +192,10 @@ def test_build_user_input_requires_reviews_before_draft():
         conditions,
     )
 
-    assert "summarize_reviews" in message
-    assert "RecommendationDraft를 제출하기 전에" in message
-    assert "반드시 호출" in message
+    assert "get_review_scores에 한 번만 전달하세요" in message
+    assert "wilson_score를 우선 기준" in message
+    assert "리뷰 점수를 확인할 수 없는 후보" in message
+    assert "summarize_reviews에는 최종 추천 후보" in message
 
 def test_build_user_input_does_not_force_reviews_without_review_criterion():
     conditions = GameConditions(
@@ -217,6 +209,7 @@ def test_build_user_input_does_not_force_reviews_without_review_criterion():
     )
 
     assert "이 요청은 Steam 평가를 추천 기준으로 포함합니다" not in message
+    assert "get_review_scores에 한 번만 전달하세요" not in message
 
 def test_build_user_input_states_dynamic_draft_limit():
     conditions = GameConditions(
@@ -315,12 +308,16 @@ def test_build_user_input_does_not_warn_for_confirmed_multiplayer():
     assert "인원, 연결 방식, 플레이 방식은 확정되지 않았습니다" not in message
 
 def test_agent_system_separates_review_score_and_summary():
-    assert "get_review_scores" in FLAT_AGENT_SYSTEM
-    assert "summarize_reviews" in FLAT_AGENT_SYSTEM
-    assert "wilson_score as the primary ranking signal" in FLAT_AGENT_SYSTEM
-    assert "Pass only final selected candidate igdb_ids" in FLAT_AGENT_SYSTEM
-    assert "must not be used as a substitute for get_review_scores" in FLAT_AGENT_SYSTEM
+    normalized = " ".join(AGENT_SYSTEM.split())
 
+    assert "get_review_scores" in normalized
+    assert "summarize_reviews" in normalized
+    assert "wilson_score as the primary ranking signal" in normalized
+    assert "Pass only final selected candidate igdb_ids" in normalized
+    assert (
+        "must not be used as a substitute for get_review_scores"
+        in normalized
+    )
 
 def test_user_input_explains_review_tool_roles():
     conditions = GameConditions(
@@ -338,3 +335,90 @@ def test_user_input_explains_review_tool_roles():
     assert "get_review_scores" in message
     assert "summarize_reviews" in message
     assert "최종 추천 후보" in message
+
+def test_user_input_forbids_score_claims_without_review_criterion():
+    conditions = GameConditions(
+        genres=["Role-playing (RPG)"],
+        platforms=["PC"],
+        recommendation_count=3,
+    )
+
+    message = build_user_input(
+        "PC RPG 3개 추천해줘.",
+        conditions,
+    )
+
+    assert "get_review_scores를 호출하지 말고" in message
+    assert "높은 추천 비율" in message
+    assert "정성적 설명에만 사용하세요" in message
+
+
+def test_build_user_input_includes_dynamic_recommendation_limit():
+    conditions = GameConditions(recommendation_count=3)
+
+    message = build_user_input(
+        "게임 3개 추천해줘.",
+        conditions,
+    )
+
+    assert "recommended_igdb_ids는 최대 3개" in message
+    assert "제출 직전에 recommended_igdb_ids의 개수를 직접 세어" in message
+
+
+def test_rejection_forbids_all_tool_retries():
+    message = build_rejection(
+        ["추천 개수는 3개 이하여야 합니다 (현재 4개)"]
+    )
+
+    assert "다음 응답에서는 어떤 Tool도 호출하지 마세요" in message
+    assert "search_games, get_prices, assess_hardware" in message
+    assert "수정된 RecommendationDraft를 다시 제출하세요" in message
+    assert "Tool 호출 없이 한 번만 제출하세요" in message
+
+
+def test_agent_system_does_not_treat_soft_price_as_budget():
+    normalized = " ".join(AGENT_SYSTEM.split())
+
+    assert "If max_price_krw is null" in AGENT_SYSTEM
+    assert "not a verified budget constraint" in normalized
+    assert "재미를 보장한다" in AGENT_SYSTEM
+
+
+def test_build_user_input_does_not_claim_budget_when_max_price_is_null():
+    conditions = GameConditions(
+        preferences=["가격 3만 원대"],
+        max_price_krw=None,
+    )
+
+    message = build_user_input(
+        "가격은 3만 원대였으면 좋겠어.",
+        conditions,
+    )
+
+    assert "확정된 예산 상한이 없습니다" in message
+    assert "'예산 범위 내'" in message
+    assert "필수 가격 조건이 아닙니다" in message
+
+def test_agent_system_forbids_duplicate_price_calls():
+    normalized = " ".join(AGENT_SYSTEM.split())
+
+    assert "Call get_prices at most once" in AGENT_SYSTEM
+    assert "Never emit more than one get_prices call" in AGENT_SYSTEM
+    assert "combine all required IDs into one" in normalized
+    assert "status=unknown" in AGENT_SYSTEM
+    assert "Do not call get_prices again" in AGENT_SYSTEM
+    
+def test_build_user_input_explains_mandatory_free_price():
+    conditions = GameConditions(
+        max_price_krw=0,
+        recommendation_count=5,
+    )
+
+    message = build_user_input(
+        "무료 게임만 추천해줘.",
+        conditions,
+    )
+
+    assert "quote.amount_krw=0" in message
+    assert "price status=met" in message
+    assert "get_prices를 다시 호출하지 말고" in message
