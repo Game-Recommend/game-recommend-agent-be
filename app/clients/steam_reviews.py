@@ -57,7 +57,7 @@ class SteamReviewSummaryClient:
     #num_per_page는 max_reviews는 최대 100이니까 그 중에서 좋은 리뷰만 추리는 구조
     #steam 구매자 여부 등으로 너무 좁게 제한하지 않고 전체 리뷰를 보기 위해 사용
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.get(
             url,
             params=params
