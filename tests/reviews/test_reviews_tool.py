@@ -101,6 +101,7 @@ def test_summarize_reviews_returns_error_json_on_failure():
             price=None,
             hardware=None,
             review_summary=review_summary,
+            review_score=None,
         ),
     )
 

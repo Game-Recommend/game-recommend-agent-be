@@ -84,5 +84,6 @@ def recommender(services):
         price=PriceTool(services.price_hardware),
         hardware=HardwareTool(services.price_hardware),
         review_summary=ReviewSummaryTool(services.reviews),
+        review_score=None,
     )
     return AgentRecommender(services.parser, tools, scripted(*SCRIPT))
