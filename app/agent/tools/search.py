@@ -74,19 +74,20 @@ async def search_candidates(ctx: AgentContext, args: SearchGamesArgs) -> dict:
 
 @tool("search_games", args_schema=SearchGamesArgs)
 async def search_games(
-    genres: list[str],
-    excluded_genres: list[str],
-    players: int | None,
-    connection: str | None,
-    play_mode: str | None,
-    max_playtime_hours: float | None,
-    max_session_minutes: float | None,
-    platforms: list[str],
     runtime: ToolRuntime[AgentContext],
+    genres: list[str] | None = None,
+    excluded_genres: list[str] | None = None,
+    players: int | None = None,
+    connection: str | None = None,
+    play_mode: str | None = None,
+    max_playtime_hours: float | None = None,
+    max_session_minutes: float | None = None,
+    platforms: list[str] | None = None,
 ) -> str:
     """조건에 맞는 게임 후보를 IGDB에서 찾는다. 추천 흐름의 첫 도구다.
 
     - 입력의 [추출한 조건]을 그대로 인자로 넘긴다. 조건을 완화하거나 없는 조건을 추가하지 않는다.
+      명시되지 않은 조건은 생략할 수 있다. 검색 조건이 없으면 빈 인자({})로 후보를 조회한다.
     - 결과의 igdb_id가 이후 모든 도구의 인자다. 여기 없는 id는 쓸 수 없다.
     - 결과는 검색 우선순위 순이며 최대 30개다. 가격·사양은 아직 확인되지 않았으므로 get_prices와
       assess_hardware로 판정한 뒤 추천한다.
@@ -94,14 +95,14 @@ async def search_games(
     """
     ctx = runtime.context
     args = SearchGamesArgs(
-        genres=genres,
-        excluded_genres=excluded_genres,
+        genres=genres or [],
+        excluded_genres=excluded_genres or [],
         players=players,
         connection=connection,
         play_mode=play_mode,
         max_playtime_hours=max_playtime_hours,
         max_session_minutes=max_session_minutes,
-        platforms=platforms,
+        platforms=platforms or [],
     )
     return await ctx.run_stage(
         STAGE, search_candidates(ctx, args), detail=lambda payload: f"후보 {payload['count']}개"
