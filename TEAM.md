@@ -65,7 +65,7 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 | 완료 | `app/config.py`, `app/assembly.py`, `.env.example` | `OPENAI_AGENT_MODEL`, LangSmith 변수, 에이전트 조립 |
 | 완료 | `tests/agent/` | 대본 모델(`ScriptedChatModel`)로 루프·후검증·안전망·SSE 검증 |
 | 완료 | Tool 5개로 늘어난 계약 반영 | `get_review_scores` 추가에 맞춰 README·TEAM.md의 Tool 목록·SSE 단계명(`리뷰 점수`)·`ToolSet`을 맞췄다. FE에 새 단계명 공유 필요 |
-| 완료 | 실제 키로 예상 질문 5개 전후 비교 | README `## 전후 비교`에 원본·에이전트의 Tool 호출 순서·횟수·지연·추천 결과를 기록했다. 같은 턴 병렬 호출과 안전망이 타임라인에 그대로 보인다 |
+| 완료 | 실제 키로 예상 질문 5개 전후 비교 | 요약은 README `## 전후 비교`, 질문별 타임라인·원시 기록·재실행 방법은 `evals/agent_questions/`다. 같은 턴 병렬 호출과 안전망이 타임라인에 그대로 보인다 |
 | 완료 | Vercel 프로젝트·자동 배포 | GitHub 연동이라 저장소에 `vercel.json`이 없다. `main`에 머지하면 프로덕션이 자동 배포된다 |
 | 완료 | 패키지 크기 확인 | dev 의존성(37MB)을 뺀 약 84MB로 서버리스 250MB 제한에 여유. 큰 순서로 `openai` 24MB, `langsmith` 9.9MB, `langchain_core` 5.8MB. 로컬(macOS·3.14) 측정이라 Vercel(Linux·3.12)과 컴파일 휠 크기가 다를 수 있다 |
 | 완료 | Vercel 환경 변수 확인 | 필수는 `API_KEY`·`OPENAI_API_KEY`·`IGDB_CLIENT_ID`·`IGDB_CLIENT_SECRET` 네 개이고, 하나라도 비면 `/recommend`가 503이다. `STEAMGRIDDB_API_KEY`는 없어도 동작하며 로고·배너만 빠진다. `OPENAI_MODEL`·`OPENAI_AGENT_MODEL`은 기본값(`gpt-4o-mini`)이 있어 등록하지 않는다. 빈 값으로 등록하면 기본값을 덮어써 모델명 없이 호출되므로, `.env.example`을 통째로 붙여넣지 않는다. 배포 URL은 배포 보호(302)라 외부에서 `/health`를 확인할 수 없고, 함수 로그의 `missing settings` 경고로 본다 |
