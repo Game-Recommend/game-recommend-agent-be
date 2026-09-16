@@ -114,7 +114,7 @@ General rules:
    - Extract an explicitly stated platform independently
      from hardware. If the user says "PC", include "PC"
      even when GPU, RAM, or OS are also stated.
-   - If no count is stated, recommendation_count=3.
+   - If no count is stated, recommendation_count=5.
    - A stated count must be between 1 and 30.
 
 Output rules:
