@@ -12,12 +12,22 @@ from app.schemas.hardware import HardwareResult, RequirementSpec
 
 STAGE = "하드웨어"
 
+FIELD_LIMIT = 60  # CPU·GPU는 "A 또는 B 이상" 나열이 길다. 판정은 이미 끝났으니 표시용으로만 남긴다
+RAW_LIMIT = 200  # 항목 추출에 실패했을 때만 쓰는 원문
+
+
+def clip(value: str, limit: int) -> str:
+    """LLM에 넘길 길이로 자른다. 자른 자리는 …로 표시해 잘렸음을 알린다."""
+    value = " ".join(value.split())
+    return value if len(value) <= limit else value[: limit - 1].rstrip() + "…"
+
 
 def compact_spec(spec: RequirementSpec | None) -> str | None:
+    """요구 사양을 "OS ..., CPU ..., RAM 8GB" 한 줄로 줄인다. 쓸 내용이 없으면 None이다."""
     if spec is None:
         return None
     parts = [
-        f"{label} {value}"
+        f"{label} {clip(value, FIELD_LIMIT)}"
         for label, value in (
             ("OS", spec.os),
             ("CPU", spec.cpu),
@@ -26,7 +36,9 @@ def compact_spec(spec: RequirementSpec | None) -> str | None:
         )
         if value
     ]
-    return ", ".join(parts) if parts else spec.raw_text[:200]
+    if parts:
+        return ", ".join(parts)
+    return clip(spec.raw_text, RAW_LIMIT) or None
 
 
 def compact_hardware(result: HardwareResult) -> dict:
