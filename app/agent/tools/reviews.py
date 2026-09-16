@@ -32,13 +32,20 @@ async def summarize(ctx: AgentContext, igdb_ids: list[int]) -> dict:
 
 @tool("summarize_reviews")
 async def summarize_reviews(igdb_ids: list[int], runtime: ToolRuntime[AgentContext]) -> str:
-    """게임의 Steam 사용자 리뷰를 모아 100자 내외 한국어 한줄평을 만든다.
+    """최종 추천 후보의 Steam 사용자 리뷰를 수집해 한국어 한줄평으로 요약한다.
 
-    - 최종 추천할 후보에만 호출한다. 게임당 수 초와 LLM 비용이 들므로 후보 전체에 부르지 않는다.
-    - 가격·사양 판정을 통과한 게임의 igdb_id만 넘긴다. 사용자가 "평가 좋은 게임"처럼 리뷰를 조건으로
-      말했으면 통과 후보를 요청 개수보다 조금 넓게 넣어 비교한 뒤 고른다.
-    - summary가 null이면 Steam에 없는 게임 등으로 리뷰를 확보하지 못한 것이다.
-      리뷰를 지어내지 않는다.
+    가격과 사양 등 필수 조건을 확인한 뒤 최종 추천을 결정하는 단계에서만 호출한다.
+    리뷰 수집과 LLM 요약에 시간이 걸리고 비용이 발생하므로 검색된 전체 후보에는 호출하지 않는다.
+
+    입력:
+    - igdb_ids: 리뷰를 확인할 최종 후보 게임의 IGDB ID 목록.
+    - 가격·사양 조건을 통과한 후보만 전달한다.
+
+    결과:
+    - igdb_id: 게임의 IGDB ID
+    - name: 게임 이름
+    - summary: Steam 사용자 리뷰를 바탕으로 만든 약 100자 한국어 한줄평
+    - summary가 null이면 Steam 리뷰를 확보하지 못한 것이므로 내용을 추측하지 않는다.
     """
     ctx = runtime.context
     return await ctx.run_stage(STAGE, summarize(ctx, igdb_ids))
