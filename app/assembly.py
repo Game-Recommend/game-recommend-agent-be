@@ -9,6 +9,7 @@
 | 가격·사양 | `SteamStoreClient`; Steam에 없으면 `CheapSharkClient`·`PcGamingWikiClient` |
 | GPU·CPU 판정 | `OpenAISpecJudge` (`routing.py`가 Steam 유무로 분기) |
 | 리뷰 요약 | `SteamReviewSummaryClient` (리뷰 담당, `steam_reviews.py`) |
+| 리뷰 점수 | `SteamReviewScoreClient` (리뷰 담당, `steam_review_score.py`) |
 | 미디어 | `MediaResolver` (SteamGridDB → Steam CDN → IGDB) |
 | 추천기 | `AgentRecommender`: LangChain 에이전트가 위 도구(`ToolSet`)를 골라 호출하고 답변을 쓴다 |
 
@@ -41,6 +42,7 @@ from app.clients.igdb_media import IgdbMediaClient
 from app.clients.media import MediaResolver
 from app.clients.pcgamingwiki import PcGamingWikiClient
 from app.clients.routing import RoutedHardwareClient, RoutedPriceClient
+from app.clients.steam_review_score import SteamReviewScoreClient
 from app.clients.steam_reviews import SteamReviewSummaryClient
 from app.clients.steam_store import SteamStoreClient
 from app.clients.steamgriddb import SteamGridDBClient
@@ -50,6 +52,7 @@ from app.tools.game_search import GameSearchTool
 from app.tools.hardware import HardwareTool
 from app.tools.media import MediaTool
 from app.tools.price import PriceTool
+from app.tools.review_score import ReviewScoreTool
 from app.tools.review_summary import ReviewSummaryTool
 
 logger = logging.getLogger(__name__)
@@ -98,6 +101,7 @@ def build_toolset(settings: Settings, http: httpx2.AsyncClient, openai: AsyncOpe
         price=PriceTool(prices),
         hardware=HardwareTool(hardware),
         review_summary=ReviewSummaryTool(SteamReviewSummaryClient()),
+        review_score=ReviewScoreTool(SteamReviewScoreClient(http)),
         media=MediaTool(media),
     )
 
