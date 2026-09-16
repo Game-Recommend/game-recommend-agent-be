@@ -39,6 +39,7 @@ def invoke_search(monkeypatch, args, rows=None, error=None):
             price=None,
             hardware=None,
             review_summary=None,
+            review_score=None,
         ),
         progress=lambda *event: events.append(event),
     )

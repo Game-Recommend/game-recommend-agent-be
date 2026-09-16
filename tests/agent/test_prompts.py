@@ -10,6 +10,15 @@ from app.pipeline.query_processing.conditions import GameConditions
 from app.schemas.hardware import HardwareSpecs
 
 
+def flatten(text: str) -> str:
+    """가독성을 위해 줄바꿈된 프롬프트 문구를 한 줄로 펴서 비교한다."""
+    return " ".join(text.split())
+
+
+# 프롬프트를 다시 줄바꿈해도 문구 검사가 깨지지 않게 한다.
+FLAT_AGENT_SYSTEM = flatten(AGENT_SYSTEM)
+
+
 def make_conditions() -> GameConditions:
     return GameConditions(
         hardware=HardwareSpecs(
@@ -170,16 +179,16 @@ def test_agent_system_preserves_code_contracts():
     }
 
     for name in required_names:
-        assert name in AGENT_SYSTEM
+        assert name in FLAT_AGENT_SYSTEM
 
-    normalized_prompt = AGENT_SYSTEM.lower()
+    normalized_prompt = FLAT_AGENT_SYSTEM.lower()
 
-    assert "[추출한 조건]" in AGENT_SYSTEM
-    assert "[search_games 검색 인자(JSON)]" in AGENT_SYSTEM
+    assert "[추출한 조건]" in FLAT_AGENT_SYSTEM
+    assert "[search_games 검색 인자(JSON)]" in FLAT_AGENT_SYSTEM
     assert "same response turn" in normalized_prompt
     assert "unmet or unknown" in normalized_prompt
     assert "do not repeat the same" in normalized_prompt
-    assert '{"error": "..."}' in AGENT_SYSTEM
+    assert '{"error": "..."}' in FLAT_AGENT_SYSTEM
 
 def test_build_user_input_requires_reviews_before_draft():
     conditions = GameConditions(
@@ -306,11 +315,11 @@ def test_build_user_input_does_not_warn_for_confirmed_multiplayer():
     assert "인원, 연결 방식, 플레이 방식은 확정되지 않았습니다" not in message
 
 def test_agent_system_separates_review_score_and_summary():
-    assert "get_review_scores" in AGENT_SYSTEM
-    assert "summarize_reviews" in AGENT_SYSTEM
-    assert "wilson_score as the primary ranking signal" in AGENT_SYSTEM
-    assert "Pass only final selected candidate igdb_ids" in AGENT_SYSTEM
-    assert "must not be used as a substitute for get_review_scores" in AGENT_SYSTEM
+    assert "get_review_scores" in FLAT_AGENT_SYSTEM
+    assert "summarize_reviews" in FLAT_AGENT_SYSTEM
+    assert "wilson_score as the primary ranking signal" in FLAT_AGENT_SYSTEM
+    assert "Pass only final selected candidate igdb_ids" in FLAT_AGENT_SYSTEM
+    assert "must not be used as a substitute for get_review_scores" in FLAT_AGENT_SYSTEM
 
 
 def test_user_input_explains_review_tool_roles():
