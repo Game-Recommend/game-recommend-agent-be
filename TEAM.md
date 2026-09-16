@@ -64,7 +64,9 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 | 완료 | `app/config.py`, `app/assembly.py`, `.env.example` | `OPENAI_AGENT_MODEL`, LangSmith 변수, 에이전트 조립 |
 | 완료 | `tests/agent/` | 대본 모델(`ScriptedChatModel`)로 루프·후검증·안전망·SSE 검증 |
 | 남음 | 실제 키로 `python -m app.assembly "..."` 실행, README 예상 질문 5개 전후 비교 기록 | 발표 자료 |
-| 남음 | Vercel 프로젝트 생성·환경 변수, 패키지 크기 확인 | 배포 |
+| 완료 | Vercel 프로젝트·자동 배포 | GitHub 연동이라 저장소에 `vercel.json`이 없다. `main`에 머지하면 프로덕션이 자동 배포된다 |
+| 완료 | 패키지 크기 확인 | dev 의존성(37MB)을 뺀 약 84MB로 서버리스 250MB 제한에 여유. 큰 순서로 `openai` 24MB, `langsmith` 9.9MB, `langchain_core` 5.8MB. 로컬(macOS·3.14) 측정이라 Vercel(Linux·3.12)과 컴파일 휠 크기가 다를 수 있다 |
+| 남음 | Vercel 환경 변수 확인 | 빌드 성공과는 별개다. 누락되면 `/recommend`가 503이다. 배포 URL은 Vercel 배포 보호(302)라 외부에서 `/health`를 확인할 수 없다 |
 
 ### 질문 가공 담당
 
