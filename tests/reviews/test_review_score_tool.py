@@ -3,11 +3,11 @@ from types import SimpleNamespace
 
 from app.agent.context import CandidateStore
 from app.agent.tools.review_score import fetch_review_scores
+from app.clients.steam_review_score import calculate_wilson_score
 from app.pipeline.query_processing.conditions import GameConditions
 from app.schemas.game import GameCandidate
 from app.schemas.review import ReviewScore
 from app.tools.review_score import ReviewScoreTool
-from app.clients.steam_review_score import calculate_wilson_score
 
 
 class FakeReviewScoreClient:
@@ -120,3 +120,24 @@ def test_calculate_wilson_score_with_zero_reviews():
     )
 
     assert score == 0.0
+
+
+def test_review_score_tool_run_returns_results_keyed_by_igdb_id():
+    games = [
+        GameCandidate(igdb_id=1, name="Game 1", steam_app_id=10),
+        GameCandidate(igdb_id=2, name="No Steam Game", steam_app_id=None),
+    ]
+
+    tool = ReviewScoreTool(FakeReviewScoreClient())
+    results = asyncio.run(tool.run(games))
+
+    assert set(results) == {1}
+    assert results[1].igdb_id == 1
+    assert results[1].total_reviews == 1000
+
+
+def test_review_score_tool_run_with_no_games_returns_empty_dict():
+    tool = ReviewScoreTool(FakeReviewScoreClient())
+    results = asyncio.run(tool.run([]))
+
+    assert results == {}

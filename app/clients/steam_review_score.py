@@ -1,12 +1,17 @@
 """Steam 사용자 리뷰 통계 조회 클라이언트."""
 
 import asyncio
+import logging
 import math
 
 import httpx2 as httpx
 
 from app.schemas.game import GameCandidate
 from app.schemas.review import ReviewScore
+
+logger = logging.getLogger(__name__)
+
+APPREVIEWS_URL = "https://store.steampowered.com/appreviews"
 
 
 def calculate_wilson_score(positive: int, total: int) -> float:
@@ -20,52 +25,38 @@ def calculate_wilson_score(positive: int, total: int) -> float:
     return (
         p
         + z**2 / (2 * total)
-        - z * math.sqrt(
-            (p * (1 - p) + z**2 / (4 * total)) / total
-        )
+        - z * math.sqrt((p * (1 - p) + z**2 / (4 * total)) / total)
     ) / (1 + z**2 / total)
 
 
 class SteamReviewScoreClient:
     """Steam 리뷰 통계를 이용해 게임별 리뷰 점수를 조회한다."""
 
-    async def _get_review_score(
-        self,
-        game: GameCandidate,
-    ) -> ReviewScore:
-        url = (
-            f"https://store.steampowered.com/"
-            f"appreviews/{game.steam_app_id}"
+    def __init__(self, http: httpx.AsyncClient, *, max_concurrency: int = 4):
+        self.http = http
+        self._semaphore = asyncio.Semaphore(max_concurrency)
+
+    async def _get_review_score(self, game: GameCandidate) -> ReviewScore:
+        response = await self.http.get(
+            f"{APPREVIEWS_URL}/{game.steam_app_id}",
+            params={
+                "json": 1,
+                "language": "all",
+                "filter": "all",
+                "purchase_type": "all",
+                "num_per_page": 1,
+            },
         )
+        response.raise_for_status()
 
-        params = {
-            "json": 1,
-            "language": "all",
-            "purchase_type": "all",
-            "num_per_page": 1,
-        }
+        # success:false(삭제·비공개 앱)나 예상 밖 응답이면 query_summary가 없을 수 있다
+        summary = response.json().get("query_summary") or {}
 
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            response = await client.get(url, params=params)
-            response.raise_for_status()
+        total_positive = summary.get("total_positive", 0)
+        total_negative = summary.get("total_negative", 0)
+        total_reviews = summary.get("total_reviews", 0)
 
-        data = response.json()
-        summary = data["query_summary"]
-
-        total_positive = summary["total_positive"]
-        total_negative = summary["total_negative"]
-        total_reviews = summary["total_reviews"]
-
-        recommend_ratio = (
-            total_positive / total_reviews
-            if total_reviews > 0
-            else 0.0
-        )
-
-        wilson_score = calculate_wilson_score(
-            total_positive,
-            total_reviews,
-        )
+        recommend_ratio = total_positive / total_reviews if total_reviews > 0 else 0.0
 
         return ReviewScore(
             igdb_id=game.igdb_id,
@@ -73,29 +64,35 @@ class SteamReviewScoreClient:
             total_negative=total_negative,
             total_reviews=total_reviews,
             recommend_ratio=recommend_ratio,
-            wilson_score=wilson_score,
+            wilson_score=calculate_wilson_score(total_positive, total_reviews),
             review_score_desc=summary.get("review_score_desc"),
         )
+
+    async def _guarded(self, game: GameCandidate) -> ReviewScore | None:
+        try:
+            async with self._semaphore:
+                return await self._get_review_score(game)
+        except (httpx.HTTPError, ValueError) as exc:
+            logger.warning(
+                "Steam review score lookup failed: igdb_id=%s (%s)",
+                game.igdb_id,
+                type(exc).__name__,
+            )
+            return None
 
     async def scores(
         self,
         games: list[GameCandidate],
     ) -> list[ReviewScore]:
-        """Steam App ID가 있는 게임들의 리뷰 통계를 병렬 조회한다."""
-        valid_games = [
-            game
-            for game in games
-            if game.steam_app_id is not None
-        ]
+        """Steam App ID가 있는 게임들의 리뷰 통계를 병렬 조회한다.
+
+        조회에 실패한 게임은 결과에서 빠지며, 다른 게임 조회에 영향을 주지 않는다.
+        """
+        valid_games = [game for game in games if game.steam_app_id is not None]
 
         if not valid_games:
             return []
 
-        return list(
-            await asyncio.gather(
-                *(
-                    self._get_review_score(game)
-                    for game in valid_games
-                )
-            )
-        )
+        results = await asyncio.gather(*(self._guarded(game) for game in valid_games))
+
+        return [result for result in results if result is not None]
