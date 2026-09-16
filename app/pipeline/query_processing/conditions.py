@@ -28,4 +28,4 @@ class GameConditions(BaseModel):
     max_session_minutes: float | None = Field(default=None, gt=0)
 
     platforms: list[str] = Field(default_factory=list)
-    recommendation_count: int = Field(default=3, ge=1, le=30)
+    recommendation_count: int = Field(default=5, ge=1, le=30)
