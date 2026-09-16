@@ -13,6 +13,30 @@ General rules:
 - Process each field independently.
 - Do not output themes or excluded_themes; they are not fields
   in GameConditions.
+- Do not duplicate a condition in preferences when it already has
+  a dedicated GameConditions field.
+- Price expressions such as "3만 원 이하", "3만 원 미만",
+  and "30,000원까지" belong only in max_price_krw.
+- Never copy a mandatory price expression into preferences.
+- preferences contains only soft preferences that do not have
+  a dedicated field.
+- Do not duplicate information in preferences when it is already
+  represented by a dedicated GameConditions field.
+- "혼자" belongs only in players=1 and play_mode="singleplayer".
+  Do not also add "혼자 선호" to preferences.
+- Online, local, cooperative, competitive, platform, price limit,
+  playtime, and recommendation count must not be duplicated
+  in preferences when their dedicated fields are populated.
+- Before returning, verify that a duration containing
+  "한 판", "한 번에", "세션", "매치", or "라운드"
+  was not duplicated into max_playtime_hours.
+- If the request is restricted to free games, verify that
+  max_price_krw=0 and that "무료 선호" is not duplicated
+  in preferences.
+- Category modifiers must not suppress category extraction.
+  "무료 협동 파티 게임만" means genres=["Party"].
+  Extract free, cooperative, and local conditions into their
+  respective dedicated fields.
 
 1. hardware
    - Extract only explicitly stated CPU model, GPU model,
@@ -21,6 +45,13 @@ General rules:
      and hardware.os respectively.
    - Preserve the relevant original wording verbatim
      in hardware.raw_text.
+   - "PC", "PC 게임", "컴퓨터 게임", or "노트북 게임" alone
+     indicates a platform, not an operating system or hardware specification.
+   - If the user mentions only PC without a CPU, GPU, system RAM,
+     or a specific operating system such as Windows 10 or Windows 11,
+     set hardware=null and include "PC" only in platforms.
+   - Never set hardware.os="PC".
+   - Do not populate hardware.raw_text with a platform-only expression.
    - GPU VRAM is not system RAM. "RTX 3060 8GB VRAM"
      must not set hardware.ram_gb=8.
    - Do not invent a CPU or GPU model from "good PC"
@@ -97,18 +128,48 @@ General rules:
 
 4. max_price_krw
    - Record an explicitly stated maximum price in whole KRW.
-   - "3만 원 이하" means 30000.
-   - "3만 원 미만" means 29999.
-   - "무료 게임만" means 0.
+   - "3만 원 이하" means max_price_krw=30000.
+   - "3만 원 미만" means max_price_krw=29999.
+   - A request restricted to free games means max_price_krw=0.
    - Do not turn "3만 원대" into a precise maximum.
    - "무료면 좋겠다" does not set max_price_krw.
+   - A maximum price does not imply a preference for free games.
+   - "3만 원 이하", "2만 원 이하", or any other positive budget
+     must not add "무료 선호" to preferences.
+   - The word "만" may apply to the complete game description.
+     For example, "무료 협동 파티 게임만" and
+     "무료로 할 수 있는 RPG만" both mean max_price_krw=0.
+   - Do not also add "무료 선호" to preferences when
+     max_price_krw=0.
+   - "무료면 좋겠다", "가능하면 무료", and "가급적 무료" are
+     soft preferences. In those cases, set max_price_krw=null
+     and add "무료 선호" to preferences.
+   - Do not turn vague expressions such as "3만 원대"
+     into a precise maximum.
+   - "무료 게임만" is a mandatory price condition represented by
+     max_price_krw=0 and must not be duplicated in preferences.
+   - "무료 협동 파티 게임만" is a mandatory free-game request:
+     set max_price_krw=0 and do not add "무료 선호" to preferences.
 
 5. max_playtime_hours, max_session_minutes
-   - Total game completion time belongs in max_playtime_hours.
-   - One session or one match belongs in max_session_minutes.
-   - Do not substitute one for the other.
-   - "30 minutes to 1 hour per session" means
-     max_session_minutes=60.
+   - max_playtime_hours is only for the total time required to
+     complete the entire game.
+   - Use max_playtime_hours only for expressions such as
+     "전체 플레이타임", "총 플레이타임", "엔딩까지",
+     "클리어까지", or "게임을 끝내는 데".
+   - max_session_minutes is only for one play session, match,
+     round, or sitting.
+   - "한 판", "한 번에", "한 세션", "한 매치", and "한 라운드"
+     belong only in max_session_minutes.
+   - "한 판은 30분 이하" means:
+     max_session_minutes=30 and max_playtime_hours=null.
+   - Never convert the same session duration into
+     max_playtime_hours.
+   - Set both fields only when the user explicitly states both
+     a total completion time and a separate session duration.
+   - Example:
+     "엔딩까지 20시간 이하이고 한 번에 30분씩"
+     means max_playtime_hours=20 and max_session_minutes=30.
 
 6. platforms, recommendation_count
    - Extract an explicitly stated platform independently
