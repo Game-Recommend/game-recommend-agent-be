@@ -1,0 +1,331 @@
+import json
+
+from app.agent.prompts import (
+    AGENT_SYSTEM,
+    build_rejection,
+    build_user_input,
+    describe_conditions,
+)
+from app.pipeline.query_processing.conditions import GameConditions
+from app.schemas.hardware import HardwareSpecs
+
+
+def make_conditions() -> GameConditions:
+    return GameConditions(
+        hardware=HardwareSpecs(
+            cpu="Ryzen 5 5600X",
+            gpu="RTX 3060",
+            ram_gb=16,
+            os="Windows 11",
+            raw_text=(
+                "Ryzen 5 5600X, RTX 3060, "
+                "시스템 RAM 16GB인 Windows 11 PC"
+            ),
+        ),
+        genres=["Adventure", "Action"],
+        excluded_genres=["Horror"],
+        preferences=[
+            "스토리 중요",
+            "Steam 평가 중요",
+        ],
+        players=2,
+        connection="online",
+        play_mode="cooperative",
+        max_price_krw=30000,
+        max_playtime_hours=30,
+        max_session_minutes=60,
+        platforms=["PC"],
+        recommendation_count=5,
+    )
+
+
+def extract_search_arguments(message: str) -> dict:
+    json_text = message.split(
+        "[search_games 검색 인자(JSON)]\n",
+        maxsplit=1,
+    )[1].split(
+        "\n\n[실행 지시]",
+        maxsplit=1,
+    )[0]
+
+    return json.loads(json_text)
+
+
+def test_describe_conditions_contains_all_conditions():
+    text = "\n".join(describe_conditions(make_conditions()))
+
+    expected = [
+        "CPU Ryzen 5 5600X",
+        "GPU RTX 3060",
+        "RAM 16GB",
+        "OS Windows 11",
+        "선호 분류: Adventure, Action",
+        "제외 분류: Horror",
+        "취향: 스토리 중요, Steam 평가 중요",
+        "인원: 2명(사용자 포함)",
+        "연결: 온라인",
+        "플레이 방식: 협동",
+        "예산: 30,000원 이하",
+        "전체 완료 시간: 30시간 이하",
+        "한 판 시간: 60분 이하",
+        "플랫폼: PC",
+        "요청 개수: 5개",
+    ]
+
+    for value in expected:
+        assert value in text
+
+
+def test_build_user_input_contains_all_sections():
+    message = build_user_input(
+        "친구 한 명과 온라인 협동 게임을 추천해줘.",
+        make_conditions(),
+    )
+
+    assert "[사용자 질문]" in message
+    assert "친구 한 명과 온라인 협동 게임을 추천해줘." in message
+    assert "[추출한 조건]" in message
+    assert "[search_games 검색 인자(JSON)]" in message
+    assert "[실행 지시]" in message
+
+
+def test_search_arguments_match_game_search_contract():
+    message = build_user_input("질문", make_conditions())
+    arguments = extract_search_arguments(message)
+
+    assert arguments == {
+        "genres": ["Adventure", "Action"],
+        "excluded_genres": ["Horror"],
+        "players": 2,
+        "connection": "online",
+        "play_mode": "cooperative",
+        "max_playtime_hours": 30.0,
+        "max_session_minutes": 60.0,
+        "platforms": ["PC"],
+    }
+
+
+def test_search_arguments_hide_server_managed_values():
+    message = build_user_input("질문", make_conditions())
+    arguments = extract_search_arguments(message)
+
+    assert "hardware" not in arguments
+    assert "max_price_krw" not in arguments
+    assert "preferences" not in arguments
+    assert "recommendation_count" not in arguments
+
+
+def test_empty_conditions_are_preserved_without_invention():
+    conditions = GameConditions()
+    arguments = extract_search_arguments(
+        build_user_input("아무 게임이나 추천해줘.", conditions)
+    )
+
+    assert arguments == {
+        "genres": [],
+        "excluded_genres": [],
+        "players": None,
+        "connection": None,
+        "play_mode": None,
+        "max_playtime_hours": None,
+        "max_session_minutes": None,
+        "platforms": [],
+    }
+
+
+def test_zero_budget_is_described_as_free_only():
+    conditions = GameConditions(max_price_krw=0)
+
+    text = "\n".join(describe_conditions(conditions))
+
+    assert "예산: 무료 게임만" in text
+
+
+def test_rejection_contains_all_problems():
+    message = build_rejection(
+        [
+            "추천 개수는 2개 이하여야 합니다 (현재 3개)",
+            "Game 1(igdb_id 1)은 추천할 수 없습니다: 가격 미충족",
+        ]
+    )
+
+    assert "[RecommendationDraft 거부]" in message
+    assert "추천 개수는 2개 이하여야 합니다" in message
+    assert "Game 1(igdb_id 1)" in message
+    assert "가격 미충족" in message
+    assert "후보 목록에 없는 igdb_id를 추가하지 마세요" in message
+    assert "RecommendationDraft를 다시 제출하세요" in message
+
+
+def test_agent_system_preserves_code_contracts():
+    required_names = {
+        "search_games",
+        "get_prices",
+        "assess_hardware",
+        "get_review_scores",
+        "summarize_reviews",
+        "RecommendationDraft",
+        "recommended_igdb_ids",
+        "AgentContext.conditions",
+    }
+
+    for name in required_names:
+        assert name in AGENT_SYSTEM
+
+    normalized_prompt = AGENT_SYSTEM.lower()
+
+    assert "[추출한 조건]" in AGENT_SYSTEM
+    assert "[search_games 검색 인자(JSON)]" in AGENT_SYSTEM
+    assert "same response turn" in normalized_prompt
+    assert "unmet or unknown" in normalized_prompt
+    assert "do not repeat the same" in normalized_prompt
+    assert '{"error": "..."}' in AGENT_SYSTEM
+
+def test_build_user_input_requires_reviews_before_draft():
+    conditions = GameConditions(
+        preferences=["좋은 Steam 평가"],
+        recommendation_count=3,
+    )
+
+    message = build_user_input(
+        "Steam 평가가 좋은 게임 3개 추천해줘.",
+        conditions,
+    )
+
+    assert "summarize_reviews" in message
+    assert "RecommendationDraft를 제출하기 전에" in message
+    assert "반드시 호출" in message
+
+def test_build_user_input_does_not_force_reviews_without_review_criterion():
+    conditions = GameConditions(
+        genres=["Adventure"],
+        recommendation_count=3,
+    )
+
+    message = build_user_input(
+        "어드벤처 게임 3개 추천해줘.",
+        conditions,
+    )
+
+    assert "이 요청은 Steam 평가를 추천 기준으로 포함합니다" not in message
+
+def test_build_user_input_states_dynamic_draft_limit():
+    conditions = GameConditions(
+        genres=["Action"],
+        recommendation_count=4,
+    )
+
+    message = build_user_input(
+        "액션 게임 4개 추천해줘.",
+        conditions,
+    )
+
+    assert "recommended_igdb_ids" in message
+    assert "최대 4개" in message
+    assert "전체 후보 수와 최종 추천 수를 혼동하지 마세요" in message
+
+def test_rejection_requires_reducing_excess_candidates():
+    message = build_rejection(
+        ["추천 개수는 4개 이하여야 합니다 (현재 10개)"]
+    )
+
+    assert "요청 개수 이하로 줄이세요" in message
+    assert "그대로 다시 제출하지 마세요" in message
+    assert "answer의 게임 수와 내용도 함께 수정하세요" in message
+
+def test_empty_hardware_is_normalized_to_none():
+    conditions = GameConditions(
+        hardware=HardwareSpecs(),
+    )
+
+    assert conditions.hardware is None
+
+def test_soft_free_preference_does_not_become_hard_budget():
+    conditions = GameConditions(
+        preferences=["무료 선호"],
+        max_price_krw=0,
+    )
+
+    assert conditions.max_price_krw is None
+
+def test_mandatory_free_budget_remains_zero():
+    conditions = GameConditions(
+        preferences=[],
+        max_price_krw=0,
+    )
+
+    assert conditions.max_price_krw == 0
+
+def test_build_user_input_explains_soft_free_preference():
+    conditions = GameConditions(
+        genres=["Role-playing (RPG)"],
+        preferences=["무료 선호"],
+        max_price_krw=None,
+        platforms=["PC"],
+        recommendation_count=3,
+    )
+
+    message = build_user_input(
+        "무료면 좋겠어.",
+        conditions,
+    )
+
+    assert "필수 가격 조건이 아닙니다" in message
+    assert "quote.amount_krw=0" in message
+    assert "무료 게임이라고 설명하지 마세요" in message
+
+def test_build_user_input_does_not_assume_multiplayer():
+    conditions = GameConditions(
+        genres=["Role-playing (RPG)"],
+        players=None,
+        connection=None,
+        play_mode=None,
+        platforms=["PC"],
+    )
+
+    message = build_user_input(
+        "친구들과 PC에서 할 RPG를 찾고 있어.",
+        conditions,
+    )
+
+    assert "인원, 연결 방식, 플레이 방식은 확정되지 않았습니다" in message
+    assert "친구와 함께할 수 있다고 단정하지 마세요" in message
+
+def test_build_user_input_does_not_warn_for_confirmed_multiplayer():
+    conditions = GameConditions(
+        players=3,
+        connection="online",
+        play_mode="cooperative",
+    )
+
+    message = build_user_input(
+        "친구 두 명과 온라인 협동 게임을 찾고 있어.",
+        conditions,
+    )
+
+    assert "인원, 연결 방식, 플레이 방식은 확정되지 않았습니다" not in message
+
+def test_agent_system_separates_review_score_and_summary():
+    assert "get_review_scores" in AGENT_SYSTEM
+    assert "summarize_reviews" in AGENT_SYSTEM
+    assert "wilson_score as the primary ranking signal" in AGENT_SYSTEM
+    assert "Pass only final selected candidate igdb_ids" in AGENT_SYSTEM
+    assert "must not be used as a substitute for get_review_scores" in AGENT_SYSTEM
+
+
+def test_user_input_explains_review_tool_roles():
+    conditions = GameConditions(
+        genres=["Role-playing (RPG)"],
+        preferences=["Steam 평가 중요"],
+        platforms=["PC"],
+        recommendation_count=3,
+    )
+
+    message = build_user_input(
+        "Steam 평가가 좋은 PC RPG 3개 추천해줘.",
+        conditions,
+    )
+
+    assert "get_review_scores" in message
+    assert "summarize_reviews" in message
+    assert "최종 추천 후보" in message
