@@ -50,6 +50,7 @@
   ├─ search_games      조건으로 IGDB 후보 검색 (최대 30개)
   ├─ get_prices        후보 igdb_id 목록 → 원화 가격·예산 판정
   ├─ assess_hardware   후보 igdb_id 목록 → 최소 사양·호환 판정
+  ├─ get_review_scores 후보 igdb_id 목록 → Steam 리뷰 통계 (추천 비율·Wilson 하한·평가 문구)
   └─ summarize_reviews 최종 후보 igdb_id 목록 → Steam 리뷰 한줄평
   ↓
 RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화된 최종 출력
@@ -113,7 +114,8 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 - 각 단계의 제한 시간은 기본 30초이며 생성자에서 변경할 수 있습니다.
   질문 분해·검색·최종 답변 실패는 HTTP 502, 연동 미설정은 503입니다.
 
-현재 순위는 검색 어댑터가 반환한 순서를 유지합니다. 리뷰 점수 기반 재정렬,
+현재 순위는 검색 어댑터가 반환한 순서를 유지합니다. 리뷰 점수는 `get_review_scores`로 조회해
+에이전트가 후보 선별에 쓰지만, 러너가 목록을 다시 정렬하지는 않습니다.
 자동 재시도, 호출 제한, 캐시, 대화 메모리는 아직 구현하지 않았습니다.
 
 ## 리뷰 요약
@@ -123,6 +125,17 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 버리고 `votes_up` 순으로 20개를 고른 뒤 OpenAI(gpt-4o-mini)로 100자 내외 한줄평을 만듭니다.
 `steam_app_id`가 없는 게임은 건너뛰어 경고만 남습니다. 클라이언트는 `load_dotenv()`로 `.env`를 읽어
 환경 변수 `OPENAI_API_KEY`를 직접 사용합니다.
+
+## 리뷰 점수
+
+리뷰 담당의 [steam_review_score.py](app/clients/steam_review_score.py)의 `SteamReviewScoreClient`가
+Steam 리뷰 통계(`total_reviews`, `recommend_ratio`, 95% Wilson 신뢰구간 하한, `review_score_desc`)를
+모아 `get_review_scores` Tool로 노출합니다. "평가 좋은 게임"처럼 **후보를 고를 때 쓰는 수치**이고,
+`summarize_reviews`의 한줄평은 **고른 뒤 카드에 쓰는 문장**이라 쓰임이 다릅니다.
+
+리뷰 점수는 다른 Tool과 달리 `CandidateStore`에 담지 않아 응답 본문(`RecommendationEvidence`)에
+나오지 않습니다. 에이전트가 판단에만 쓰는 값이며, 카드에 노출하려면 `EvaluatedGame`에 필드를
+더하고 프론트와 맞춰야 합니다. 러너의 안전망도 리뷰 점수는 대신 조회하지 않습니다.
 
 ## 비Steam 폴백
 
@@ -265,7 +278,7 @@ data: {"event":"result","result":{ ...JSON 응답과 같은 본문... }}
 
 | 이벤트 | `data` 필드 | 의미 |
 | --- | --- | --- |
-| `stage` | `stage`, `status`(`started`/`completed`/`failed`), `detail` | 단계 진행. 단계 이름은 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 요약, 조건 판정, 미디어. Tool 단계는 에이전트 추론 안에서 LLM이 부른 순서대로 나오며 같은 턴의 병렬 호출은 순서가 섞일 수 있다 |
+| `stage` | `stage`, `status`(`started`/`completed`/`failed`), `detail` | 단계 진행. 단계 이름은 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 점수, 리뷰 요약, 조건 판정, 미디어. Tool 단계는 에이전트 추론 안에서 LLM이 부른 순서대로 나오며 같은 턴의 병렬 호출은 순서가 섞일 수 있다 |
 | `result` | `result` | 완료. JSON 응답(`RecommendationResponse`)과 같은 본문 |
 | `error` | `detail` | 필수 단계 실패. JSON 응답의 502 `detail`과 같은 문장. 선택 단계 실패는 `stage`의 `failed`와 `warnings`로만 나타난다 |
 
@@ -330,6 +343,7 @@ CI 성공을 머지 조건으로 사용하려면 GitHub 브랜치 규칙을 설�
 | 가격 | `RoutedPriceClient(SteamStoreClient, CheapSharkClient)` | `app/clients/steam_store.py`, `routing.py`, `cheapshark.py` |
 | 사양 | `RoutedHardwareClient(SteamStoreClient, PcGamingWikiClient)` + `OpenAISpecJudge` | `app/clients/steam_store.py`, `pcgamingwiki.py`, `hardware_judge.py` |
 | 리뷰 요약 | `SteamReviewSummaryClient` | `app/clients/steam_reviews.py` |
+| 리뷰 점수 | `SteamReviewScoreClient` | `app/clients/steam_review_score.py` |
 | 미디어 | `MediaResolver(SteamGridDBClient, IgdbMediaClient)` | `app/clients/media.py` |
 | 추천기 | `AgentRecommender(LLMQueryParser, ToolSet, ChatOpenAI)` | `app/agent/runner.py` |
 
@@ -368,6 +382,7 @@ app/
 │     ├─ search.py          IGDB 담당: search_games
 │     ├─ price.py           가격·하드웨어 담당: get_prices (참조 예시)
 │     ├─ hardware.py        가격·하드웨어 담당: assess_hardware
+│     ├─ review_score.py    리뷰 담당: get_review_scores
 │     └─ reviews.py         리뷰 담당: summarize_reviews
 ├─ api/
 │  ├─ routes.py             /health, /recommend (JSON 또는 SSE), SSE 인코더
@@ -392,6 +407,7 @@ app/
 │  ├─ free_games.py         가격·하드웨어 담당: 자체 런처 무료 게임 표
 │  ├─ pcgamingwiki.py       가격·하드웨어 담당: 비Steam 요구 사양 폴백
 │  ├─ steam_reviews.py      리뷰 담당: Steam·웹 리뷰 수집과 LLM 한줄평 (SteamReviewSummaryClient)
+│  ├─ steam_review_score.py 리뷰 담당: Steam 리뷰 통계 (SteamReviewScoreClient)
 │  ├─ steamgriddb.py        미디어 담당: SteamGridDB 로고·히어로
 │  ├─ igdb_media.py         미디어 담당: IGDB 아트워크·트레일러
 │  └─ media.py              미디어 담당: 세 소스를 폴백 순서로 합치는 MediaResolver
