@@ -17,8 +17,14 @@ from app.schemas.hardware import HardwareSpecs
 
 def test_tool_schemas_hide_runtime_and_server_criteria():
     tools = {tool.name: tool for tool in build_tools()}
-    assert set(tools) == {"search_games", "get_prices", "assess_hardware", "summarize_reviews"}
-    for name in ("get_prices", "assess_hardware", "summarize_reviews"):
+    assert set(tools) == {
+        "search_games",
+        "get_prices",
+        "assess_hardware",
+        "summarize_reviews",
+        "get_review_scores",
+    }
+    for name in ("get_prices", "assess_hardware", "summarize_reviews", "get_review_scores"):
         assert list(tools[name].tool_call_schema.model_json_schema()["properties"]) == ["igdb_ids"]
     search = tools["search_games"].tool_call_schema.model_json_schema()["properties"]
     assert "max_price_krw" not in search and "hardware" not in search
