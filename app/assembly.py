@@ -110,7 +110,7 @@ def build_toolset(settings: Settings, http: httpx2.AsyncClient, openai: AsyncOpe
 def build_recommender(settings: Settings, tools: ToolSet) -> Recommender:
     """질문 파서와 에이전트 모델로 추천기를 만든다."""
     model = ChatOpenAI(
-        model=settings.agent_model, api_key=settings.openai_api_key, timeout=25, max_retries=1
+        model=settings.agent_model, api_key=settings.openai_api_key, timeout=25, max_retries=3
     )
     return AgentRecommender(LLMQueryParser(), tools, model)
 
@@ -128,7 +128,7 @@ def assemble(settings: Settings | None = None) -> AssembledRecommender | None:
     # 사양 판정(OpenAISpecJudge)이 쓰는 공유 클라이언트. wrap_openai로 감싸 LangSmith
     # 트레이스에 자식 run으로 남긴다(LANGSMITH_TRACING이 꺼져 있으면 무동작).
     openai = wrap_openai(
-        AsyncOpenAI(api_key=settings.openai_api_key, timeout=25, max_retries=1),
+        AsyncOpenAI(api_key=settings.openai_api_key, timeout=25, max_retries=3),
         chat_name="SpecJudge",
     )
     tools = build_toolset(settings, http, openai)
