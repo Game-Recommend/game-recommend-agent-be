@@ -35,6 +35,7 @@ AgentRecommender (app/agent/runner.py, LangChain create_agent)
   ├─ search_games      app/agent/tools/search.py    → GameSearchTool.run    (IGDB 담당)
   ├─ get_prices        app/agent/tools/price.py     → PriceTool.run         (가격·하드웨어 담당, 참조 예시)
   ├─ assess_hardware   app/agent/tools/hardware.py  → HardwareTool.run      (가격·하드웨어 담당)
+  ├─ get_review_scores app/agent/tools/review_score.py → ReviewScoreTool.run (리뷰 담당)
   └─ summarize_reviews app/agent/tools/reviews.py   → ReviewSummaryTool.run (리뷰 담당)
   ↓
 러너 후검증: 후보에 있는 id · 가격/사양 판정 통과 · 요청 개수 이하 → 위반 시 거부 사유를 붙여 1회 재호출
@@ -61,10 +62,14 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 | 완료 | `app/agent/schemas.py` | 최종 출력 `RecommendationDraft` |
 | 완료 | `app/agent/tools/__init__.py` | `build_tools()` Tool 목록 |
 | 완료 | `app/agent/progress.py` | 진행 콜백·`PipelineStageError`·`stream_progress()`·`Recommender` 계약 |
-| 완료 | `app/config.py`, `app/assembly.py`, `.env.example` | `OPENAI_AGENT_MODEL`, LangSmith 변수, 에이전트 조립 |
+| 완료 | `app/config.py`, `app/assembly.py` | `OPENAI_AGENT_MODEL`(비면 `OPENAI_MODEL`), 에이전트 조립 |
+| 완료 | `.env.example`, `app/__init__.py` | LangSmith 변수는 `LANGSMITH_TRACING`·`LANGSMITH_API_KEY`·`LANGSMITH_PROJECT` 세 개이고 `.env.example`에 주석으로 있다. LangChain이 환경 변수만 보고 켜므로 `Settings`에는 넣지 않았다. `.env`는 `app/__init__.py`의 `load_dotenv()`가 app 패키지 import 시점에 올린다 |
 | 완료 | `tests/agent/` | 대본 모델(`ScriptedChatModel`)로 루프·후검증·안전망·SSE 검증 |
-| 남음 | 실제 키로 `python -m app.assembly "..."` 실행, README 예상 질문 5개 전후 비교 기록 | 발표 자료 |
-| 남음 | Vercel 프로젝트 생성·환경 변수, 패키지 크기 확인 | 배포 |
+| 완료 | Tool 5개로 늘어난 계약 반영 | `get_review_scores` 추가에 맞춰 README·TEAM.md의 Tool 목록·SSE 단계명(`리뷰 점수`)·`ToolSet`을 맞췄다. FE도 `AGENT_TOOL_STAGES`에 `리뷰 점수`를 넣어 반영했다(agent-fe `5b41bc7`) |
+| 완료 | 실제 키로 예상 질문 5개 전후 비교 | 요약은 README `## 전후 비교`, 질문별 타임라인·원시 기록·재실행 방법은 `evals/agent_questions/`다. 같은 턴 병렬 호출과 안전망이 타임라인에 그대로 보인다 |
+| 완료 | Vercel 프로젝트·자동 배포 | GitHub 연동이라 저장소에 `vercel.json`이 없다. `main`에 머지하면 프로덕션이 자동 배포된다 |
+| 완료 | 패키지 크기 확인 | dev 의존성(37MB)을 뺀 약 84MB로 서버리스 250MB 제한에 여유. 큰 순서로 `openai` 24MB, `langsmith` 9.9MB, `langchain_core` 5.8MB. 로컬(macOS·3.14) 측정이라 Vercel(Linux·3.12)과 컴파일 휠 크기가 다를 수 있다 |
+| 완료 | Vercel 환경 변수 확인 | 필수는 `API_KEY`·`OPENAI_API_KEY`·`IGDB_CLIENT_ID`·`IGDB_CLIENT_SECRET` 네 개이고, 하나라도 비면 `/recommend`가 503이다. `STEAMGRIDDB_API_KEY`는 없어도 동작하며 로고·배너만 빠진다. `OPENAI_MODEL`·`OPENAI_AGENT_MODEL`은 기본값(`gpt-4o-mini`)이 있어 등록하지 않는다. 빈 값으로 등록하면 기본값을 덮어써 모델명 없이 호출되므로, `.env.example`을 통째로 붙여넣지 않는다. 배포 URL은 배포 보호(302)라 외부에서 `/health`를 확인할 수 없고, 함수 로그의 `missing settings` 경고로 본다 |
 
 ### 질문 가공 담당
 
@@ -102,6 +107,7 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 
 | 파일 | 할 일 |
 | --- | --- |
+| `app/agent/tools/review_score.py` | 완료. `get_review_scores`(Steam 리뷰 통계)는 후보 선별용 수치, `summarize_reviews`는 카드용 문장으로 쓰임을 나눴다. 결과는 `CandidateStore`에 담지 않아 응답 본문에 나오지 않는다 |
 | `app/agent/tools/reviews.py` | `summarize_reviews` docstring 다듬기. "최종 추천 후보에만" 원칙과 비용 안내 유지 |
 | `app/agent/tools/reviews.py` | 에이전트가 "평가 좋은 게임" 조건에 쓸 수 있는 압축 필드 검토(긍정 비율, `review_score_desc`). `ReviewSummary` 모델 확장은 리뷰 담당 결정이며, 바꾸면 `schemas/review.py` 소비자(FE 카드)와 조율 |
 | `app/clients/steam_reviews.py` | 게임을 순차 처리해 3개면 3배 느리다. `asyncio.gather`로 게임별 병렬 처리 검토(리뷰 담당 모듈이므로 리뷰 담당이 결정) |
@@ -142,12 +148,13 @@ async def get_prices(igdb_ids: list[int], runtime: ToolRuntime[AgentContext]) ->
 
 | 항목 | 정의 | 위치 |
 | --- | --- | --- |
-| `ToolSet` | 서비스 도구 묶음. `game_search`, `price`, `hardware`, `review_summary`, `media` | `app/agent/context.py` |
+| `ToolSet` | 서비스 도구 묶음. `game_search`, `price`, `hardware`, `review_summary`, `review_score`, `media` | `app/agent/context.py` |
 | `AgentContext` | 요청 컨텍스트. `conditions`, `store`, `tools`, `progress`, `run_stage()`, `optional()` | `app/agent/context.py` |
 | `CandidateStore` | `add_candidates()`, `resolve(ids)`, `prices/hardware/reviews/media` dict, `warn()`, `validate_draft()`, `build_evidence()` | `app/agent/context.py` |
 | Tool 반환 | 성공: 압축 dict → JSON 문자열. 실패: `{"error": "..."}` (+ warnings). 모르는 id: `{"error": "후보 목록에 없는 igdb_id: [...]"}` | `run_stage()` |
 | `RecommendationDraft` | `recommended_igdb_ids`, `answer`. 러너가 검증한다 | `app/agent/schemas.py` |
-| SSE 단계명 | 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 요약, 조건 판정, 미디어 | `runner.py`, 각 Tool의 `STAGE` |
+| SSE 단계명 | 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 점수, 리뷰 요약, 조건 판정, 미디어 | `runner.py`, 각 Tool의 `STAGE` |
+| 리뷰 점수 저장 | `get_review_scores` 결과는 `CandidateStore`에 담지 않는다. 에이전트 판단 전용이라 응답 본문·안전망에 없다 | `app/agent/tools/review_score.py` |
 
 ## 작업 순서 (9/16 ~ 9/18)
 

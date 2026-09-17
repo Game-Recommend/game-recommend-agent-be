@@ -15,13 +15,12 @@ import asyncio
 import os
 
 import httpx2 as httpx
-from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
 from app.schemas.game import GameCandidate
 from app.schemas.review import ReviewSummary
 
-load_dotenv()
+# `.env`는 app 패키지를 import할 때 올라온다(app/__init__.py). 여기서는 os.environ만 읽는다
 
 class SteamReviewSummaryClient:
     """steam리뷰를 우선 사용하여 게임별 한줄평을 생성한다"""

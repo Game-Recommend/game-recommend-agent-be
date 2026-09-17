@@ -38,7 +38,34 @@
 - **플레이타임 + 장르**: "취업 준비하면서 가볍게 할 게임을 찾고 있어. 한 번에 30분~1시간 정도 하기 좋고, 전체 플레이타임도 15시간을 넘지 않는 싱글 게임이면 좋겠어."
 - **복합 조건 (데모용)**: "RTX 3060, RAM 16GB PC를 사용하고 있어. 친구 한 명과 온라인으로 같이 할 수 있고, 공포 게임은 싫어. 3만 원 이하이면서 Steam 평가가 좋은 게임 3개만 추천해줘."
 
+## 전후 비교 (고정 파이프라인 → 에이전트)
+
+2026-09-17에 위 예상 질문 5개를 원본 [game-recommend-be](https://github.com/Game-Recommend/game-recommend-be)
+(고정 파이프라인)와 이 저장소(에이전트)로 각각 실행한 결과입니다. 질문별 상세·타임라인·원시 기록은
+[evals/agent_questions/REPORT.md](evals/agent_questions/REPORT.md)에 있습니다.
+
+| 질문 유형 | 원본 (고정 파이프라인) | 에이전트 | 에이전트가 부른 Tool (순서) |
+| --- | --- | --- | --- |
+| 하드웨어 | 4.87초 · 0개 | 30.05초 · 3개 | 게임 검색 → 하드웨어 → 리뷰 점수 → 리뷰 요약 → 가격 |
+| 멀티플레이 + 인원 | 17.48초 · 5개 | 27.07초 · 5개 | 게임 검색 → 가격 → 하드웨어 → 리뷰 점수 → 리뷰 요약 → 리뷰 요약 |
+| 가격 + 취향 | 22.47초 · 5개 | 28.76초 · 5개 | 게임 검색 → 가격 → 하드웨어 → 리뷰 점수 → 리뷰 요약 |
+| 플레이타임 + 장르 | 16.14초 · 5개 | 40.07초 · 5개 | 게임 검색 → 가격 → 하드웨어 → 리뷰 점수 → 리뷰 요약 |
+| 복합 조건 (데모용) | 24.77초 · 3개 | 19.71초 · 2개 | 게임 검색 → 가격 → 하드웨어 → 리뷰 점수 → 리뷰 요약 → 리뷰 요약 |
+
+- **검색이 비면 고정 파이프라인은 거기서 끝납니다.** 하드웨어 질문에서 원본은 충족 후보를 찾지 못해
+  4.9초 만에 빈손으로 끝냈고, 에이전트는 검색 인자를 LLM이 정해 후보 30개를 얻고 3개를 추천했습니다.
+- **도구 순서와 횟수가 질문마다 달라집니다.** 원본은 늘 같은 한 바퀴이고, 에이전트는 사양을 먼저 보거나
+  리뷰 요약을 두 번 부릅니다. 같은 턴에 고른 도구는 병렬로 실행합니다.
+- **대신 느립니다.** 원본 4.9~24.8초, 에이전트 19.7~40.1초입니다. 도구를 고르는 LLM 왕복이 더해집니다.
+- **제외 목록은 에이전트가 얇습니다.** 복합 조건 질문에서 원본은 20개를 제외 근거로 남겼지만 에이전트는
+  1개입니다. LLM이 고른 후보만 조회하고, 조회하지 않은 후보는 판단한 적이 없어 제외에 넣지 않습니다.
+
 ## 에이전트 흐름
+
+![게임 추천 에이전트 서비스 처리 흐름](docs/game_recommend_flow.png)
+
+질의 한 건이 추천 답변이 되기까지의 6단계입니다. 고칠 때는 [SVG](docs/game_recommend_flow.svg)를 씁니다.
+아래는 같은 흐름에서 에이전트 루프를 자세히 본 것입니다.
 
 ```text
 질문
@@ -50,6 +77,7 @@
   ├─ search_games      조건으로 IGDB 후보 검색 (최대 30개)
   ├─ get_prices        후보 igdb_id 목록 → 원화 가격·예산 판정
   ├─ assess_hardware   후보 igdb_id 목록 → 최소 사양·호환 판정
+  ├─ get_review_scores 후보 igdb_id 목록 → Steam 리뷰 통계 (추천 비율·Wilson 하한·평가 문구)
   └─ summarize_reviews 최종 후보 igdb_id 목록 → Steam 리뷰 한줄평
   ↓
 RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화된 최종 출력
@@ -113,7 +141,8 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 - 각 단계의 제한 시간은 기본 30초이며 생성자에서 변경할 수 있습니다.
   질문 분해·검색·최종 답변 실패는 HTTP 502, 연동 미설정은 503입니다.
 
-현재 순위는 검색 어댑터가 반환한 순서를 유지합니다. 리뷰 점수 기반 재정렬,
+현재 순위는 검색 어댑터가 반환한 순서를 유지합니다. 리뷰 점수는 `get_review_scores`로 조회해
+에이전트가 후보 선별에 쓰지만, 러너가 목록을 다시 정렬하지는 않습니다.
 자동 재시도, 호출 제한, 캐시, 대화 메모리는 아직 구현하지 않았습니다.
 
 ## 리뷰 요약
@@ -121,8 +150,19 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 리뷰 담당의 [steam_reviews.py](app/clients/steam_reviews.py)의 `SteamReviewSummaryClient`가
 `ReviewSummaryClient` 계약을 구현합니다. Steam 리뷰를 한국어 우선으로 최대 100개 받아 80자 미만을
 버리고 `votes_up` 순으로 20개를 고른 뒤 OpenAI(gpt-4o-mini)로 100자 내외 한줄평을 만듭니다.
-`steam_app_id`가 없는 게임은 건너뛰어 경고만 남습니다. 클라이언트는 `load_dotenv()`로 `.env`를 읽어
-환경 변수 `OPENAI_API_KEY`를 직접 사용합니다.
+`steam_app_id`가 없는 게임은 건너뛰어 경고만 남습니다. 클라이언트는 `Settings` 대신 환경 변수
+`OPENAI_API_KEY`를 직접 읽습니다(`.env`는 [app/__init__.py](app/__init__.py)가 올립니다).
+
+## 리뷰 점수
+
+리뷰 담당의 [steam_review_score.py](app/clients/steam_review_score.py)의 `SteamReviewScoreClient`가
+Steam 리뷰 통계(`total_reviews`, `recommend_ratio`, 95% Wilson 신뢰구간 하한, `review_score_desc`)를
+모아 `get_review_scores` Tool로 노출합니다. "평가 좋은 게임"처럼 **후보를 고를 때 쓰는 수치**이고,
+`summarize_reviews`의 한줄평은 **고른 뒤 카드에 쓰는 문장**이라 쓰임이 다릅니다.
+
+리뷰 점수는 다른 Tool과 달리 `CandidateStore`에 담지 않아 응답 본문(`RecommendationEvidence`)에
+나오지 않습니다. 에이전트가 판단에만 쓰는 값이며, 카드에 노출하려면 `EvaluatedGame`에 필드를
+더하고 프론트와 맞춰야 합니다. 러너의 안전망도 리뷰 점수는 대신 조회하지 않습니다.
 
 ## 비Steam 폴백
 
@@ -177,7 +217,9 @@ make run                # http://127.0.0.1:8000/health
 
 키 목록의 기준은 [.env.example](.env.example)입니다. 서버 시작 시 [app/assembly.py](app/assembly.py)가
 이 설정을 읽어 어댑터를 조립하므로, 키를 채우고 `make run`하면 추천 기능이 켜집니다.
-`steam_reviews.py`는 `load_dotenv()`로 `.env`를 직접 읽으므로 서버는 저장소 루트에서 실행합니다.
+`.env`는 [app/__init__.py](app/__init__.py)의 `load_dotenv()`가 app 패키지 import 시점에 한 번 올립니다.
+`steam_reviews.py`와 LangSmith 추적처럼 환경 변수를 직접 보는 쪽이 여기에 기댑니다. 이미 있는 환경
+변수는 덮어쓰지 않으므로 배포 환경 값이 우선하고, 로컬에서는 저장소 루트에서 실행합니다.
 
 ### 개발·검증 명령
 
@@ -265,15 +307,17 @@ data: {"event":"result","result":{ ...JSON 응답과 같은 본문... }}
 
 | 이벤트 | `data` 필드 | 의미 |
 | --- | --- | --- |
-| `stage` | `stage`, `status`(`started`/`completed`/`failed`), `detail` | 단계 진행. 단계 이름은 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 요약, 조건 판정, 미디어. Tool 단계는 에이전트 추론 안에서 LLM이 부른 순서대로 나오며 같은 턴의 병렬 호출은 순서가 섞일 수 있다 |
+| `stage` | `stage`, `status`(`started`/`completed`/`failed`), `detail` | 단계 진행. 단계 이름은 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 점수, 리뷰 요약, 조건 판정, 미디어. Tool 단계는 에이전트 추론 안에서 LLM이 부른 순서대로 나오며 같은 턴의 병렬 호출은 순서가 섞일 수 있다 |
 | `result` | `result` | 완료. JSON 응답(`RecommendationResponse`)과 같은 본문 |
 | `error` | `detail` | 필수 단계 실패. JSON 응답의 502 `detail`과 같은 문장. 선택 단계 실패는 `stage`의 `failed`와 `warnings`로만 나타난다 |
 
 스트림이 열린 뒤에는 HTTP 상태가 항상 200이고, 15초 동안 이벤트가 없으면 `: keep-alive` 주석 줄을
 보냅니다. 인증 실패(401)·미설정(503)·검증 실패(422)는 스트림이 열리기 전에 그대로 반환합니다.
 클라이언트가 연결을 끊으면 진행 중인 에이전트 실행을 취소합니다.
-프론트 서버는 현재 `Accept: application/json`으로 호출하므로 SSE를 쓰려면 프록시(`src/lib/backend.ts`)가
-`Accept: text/event-stream`을 보내고 응답 본문을 그대로 흘려보내도록 바꿔야 합니다.
+프론트 서버는 진행 표시를 켤 때 프록시(`src/lib/backend.ts`)가 `Accept: text/event-stream`을 붙여
+호출하고 본문을 버퍼링 없이 흘려보냅니다. 진행 표시가 아는 단계 이름은 FE의 `PIPELINE_FLOW`
+(질문 분해·에이전트 추론·조건 판정·미디어)와 `AGENT_TOOL_STAGES`(게임 검색·가격·하드웨어·리뷰 점수·리뷰 요약)이므로,
+Tool을 더하거나 `STAGE`를 바꾸면 FE와 함께 고쳐야 합니다.
 정확한 중첩 필드는 [응답 모델](app/schemas/recommendation.py)과 Swagger UI에서 확인하세요.
 FE 개발용 전체 예시는 [recommend_response.json](tests/integration/examples/recommend_response.json)입니다.
 
@@ -330,6 +374,7 @@ CI 성공을 머지 조건으로 사용하려면 GitHub 브랜치 규칙을 설�
 | 가격 | `RoutedPriceClient(SteamStoreClient, CheapSharkClient)` | `app/clients/steam_store.py`, `routing.py`, `cheapshark.py` |
 | 사양 | `RoutedHardwareClient(SteamStoreClient, PcGamingWikiClient)` + `OpenAISpecJudge` | `app/clients/steam_store.py`, `pcgamingwiki.py`, `hardware_judge.py` |
 | 리뷰 요약 | `SteamReviewSummaryClient` | `app/clients/steam_reviews.py` |
+| 리뷰 점수 | `SteamReviewScoreClient` | `app/clients/steam_review_score.py` |
 | 미디어 | `MediaResolver(SteamGridDBClient, IgdbMediaClient)` | `app/clients/media.py` |
 | 추천기 | `AgentRecommender(LLMQueryParser, ToolSet, ChatOpenAI)` | `app/agent/runner.py` |
 
@@ -354,6 +399,7 @@ HTTP 서버 없이 전체 흐름을 확인하려면 저장소 루트에서 실�
 pyproject.toml             의존성·빌드·pytest·Ruff·Vercel 설정
 Makefile                   개발 서버·검증 명령
 TEAM.md                    역할별 담당 파일·연결 계약
+docs/game_recommend_flow.*  서비스 처리 흐름 다이어그램 (PNG 문서용 · SVG 수정용)
 app/
 ├─ main.py                  FastAPI 앱. 시작 시 조립, 종료 시 클라이언트 정리
 ├─ assembly.py              .env 설정으로 ToolSet을 만들고 에이전트 추천기를 조립
@@ -368,6 +414,7 @@ app/
 │     ├─ search.py          IGDB 담당: search_games
 │     ├─ price.py           가격·하드웨어 담당: get_prices (참조 예시)
 │     ├─ hardware.py        가격·하드웨어 담당: assess_hardware
+│     ├─ review_score.py    리뷰 담당: get_review_scores
 │     └─ reviews.py         리뷰 담당: summarize_reviews
 ├─ api/
 │  ├─ routes.py             /health, /recommend (JSON 또는 SSE), SSE 인코더
@@ -392,6 +439,7 @@ app/
 │  ├─ free_games.py         가격·하드웨어 담당: 자체 런처 무료 게임 표
 │  ├─ pcgamingwiki.py       가격·하드웨어 담당: 비Steam 요구 사양 폴백
 │  ├─ steam_reviews.py      리뷰 담당: Steam·웹 리뷰 수집과 LLM 한줄평 (SteamReviewSummaryClient)
+│  ├─ steam_review_score.py 리뷰 담당: Steam 리뷰 통계 (SteamReviewScoreClient)
 │  ├─ steamgriddb.py        미디어 담당: SteamGridDB 로고·히어로
 │  ├─ igdb_media.py         미디어 담당: IGDB 아트워크·트레일러
 │  └─ media.py              미디어 담당: 세 소스를 폴백 순서로 합치는 MediaResolver
@@ -411,4 +459,9 @@ tests/
 ├─ reviews/                 리뷰 담당 테스트와 대역
 ├─ media/                   미디어 담당 테스트와 대역
 └─ integration/             HTTP API·SSE·조립 테스트 (대본 모델로 에이전트를 돌린다)
+
+evals/
+├─ agent_questions/         예상 질문 5개의 고정 파이프라인·에이전트 전후 비교 (실제 API, CI 제외)
+├─ non_steam/               비Steam 폴백 실측 평가
+└─ price_hardware/          가격·사양 평가셋
 ```
