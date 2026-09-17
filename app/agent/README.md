@@ -18,14 +18,14 @@ flowchart TD
     H --> I["RecommendationResponse"]
 ```
 
-`LLMQueryParser`는 Agent 내부 Tool이 아니라 Agent 실행 전의 0단계다. 사용자 질문을 `GameConditions`로 변환한 뒤, `AgentRecommender`가 해당 조건을 서버 컨텍스트로 전달받아 Tool을 선택한다.
+`LLMQueryParser`는 Agent 내부 Tool이 아니라 Agent 실행 전의 0단계다(그래프의 `parse` 노드). 사용자 질문을 `GameConditions`로 변환한 뒤, `AgentRecommender`가 해당 조건을 서버 컨텍스트로 전달받아 Tool을 선택한다.
 
 ## 주요 파일
 
 | 파일 | 역할 |
 |---|---|
 | `app/agent/context.py` | `AgentContext`, `CandidateStore`, `ToolSet`과 공통 실행 상태 |
-| `app/agent/runner.py` | LangChain Agent 조립, Tool loop, 후검증, 재시도, 최종 응답 생성 |
+| `app/agent/runner.py` | LangGraph `StateGraph` 조립(LangChain Agent는 서브그래프 노드), Tool loop, 후검증, 재시도, 최종 응답 생성 |
 | `app/agent/schemas.py` | Agent 구조화 출력인 `RecommendationDraft` |
 | `app/agent/prompts.py` | Agent 시스템 프롬프트, 사용자 입력, 거부 메시지 구성 |
 | `app/agent/progress.py` | 실행 단계와 SSE 진행 이벤트 |

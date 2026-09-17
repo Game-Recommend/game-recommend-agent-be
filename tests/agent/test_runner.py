@@ -5,6 +5,7 @@ import asyncio
 import pytest
 from langchain_core.messages import HumanMessage
 
+from app.agent.context import AgentContext
 from app.agent.progress import PipelineStageError
 from app.schemas.recommendation import ErrorEvent, ResultEvent, StageEvent
 from tests.agent.fakes import checks, draft, reviews, search
@@ -14,6 +15,13 @@ SEARCH = dict(genres=["Adventure"])
 
 def run(recommender, question="어드벤처 게임 2개"):
     return asyncio.run(recommender.run(question))
+
+
+def assert_calls(services, *agent_calls):
+    """에이전트 구간은 순서대로, 그 뒤 리뷰·미디어는 병렬 노드라 순서를 묻지 않는다."""
+    head, tail = services.calls[: len(agent_calls)], services.calls[len(agent_calls) :]
+    assert head == list(agent_calls)
+    assert sorted(tail) == ["media", "reviews"]
 
 
 def test_agent_flow_builds_full_response(make_recommender, services):
@@ -73,7 +81,7 @@ def test_rejected_draft_is_retried_with_reasons(make_recommender, services):
 
     assert [g.game.igdb_id for g in response.games] == [3]
     assert response.answer == "수정"
-    assert services.calls == ["parse", "search", "price", "hardware", "reviews", "media"]
+    assert_calls(services, "parse", "search", "price", "hardware")
 
 
 def test_rejection_message_lists_problems(make_recommender):
@@ -81,15 +89,14 @@ def test_rejection_message_lists_problems(make_recommender):
     recommender = make_recommender(
         search(**SEARCH), checks([1, 2, 3]), draft([1, 2, 3]), draft([3])
     )
-    original = recommender._invoke
-
-    async def spy(messages, ctx):
-        if isinstance(messages[-1], HumanMessage) and "확정할 수 없습니다" in messages[-1].content:
-            seen.append(messages[-1].content.splitlines())
-        return await original(messages, ctx)
-
-    recommender._invoke = spy
-    run(recommender)
+    state = asyncio.run(
+        recommender.graph.ainvoke(
+            {"question": "q", "messages": []}, context=AgentContext.pending(recommender.tools)
+        )
+    )
+    for message in state["messages"]:
+        if isinstance(message, HumanMessage) and "확정할 수 없습니다" in message.content:
+            seen.append(message.content.splitlines())
 
     assert len(seen) == 1
     lines = seen[0]
@@ -116,7 +123,7 @@ def test_runner_fetches_skipped_checks_and_reviews_before_finalizing(make_recomm
 
     response = run(recommender)
 
-    assert services.calls == ["parse", "search", "price", "hardware", "reviews", "media"]
+    assert_calls(services, "parse", "search", "price", "hardware")
     assert response.games[0].price.quote.amount_krw == 100
     assert response.games[0].hardware.check.status == "met"
     assert response.games[0].review.summary == "테스트 요약"
@@ -191,6 +198,15 @@ def test_model_without_draft_fails_cleanly(make_recommender):
 def test_graph_has_model_and_tools_nodes(make_recommender):
     mermaid = make_recommender(draft([])).graph_mermaid()
     assert "model(model)" in mermaid and "tools(tools)" in mermaid
+
+
+def test_graph_shows_whole_pipeline(make_recommender):
+    mermaid = make_recommender(draft([])).graph_mermaid()
+    nodes = ("parse", "safety_net", "validate", "retry", "judge", "reviews", "media", "respond")
+    for node in nodes:
+        assert f"{node}({node})" in mermaid
+    assert "subgraph agent" in mermaid
+    assert "validate -.-> retry" in mermaid and "retry --> agent" in mermaid
 
 
 async def _collect(stream):
