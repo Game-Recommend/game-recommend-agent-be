@@ -11,6 +11,7 @@ steam review가 충분하지 않을 경우 tavily 웹검색으로 보충
 
 ##steam만
 
+import asyncio
 import os
 
 import httpx2 as httpx
@@ -25,10 +26,11 @@ load_dotenv()
 class SteamReviewSummaryClient:
     """steam리뷰를 우선 사용하여 게임별 한줄평을 생성한다"""
 
-    def __init__(self):
-        
+    def __init__(self, *, max_concurrency: int = 4):
+
         self.llm = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.model = "gpt-4o-mini"
+        self._semaphore = asyncio.Semaphore(max_concurrency)
 
 
 
@@ -260,14 +262,10 @@ class SteamReviewSummaryClient:
 
 
 
-    async def summarize(
-        self, games: list[GameCandidate]
-)->list[ReviewSummary]:
-        results = []
-
-        for game in games:
-            if game.steam_app_id is None:
-                continue
+    async def _summarize_one(
+        self, game: GameCandidate
+)->ReviewSummary:
+        async with self._semaphore:
             reviews = await self._collect_all_reviews(
                 steam_app_id = game.steam_app_id
         )
@@ -287,11 +285,18 @@ class SteamReviewSummaryClient:
                 and source_url not in source_urls
             ):
                     source_urls.append(source_url)
-            results.append(
-                ReviewSummary(
+
+            return ReviewSummary(
                 igdb_id=game.igdb_id,
                 summary=summary,
                 source_urls=source_urls
             )
+
+    async def summarize(
+        self, games: list[GameCandidate]
+)->list[ReviewSummary]:
+        valid_games = [game for game in games if game.steam_app_id is not None]
+
+        return list(
+            await asyncio.gather(*(self._summarize_one(game) for game in valid_games))
         )
-        return results
