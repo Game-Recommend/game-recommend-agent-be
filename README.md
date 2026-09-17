@@ -23,7 +23,7 @@
 | 데이터 검증·설정 | Pydantic, pydantic-settings |
 | HTTP 클라이언트 | `httpx2` |
 | LLM | OpenAI SDK (질문 가공·사양 판정·리뷰 한줄평), `langchain-openai` `ChatOpenAI` (에이전트) |
-| 에이전트 | LangChain 1.x `create_agent` + LangGraph: Tool 호출 루프, 같은 턴 병렬 호출, 구조화된 최종 출력 |
+| 에이전트 | LangGraph `StateGraph`(질문 분해 → 에이전트 → 안전망 → 후검증·재시도 → 후처리) 안에 LangChain 1.x `create_agent`를 서브그래프로: Tool 호출 루프, 같은 턴 병렬 호출, 구조화된 최종 출력 |
 | 개발 도구 | pytest, Ruff, Makefile |
 | CI | GitHub Actions: PR 및 `main` 푸시 시 린트·테스트 |
 
@@ -93,7 +93,10 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 - Tool은 LLM에 압축 JSON만 돌려주고 응답용 전체 모델은 요청 단위 `CandidateStore`에 쌓습니다.
 - Tool 실패는 예외로 올리지 않고 `{"error": ...}`로 LLM에 돌려주며 `warnings`에 남깁니다. 502는 질문 분해 실패,
   에이전트 루프 실패(모델 오류·반복 상한·전체 120초 초과), 재시도 후에도 후검증 실패일 때만 납니다.
-- 에이전트 모델은 `OPENAI_AGENT_MODEL`(비어 있으면 `OPENAI_MODEL`)입니다. 그래프는 `make graph`로 출력합니다.
+- 에이전트 모델은 `OPENAI_AGENT_MODEL`(비어 있으면 `OPENAI_MODEL`)입니다.
+- 위 흐름 전체가 LangGraph `StateGraph` 하나입니다(`parse → agent → safety_net → validate ⇄ retry → judge →
+  reviews·media → respond`). `create_agent` 루프는 `agent` 서브그래프 노드이고, 후검증 재시도는 조건부
+  엣지입니다. `make graph`가 서브그래프까지 펼친 Mermaid를 출력합니다.
 - 설계 원칙과 역할별 할 일은 [TEAM.md](TEAM.md), 프롬프트는 [app/agent/prompts.py](app/agent/prompts.py)입니다.
 
 ## 프롬프트 엔지니어링
@@ -260,7 +263,7 @@ make run                # http://127.0.0.1:8000/health
 | `make test-reviews` | 리뷰 요약 도구 테스트 |
 | `make test-integration` | HTTP API·SSE·조립 테스트 (대본 모델로 에이전트를 돌린다) |
 | `make test-agent` | 에이전트 계층 테스트 (대본 모델로 OpenAI 없이 루프·후검증·안전망 검증) |
-| `make graph` | 에이전트 그래프를 Mermaid로 출력 |
+| `make graph` | 추천 파이프라인 그래프(에이전트 서브그래프 포함)를 Mermaid로 출력 |
 
 테스트 옵션은 `make test ARGS="-q"`처럼 전달합니다. `make test-llm`은
 `make test-query-processing`의 호환용 별칭입니다. 테스트는 역할별 가짜 연동을
@@ -433,7 +436,7 @@ app/
 ├─ config.py                .env 설정 (OPENAI_AGENT_MODEL 포함)
 ├─ agent/                   에이전트 계층 (통합 담당이 뼈대, Tool 파일은 도메인 담당)
 │  ├─ context.py            공통 계약: ToolSet · AgentContext(run_stage) · CandidateStore
-│  ├─ runner.py             create_agent 루프 · 후검증·재시도 · 안전망 · 미디어 후처리 · stream()
+│  ├─ runner.py             StateGraph(create_agent 서브그래프) · 후검증·재시도 · 안전망 · 후처리 · stream()
 │  ├─ progress.py           진행 콜백 · PipelineStageError · stream_progress() · Recommender 계약
 │  ├─ prompts.py            질문 가공 담당: 시스템 프롬프트 · 조건 설명 · 사용자 입력 · 거부 문구
 │  ├─ schemas.py            최종 출력 RecommendationDraft

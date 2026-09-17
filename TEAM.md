@@ -58,7 +58,7 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 | 상태 | 파일 | 내용 |
 | --- | --- | --- |
 | 완료 | `app/agent/context.py` | `ToolSet`, `AgentContext.run_stage()/optional()`, `CandidateStore`(resolve·evaluate·validate_draft·build_evidence) |
-| 완료 | `app/agent/runner.py` | `create_agent` 조립, 후검증·재시도, 안전망, 미디어 후처리, `stream()`, Mermaid 그래프 |
+| 완료 | `app/agent/runner.py` | LangGraph `StateGraph` 조립(`create_agent`는 서브그래프 노드), 후검증·재시도, 안전망, 미디어 후처리, `stream()`, Mermaid 그래프 |
 | 완료 | `app/agent/schemas.py` | 최종 출력 `RecommendationDraft` |
 | 완료 | `app/agent/tools/__init__.py` | `build_tools()` Tool 목록 |
 | 완료 | `app/agent/progress.py` | 진행 콜백·`PipelineStageError`·`stream_progress()`·`Recommender` 계약 |

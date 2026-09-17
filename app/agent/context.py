@@ -203,6 +203,29 @@ class AgentContext:
     stage_timeout_seconds: float = 30
     stages: list[str] = field(default_factory=list)  # run_stage로 실행한 단계 이름 (테스트·진단용)
 
+    @classmethod
+    def pending(
+        cls, tools: ToolSet, progress: Progress = silent, stage_timeout_seconds: float = 30
+    ) -> "AgentContext":
+        """질문 분해 전의 컨텍스트.
+
+        그래프 실행 중에는 컨텍스트를 바꿔 끼울 수 없어, 빈 조건으로 만들고 질문 분해 노드가
+        `begin()`으로 확정한다.
+        """
+        conditions = GameConditions()
+        return cls(
+            conditions=conditions,
+            store=CandidateStore(conditions),
+            tools=tools,
+            progress=progress,
+            stage_timeout_seconds=stage_timeout_seconds,
+        )
+
+    def begin(self, conditions: GameConditions) -> None:
+        """질문 분해 결과로 조건과 후보 저장소를 연다. Tool은 이 뒤에만 실행된다."""
+        self.conditions = conditions
+        self.store = CandidateStore(conditions)
+
     async def run_stage(
         self,
         stage: str,
