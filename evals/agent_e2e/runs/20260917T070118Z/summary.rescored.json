@@ -1,0 +1,166 @@
+{
+  "attempted": 100,
+  "scored": 100,
+  "passed": 79,
+  "accuracy": 0.79,
+  "errors": 0,
+  "error_kinds": {},
+  "axes": {
+    "constraints": 98,
+    "trajectory": 98,
+    "answer_format": 83
+  },
+  "empty_recommendations": 50,
+  "latency_seconds": {
+    "median": 12.17,
+    "max": 32.99
+  },
+  "judge": {
+    "judged": 100,
+    "errors": 0,
+    "grounded_mean": 4.27,
+    "linked_mean": 4.59,
+    "grounded_distribution": {
+      "1": 1,
+      "2": 9,
+      "3": 14,
+      "4": 14,
+      "5": 62
+    },
+    "linked_distribution": {
+      "1": 1,
+      "2": 3,
+      "3": 7,
+      "4": 14,
+      "5": 75
+    },
+    "grounded_below_4": [
+      "E004",
+      "E005",
+      "E007",
+      "E012",
+      "E017",
+      "E018",
+      "E036",
+      "E044",
+      "E051",
+      "E058",
+      "E062",
+      "E067",
+      "E069",
+      "E070",
+      "E074",
+      "E075",
+      "E081",
+      "E082",
+      "E086",
+      "E089",
+      "E090",
+      "E094",
+      "E096",
+      "E098"
+    ],
+    "linked_below_4": [
+      "E005",
+      "E015",
+      "E019",
+      "E051",
+      "E058",
+      "E067",
+      "E074",
+      "E075",
+      "E081",
+      "E086",
+      "E089"
+    ]
+  },
+  "by_family": {
+    "budget": {
+      "attempted": 20,
+      "scored": 20,
+      "passed": 13,
+      "errors": 0,
+      "failed_ids": [
+        "E004",
+        "E005",
+        "E007",
+        "E010",
+        "E013",
+        "E017",
+        "E018"
+      ],
+      "accuracy": 0.65
+    },
+    "combined": {
+      "attempted": 20,
+      "scored": 20,
+      "passed": 16,
+      "errors": 0,
+      "failed_ids": [
+        "E081",
+        "E085",
+        "E086",
+        "E089"
+      ],
+      "accuracy": 0.8
+    },
+    "count": {
+      "attempted": 15,
+      "scored": 15,
+      "passed": 15,
+      "errors": 0,
+      "failed_ids": [],
+      "accuracy": 1.0
+    },
+    "exclude": {
+      "attempted": 15,
+      "scored": 15,
+      "passed": 11,
+      "errors": 0,
+      "failed_ids": [
+        "E047",
+        "E051",
+        "E057",
+        "E058"
+      ],
+      "accuracy": 0.7333
+    },
+    "free": {
+      "attempted": 10,
+      "scored": 10,
+      "passed": 9,
+      "errors": 0,
+      "failed_ids": [
+        "E021"
+      ],
+      "accuracy": 0.9
+    },
+    "hardware": {
+      "attempted": 15,
+      "scored": 15,
+      "passed": 10,
+      "errors": 0,
+      "failed_ids": [
+        "E067",
+        "E069",
+        "E070",
+        "E074",
+        "E075"
+      ],
+      "accuracy": 0.6667
+    },
+    "tight": {
+      "attempted": 5,
+      "scored": 5,
+      "passed": 5,
+      "errors": 0,
+      "failed_ids": [],
+      "accuracy": 1.0
+    }
+  },
+  "rescored": {
+    "rule": "answer_format: 추천 0개면 2~6문장, 아니면 3~6문장",
+    "original_passed": 53,
+    "original_answer_format": 56
+  }
+}
