@@ -50,7 +50,7 @@ LLM의 자유 텍스트 응답을 그대로 전달하지 않고, OpenAI의 구�
 
 ## 조건 해석 규칙
 
-- 질문에 없는 조건은 `null` 또는 빈 목록으로 둡니다. 추천 개수를 말하지 않으면 `recommendation_count=3`이며 허용 범위는 1~30개입니다.
+- 질문에 없는 조건은 `null` 또는 빈 목록으로 둡니다. 추천 개수를 말하지 않으면 `recommendation_count=5`이며 허용 범위는 1~30개입니다.
 - `hardware`에는 명시된 CPU 모델, GPU 모델, **시스템 RAM** 용량, OS만 기록합니다. 원문의 관련 표현은 `raw_text`에 보존합니다. GPU의 VRAM 용량을 시스템 RAM으로 기록하지 않습니다.
 - `genres`와 `excluded_genres`는 서비스의 **통합 게임 분류**입니다. `Adventure`, `Shooter` 같은 IGDB 장르뿐 아니라 `Horror`, `Fantasy` 같은 테마 성격의 값도 들어갈 수 있습니다. `themes`와 `excluded_themes` 필드는 사용하지 않습니다.
 - `"친구 한 명과"`는 사용자 포함 `players=2`입니다. 인원수가 없는 `"친구랑"`은 `players=null`입니다. 친구와 플레이한다는 이유만으로 협동 또는 온라인 플레이를 추정하지 않습니다.

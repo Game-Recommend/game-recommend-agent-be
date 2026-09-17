@@ -61,7 +61,7 @@ class GameConditions(BaseModel):
     )
 
     platforms: list[str] = Field(default_factory=list)
-    recommendation_count: int = Field(default=3, ge=1, le=30)
+    recommendation_count: int = Field(default=5, ge=1, le=30)
 
     @model_validator(mode="after")
     def normalize_conditions(self) -> "GameConditions":
