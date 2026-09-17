@@ -1,8 +1,10 @@
 # 질문 파서 평가 최초 실측
 
 2026-09-17. 200문항 × 3회 = 600회 실행. 모델 `gpt-4o-mini`, 비용 $0.1515, 동시성 8.
-원시 기록은 [runs/20260917T063724Z](runs/20260917T063724Z), LangSmith 실험은
-`parser-conditions-07f3c14c`다. 평가셋 설계와 채점 규칙은 [README.md](README.md)에 있다.
+**이 절의 수치는 `game-recommend-agent-be`(에이전트)에서 잰 것이다.** 원시 기록은 그 저장소의
+`evals/parser_conditions/runs/20260917T063724Z`, LangSmith 실험은 `parser-conditions-07f3c14c`다.
+원본 `game-recommend-be`의 수치는 아래 전후 비교 절에 있다. 평가셋 설계와 채점 규칙은
+[README.md](README.md)에 있다.
 
 ## 결과
 
@@ -122,7 +124,8 @@ Q080의 방향으로 한 가지 더: Q060의 출력에는 정답이 주장하지
 ## 단발 관찰
 
 아래 두 문항은 3회 반복에서 재현되지 않았으나 기록해 둔다. 근거가 되는 1차 실행(정답 수정 전,
-200문항 × 1회, 187/200)의 원시 기록은 [runs/20260917T063220Z](runs/20260917T063220Z)에 있다.
+200문항 × 1회, 187/200)의 원시 기록은 `game-recommend-agent-be`의
+`evals/parser_conditions/runs/20260917T063220Z`에 있다.
 
 1. **원하는 카테고리가 `excluded_genres`로 반전** — 정답 수정 전 1차 실행(단일 회차)에서
    Q200 `"Ryzen 5 5600, RX 6600, RAM 16GB PC로 할 공포 게임 2개"`가
