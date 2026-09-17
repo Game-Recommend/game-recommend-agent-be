@@ -104,7 +104,7 @@ LangSmith에는 `agent-e2e` 데이터셋으로 올라간다. 파서 평가와 �
 `summary.rescored.json`을 쓴다. 원본 `results.jsonl`·`summary.json`은 그대로 둔다.
 
 ```bash
-.venv/bin/python -m evals.agent_e2e.rescore evals/agent_e2e/runs/20260917T070118Z
+.venv/bin/python -m evals.agent_e2e.rescore evals/agent_e2e/runs/<UTC timestamp>
 ```
 
 ```bash

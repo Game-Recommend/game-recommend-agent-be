@@ -6,7 +6,7 @@
 
 원본 `results.jsonl`·`summary.json`은 건드리지 않고 같은 디렉터리에 `summary.rescored.json`을 쓴다.
 
-    .venv/bin/python -m evals.agent_e2e.rescore evals/agent_e2e/runs/20260917T070118Z
+    .venv/bin/python -m evals.agent_e2e.rescore evals/agent_e2e/runs/<UTC timestamp>
 """
 
 import argparse
