@@ -30,7 +30,8 @@ class SteamReviewSummaryClient:
 
         # wrap_openai는 LANGSMITH_TRACING이 켜져 있을 때만 트레이스를 남긴다
         self.llm = wrap_openai(
-            AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY")), chat_name="ReviewSummary"
+            AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"), max_retries=3),
+            chat_name="ReviewSummary",
         )
         self.model = "gpt-4o-mini"
         self._semaphore = asyncio.Semaphore(max_concurrency)

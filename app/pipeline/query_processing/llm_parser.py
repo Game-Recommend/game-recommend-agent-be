@@ -20,7 +20,7 @@ class LLMQueryParser:
 
         # wrap_openai: LANGSMITH_TRACING이 켜져 있으면 이 호출이 트레이스의 자식 run으로
         # 남는다. 꺼져 있으면 아무 일도 하지 않는다.
-        async with AsyncOpenAI(api_key=api_key) as raw:
+        async with AsyncOpenAI(api_key=api_key, max_retries=3) as raw:
             client = wrap_openai(raw, chat_name="QueryParser")
             completion = await client.chat.completions.parse(
                 model="gpt-4o-mini",
