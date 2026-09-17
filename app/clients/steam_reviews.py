@@ -15,6 +15,7 @@ import asyncio
 import os
 
 import httpx2 as httpx
+from langsmith.wrappers import wrap_openai
 from openai import AsyncOpenAI
 
 from app.schemas.game import GameCandidate
@@ -27,7 +28,10 @@ class SteamReviewSummaryClient:
 
     def __init__(self, *, max_concurrency: int = 4):
 
-        self.llm = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # wrap_openai는 LANGSMITH_TRACING이 켜져 있을 때만 트레이스를 남긴다
+        self.llm = wrap_openai(
+            AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY")), chat_name="ReviewSummary"
+        )
         self.model = "gpt-4o-mini"
         self._semaphore = asyncio.Semaphore(max_concurrency)
 

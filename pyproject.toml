@@ -11,6 +11,9 @@ dependencies = [
     # 에이전트 계층(app/agent/): create_agent 루프·Tool 정의·구조화 출력. langgraph는 langchain이 끌어온다
     "langchain>=1.4",
     "langchain-openai>=1.6",
+    # OpenAI SDK를 직접 부르는 지점(질문 파서·리뷰 요약·사양 판정)을 wrap_openai로 감싼다.
+    # langchain이 이미 끌어오지만 app이 직접 import하므로 명시한다
+    "langsmith>=0.12",
     "pydantic>=2.8",
     "pydantic-settings>=2.4",
     # app/__init__.py가 load_dotenv()로 .env를 os.environ에 올린다(steam_reviews.py, LangSmith 추적)

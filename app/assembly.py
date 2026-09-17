@@ -29,6 +29,7 @@ from typing import Any
 
 import httpx2
 from langchain_openai import ChatOpenAI
+from langsmith.wrappers import wrap_openai
 from openai import AsyncOpenAI
 
 from app.agent.context import ToolSet
@@ -124,7 +125,12 @@ def assemble(settings: Settings | None = None) -> AssembledRecommender | None:
 
     # Steam·CheapShark·PCGamingWiki·환율은 키가 없어 HTTP 클라이언트 하나를 공유한다.
     http = httpx2.AsyncClient(timeout=20)
-    openai = AsyncOpenAI(api_key=settings.openai_api_key, timeout=25, max_retries=1)
+    # 사양 판정(OpenAISpecJudge)이 쓰는 공유 클라이언트. wrap_openai로 감싸 LangSmith
+    # 트레이스에 자식 run으로 남긴다(LANGSMITH_TRACING이 꺼져 있으면 무동작).
+    openai = wrap_openai(
+        AsyncOpenAI(api_key=settings.openai_api_key, timeout=25, max_retries=1),
+        chat_name="SpecJudge",
+    )
     tools = build_toolset(settings, http, openai)
     recommender = build_recommender(settings, tools)
     return AssembledRecommender(recommender, http, openai)

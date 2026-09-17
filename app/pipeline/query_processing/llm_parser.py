@@ -1,6 +1,7 @@
 import asyncio
 import sys
 
+from langsmith.wrappers import wrap_openai
 from openai import AsyncOpenAI
 
 from app.config import get_settings
@@ -17,7 +18,10 @@ class LLMQueryParser:
         if not api_key:
             raise ValueError("OPENAI_API_KEY가 설정되지 않았습니다.")
 
-        async with AsyncOpenAI(api_key=api_key) as client:
+        # wrap_openai: LANGSMITH_TRACING이 켜져 있으면 이 호출이 트레이스의 자식 run으로
+        # 남는다. 꺼져 있으면 아무 일도 하지 않는다.
+        async with AsyncOpenAI(api_key=api_key) as raw:
+            client = wrap_openai(raw, chat_name="QueryParser")
             completion = await client.chat.completions.parse(
                 model="gpt-4o-mini",
                 messages=[

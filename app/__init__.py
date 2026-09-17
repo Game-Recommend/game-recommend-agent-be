@@ -9,6 +9,18 @@
 이미 있는 환경 변수는 덮어쓰지 않으므로 배포 환경(Vercel 등)의 값이 우선한다.
 """
 
+import warnings
+
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# wrap_openai(app/pipeline/query_processing/llm_parser.py 등)가 `.parse()` 응답을 트레이스에
+# 남길 때, ParsedChatCompletion.parsed의 선언 타입이 None이라 Pydantic이 호출마다 직렬화 경고를
+# 낸다. 추적을 꺼도 나오고 기능에는 영향이 없으나 추천 요청마다 로그를 채우므로 이 경고만 막는다.
+warnings.filterwarnings(
+    "ignore",
+    message="Pydantic serializer warnings",
+    category=UserWarning,
+    module=r"pydantic\.main",
+)

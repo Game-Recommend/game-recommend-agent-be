@@ -375,6 +375,19 @@ LangSmith에서는 다음을 확인한다.
 - `RecommendationDraft` 거부 사유와 수정 여부
 - 최종 추천 ID가 요청 개수를 초과하지 않는지
 
+LLM 호출은 네 이름으로 구분된다. 에이전트 루프(Tool 선택·최종 답변)만 LangChain이 `ChatOpenAI`로
+남기고, OpenAI SDK를 직접 부르는 세 곳은 `langsmith.wrappers.wrap_openai`로 감싸 이름을 붙였다.
+
+| run 이름 | 부르는 곳 | 질문 1건당 |
+| --- | --- | --- |
+| `ChatOpenAI` | 에이전트 루프 (`app/agent/runner.py`) | Tool 호출 턴 수만큼 |
+| `QueryParser` | 질문 분해 (`app/pipeline/query_processing/llm_parser.py`) | 1회 |
+| `SpecJudge` | GPU·CPU 사양 판정 (`app/clients/hardware_judge.py`) | 판정 묶음 수만큼 |
+| `ReviewSummary` | 리뷰 한줄평 (`app/clients/steam_reviews.py`) | 확정 후보 수만큼 |
+
+감싸지 않으면 에이전트 루프의 호출만 트레이스에 남아, 한 질문의 실제 토큰·비용이 실제보다 적게
+보인다. `wrap_openai`는 `LANGSMITH_TRACING`이 꺼져 있으면 아무 일도 하지 않는다.
+
 LangSmith의 평면 목록에서 Tool이 순서대로 보이더라도 같은 AIMessage의 `tool_calls`에 포함돼 있으면 병렬 호출이다.
 
 ## 알려진 개선 사항
