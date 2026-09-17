@@ -213,7 +213,7 @@ make run                # http://127.0.0.1:8000/health
 | `OPENAI_API_KEY` | OpenAI API 키. 질문 가공, GPU·CPU 사양 판정, 리뷰 한줄평, 최종 답변에 쓴다 |
 | `OPENAI_MODEL` | 사양 판정·최종 답변 모델. 기본값 `gpt-4o-mini`. 질문 가공·리뷰 한줄평은 담당 모듈에서 `gpt-4o-mini` 고정 |
 | `OPENAI_AGENT_MODEL` | 에이전트(도구 선택·최종 답변) 모델. 비어 있으면 `OPENAI_MODEL` |
-| `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` | 선택. LangSmith 추적을 켜면 Tool 호출·프롬프트·토큰이 기록된다 |
+| `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` | 선택. LangSmith 추적을 켜면 Tool 호출·프롬프트·토큰이 기록된다. 에이전트 루프뿐 아니라 질문 분해·사양 판정·리뷰 한줄평의 LLM 호출도 한 트레이스에 모인다([app/agent/README.md](app/agent/README.md)) |
 
 키 목록의 기준은 [.env.example](.env.example)입니다. 서버 시작 시 [app/assembly.py](app/assembly.py)가
 이 설정을 읽어 어댑터를 조립하므로, 키를 채우고 `make run`하면 추천 기능이 켜집니다.

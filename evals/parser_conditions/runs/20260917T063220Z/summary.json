@@ -1,0 +1,87 @@
+{
+  "total": 200,
+  "passed": 187,
+  "accuracy": 0.935,
+  "errors": 0,
+  "axes": {
+    "fields": 191,
+    "preferences": 196,
+    "invariants": 199
+  },
+  "by_family": {
+    "combined": {
+      "total": 20,
+      "passed": 15,
+      "errors": 0,
+      "failed_ids": [
+        "Q181",
+        "Q182",
+        "Q183",
+        "Q188",
+        "Q200"
+      ],
+      "accuracy": 0.75
+    },
+    "count": {
+      "total": 15,
+      "passed": 15,
+      "errors": 0,
+      "failed_ids": [],
+      "accuracy": 1.0
+    },
+    "genres": {
+      "total": 36,
+      "passed": 35,
+      "errors": 0,
+      "failed_ids": [
+        "Q148"
+      ],
+      "accuracy": 0.9722
+    },
+    "hardware": {
+      "total": 30,
+      "passed": 30,
+      "errors": 0,
+      "failed_ids": [],
+      "accuracy": 1.0
+    },
+    "no_dup": {
+      "total": 14,
+      "passed": 13,
+      "errors": 0,
+      "failed_ids": [
+        "Q171"
+      ],
+      "accuracy": 0.9286
+    },
+    "players": {
+      "total": 30,
+      "passed": 25,
+      "errors": 0,
+      "failed_ids": [
+        "Q060",
+        "Q061",
+        "Q078",
+        "Q081",
+        "Q083"
+      ],
+      "accuracy": 0.8333
+    },
+    "price": {
+      "total": 30,
+      "passed": 29,
+      "errors": 0,
+      "failed_ids": [
+        "Q011"
+      ],
+      "accuracy": 0.9667
+    },
+    "time": {
+      "total": 25,
+      "passed": 25,
+      "errors": 0,
+      "failed_ids": [],
+      "accuracy": 1.0
+    }
+  }
+}
