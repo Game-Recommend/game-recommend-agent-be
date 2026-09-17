@@ -96,6 +96,32 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 - 에이전트 모델은 `OPENAI_AGENT_MODEL`(비어 있으면 `OPENAI_MODEL`)입니다. 그래프는 `make graph`로 출력합니다.
 - 설계 원칙과 역할별 할 일은 [TEAM.md](TEAM.md), 프롬프트는 [app/agent/prompts.py](app/agent/prompts.py)입니다.
 
+## 프롬프트 엔지니어링
+
+![게임 추천 에이전트 프롬프트 엔지니어링 아키텍처](docs/prompt_engineering_architecture.png)
+
+질의 한 건이 지나는 프롬프트와, 그 프롬프트를 고치려고 쓰는 프롬프트를 한 장에 모았습니다.
+고칠 때는 [SVG](docs/prompt_engineering_architecture.svg)를 씁니다.
+
+| 프롬프트 | 하는 일 | 위치 | 출력 계약 |
+| --- | --- | --- | --- |
+| `QUERY_PARSER_SYSTEM` | 자연어 질문에서 조건만 뽑는다 | [app/pipeline/query_processing/prompts.py](app/pipeline/query_processing/prompts.py) | `GameConditions` |
+| `build_user_input` | 질문·조건·검색 JSON과 조건부 실행 지시를 요청마다 조립 | [app/agent/prompts.py](app/agent/prompts.py) | 사용자 메시지 |
+| `AGENT_SYSTEM` | 신뢰 경계·도구 선택 절차·답변 작성 규칙 | [app/agent/prompts.py](app/agent/prompts.py) | `RecommendationDraft` |
+| `SYSTEM_PROMPT` (사양 판정) | 부품별 `met`·`unmet`·`unknown`과 30자 근거 | [app/clients/hardware_judge.py](app/clients/hardware_judge.py) | `_JudgeOutput` |
+| 리뷰 한줄평 | Steam·웹 리뷰 상위 20개를 100자 한 문장으로 | [app/clients/steam_reviews.py](app/clients/steam_reviews.py) | 자유 문장 |
+| `build_rejection` | 후검증 실패 사유와 재제출 규칙 | [app/agent/prompts.py](app/agent/prompts.py) | 사용자 메시지 |
+| `JUDGE_SYSTEM` | 답변 문단의 `grounded`·`linked` 채점 (오프라인) | [evals/agent_e2e/judge.py](evals/agent_e2e/judge.py) | `JudgeVerdict` |
+
+- **집행은 프롬프트 밖에 둡니다.** 추천 개수와 판정 통과는 `CandidateStore.validate_draft`가, 조건 중복
+  제거는 `conditions.py`의 validator가, 사양 최종 판정과 이유 문장은 `compose_assessment`가 집행합니다.
+  프롬프트는 요청하고, 거부는 코드가 합니다.
+- **문구를 고치기 전에 잽니다.** 예시까지 적어 둔 규칙이 실측에서 깨진 자리는 [evals/](evals/)의 REPORT에
+  있습니다(`친구 N명이서`를 N+1로 세는 실패 18/18, `내장그래픽`을 GPU 모델명 자리에, 판단 불가를 미달로
+  단정 16/26).
+- **트레이스에 이름이 남습니다.** `QueryParser`·`SpecJudge`·`ReviewSummary`·`AnswerJudge`가 `wrap_openai`로
+  감싸져 LangSmith 자식 run이 되므로, 어느 프롬프트가 무엇을 냈는지 한 트레이스에서 읽힙니다.
+
 ## 도구와 외부 연동의 역할
 
 | 서비스 도구 | 하는 일 | 연동 구현 위치 / 예정 출처 |

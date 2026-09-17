@@ -1,8 +1,10 @@
 """채점기 검사. API를 부르지 않는다."""
 
 import json
+import pathlib
 from pathlib import Path
 
+import app
 from app.pipeline.query_processing.conditions import GameConditions
 from app.schemas.common import ConditionCheck
 from app.schemas.game import GameCandidate
@@ -11,10 +13,12 @@ from app.schemas.price import PriceQuote, PriceResult
 from app.schemas.recommendation import EvaluatedGame, RecommendationResponse
 from evals.agent_e2e.judge import build_evidence
 from evals.agent_e2e.score import (
+    BASE_STAGES,
     check_answer_format,
     check_constraints,
     check_trajectory,
     count_sentences,
+    detect_profile,
 )
 
 DATA = json.loads((Path(__file__).parent / "dataset.json").read_text(encoding="utf-8"))
@@ -257,3 +261,46 @@ def test_judge_evidence_for_empty_recommendation():
     evidence = build_evidence(resp)
     assert "추천된 게임이 없다" in evidence
     assert "조건을 충족한 후보가 없습니다." in evidence
+
+
+BASELINE_STAGES = [
+    {"t": 0.0, "stage": "질문 분해", "status": "started", "detail": None},
+    {"t": 1.0, "stage": "질문 분해", "status": "completed", "detail": None},
+    {"t": 1.0, "stage": "게임 검색", "status": "started", "detail": None},
+    {"t": 2.0, "stage": "게임 검색", "status": "completed", "detail": "후보 30개"},
+    {"t": 2.0, "stage": "가격", "status": "started", "detail": None},
+    {"t": 3.0, "stage": "가격", "status": "completed", "detail": None},
+    {"t": 3.0, "stage": "하드웨어", "status": "started", "detail": None},
+    {"t": 4.0, "stage": "하드웨어", "status": "completed", "detail": None},
+    {"t": 5.0, "stage": "최종 답변 생성", "status": "started", "detail": None},
+    {"t": 6.0, "stage": "최종 답변 생성", "status": "completed", "detail": None},
+]
+
+
+def test_detect_profile_matches_the_repo_layout():
+    """평가 코드를 두 저장소에 같은 내용으로 두므로, 프로필을 스스로 맞게 판단해야 한다."""
+    profile = detect_profile()
+    assert profile in BASE_STAGES
+    agent_layer_exists = pathlib.Path(app.__file__).parent.joinpath("agent").is_dir()
+    assert profile == ("agent" if agent_layer_exists else "baseline")
+
+
+def test_two_profiles_expect_different_base_stages():
+    assert "에이전트 추론" in BASE_STAGES["agent"]
+    assert "최종 답변 생성" in BASE_STAGES["baseline"]
+    assert "에이전트 추론" not in BASE_STAGES["baseline"]
+
+
+def test_baseline_trajectory_passes_on_baseline_profile():
+    assert check_trajectory(BY_ID["E001"], BASELINE_STAGES, "baseline") == []
+
+
+def test_baseline_trajectory_fails_on_agent_profile():
+    """프로필을 잘못 주면 공통 단계가 어긋나 실패한다. 실행 시 프로필을 기록해 둔다."""
+    problems = check_trajectory(BY_ID["E001"], BASELINE_STAGES, "agent")
+    assert any("에이전트 추론" in problem for problem in problems)
+
+
+def test_agent_trajectory_fails_on_baseline_profile():
+    problems = check_trajectory(BY_ID["E001"], OK_STAGES, "baseline")
+    assert any("최종 답변 생성" in problem for problem in problems)

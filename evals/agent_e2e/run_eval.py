@@ -24,14 +24,24 @@ from pathlib import Path
 
 from langsmith import Client
 
-from app.agent.prompts import AGENT_SYSTEM
 from app.assembly import assemble, missing_settings
 from app.config import get_settings
 from evals.agent_e2e.judge import AnswerJudge
-from evals.agent_e2e.score import score_case
+from evals.agent_e2e.score import detect_profile, score_case
 
 EVAL_DIR = Path(__file__).resolve().parent
 DATASET_NAME = "agent-e2e"
+
+
+def answer_prompt_source(profile: str) -> str:
+    """답변을 쓰는 프롬프트. 저장소 구조가 달라 프로필별로 다른 모듈에 있다."""
+    if profile == "agent":
+        from app.agent.prompts import AGENT_SYSTEM
+
+        return AGENT_SYSTEM
+    from app.pipeline.final_answer.prompts import ANSWER_SYSTEM
+
+    return ANSWER_SYSTEM
 
 
 def load_dataset() -> list[dict]:
@@ -94,7 +104,9 @@ def sync_langsmith_dataset(client: Client, cases: list[dict]) -> None:
     )
 
 
-async def run_one(recommender, item: dict, judge: AnswerJudge | None) -> dict:
+async def run_one(
+    recommender, item: dict, judge: AnswerJudge | None, profile: str = "agent"
+) -> dict:
     """질문 하나를 실행하고 채점한다. 진행 이벤트를 단계 기록으로 남긴다."""
     stages: list[dict] = []
     started = time.perf_counter()
@@ -122,7 +134,7 @@ async def run_one(recommender, item: dict, judge: AnswerJudge | None) -> dict:
             "stages": stages,
         }
 
-    record = score_case(item, response, stages)
+    record = score_case(item, response, stages, profile)
     record["question"] = item["question"]
     record["why"] = item["why"]
     record["seconds"] = round(time.perf_counter() - started, 2)
@@ -235,11 +247,17 @@ async def main() -> None:
     parser.add_argument("--limit", type=int, help="앞에서 N문항만 실행한다")
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--no-judge", action="store_true", help="LLM 심판을 생략한다")
+    parser.add_argument(
+        "--profile",
+        choices=("agent", "baseline"),
+        help="기본값은 자동 감지(app.agent가 있으면 agent). 궤적 채점의 공통 단계가 달라진다",
+    )
     parser.add_argument("--no-langsmith", action="store_true", help="데이터셋 동기화를 생략한다")
     parser.add_argument("--out", type=Path, help="기본값: runs/<UTC timestamp>/")
     args = parser.parse_args()
 
     settings = get_settings()
+    profile = args.profile or detect_profile()
     cases = load_dataset()
     if args.limit:
         cases = cases[: args.limit]
@@ -258,12 +276,15 @@ async def main() -> None:
     judge = None if args.no_judge else AnswerJudge(settings.openai_api_key)
     semaphore = asyncio.Semaphore(args.concurrency)
     done = 0
-    print(f"실행: 문항 {len(cases)}개, 동시성 {args.concurrency}, 심판 {not args.no_judge}")
+    print(
+        f"실행: 프로필 {profile}, 문항 {len(cases)}개, "
+        f"동시성 {args.concurrency}, 심판 {not args.no_judge}"
+    )
 
     async def one(item: dict) -> dict:
         nonlocal done
         async with semaphore:
-            record = await run_one(assembled.recommender, item, judge)
+            record = await run_one(assembled.recommender, item, judge, profile)
             done += 1
             status = record.get("error") or (
                 f"추천 {record.get('recommended_count', 0)}개"
@@ -290,13 +311,15 @@ async def main() -> None:
         json.dumps(
             {
                 "started_at": stamp,
-                "agent_model": settings.agent_model,
+                # agent_model은 에이전트 저장소에만 있는 property다(원본은 openai_model 하나뿐)
+                "answer_model": getattr(settings, "agent_model", settings.openai_model),
                 "openai_model": settings.openai_model,
                 "judge_model": None if args.no_judge else "gpt-4o-mini",
                 "cases": len(cases),
                 "concurrency": args.concurrency,
                 "dataset_sha256": sha256((EVAL_DIR / "dataset.json").read_text(encoding="utf-8")),
-                "agent_prompt_sha256": sha256(AGENT_SYSTEM),
+                "profile": profile,
+                "answer_prompt_sha256": sha256(answer_prompt_source(profile)),
             },
             ensure_ascii=False,
             indent=2,

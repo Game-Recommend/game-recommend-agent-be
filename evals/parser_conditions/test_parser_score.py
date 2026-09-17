@@ -72,10 +72,17 @@ def test_price_duplicated_into_preferences_fails():
     assert not scored["invariants_passed"]
 
 
-def test_exact_platform_os_is_stripped_by_the_model_validator():
-    """conditions.py의 validator가 os="PC"를 지우고 hardware를 null로 만든다."""
+def test_platform_only_os_is_caught_in_some_layer():
+    """os="PC"는 어느 층에서든 걸러져야 한다.
+
+    두 저장소의 층이 다르다. 에이전트 저장소는 conditions.py의 validator가 지우고,
+    원본 game-recommend-be는 validator가 없어 채점기의 공통 불변식이 잡는다.
+    어느 쪽이든 통과로 넘어가지 않는다는 것이 계약이다(프롬프트 1절).
+    """
     result = GameConditions(hardware=HardwareSpecs(os="PC"), recommendation_count=5)
-    assert result.hardware is None
+    stripped_by_validator = result.hardware is None
+    caught_by_invariant = bool(check_invariants(result))
+    assert stripped_by_validator or caught_by_invariant
 
 
 def test_platform_phrase_in_hardware_os_fails_invariant():

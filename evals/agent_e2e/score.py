@@ -22,8 +22,27 @@ HANGUL = re.compile(r"[가-힣]")
 # "실패나 누락은 필수 조건 통과로 처리하지 않는다"가 unmet·unknown을 막는다.
 PASSING = {"met", "skipped"}
 
-# 전 문항 공통으로 실행돼야 하는 단계
-BASE_STAGES = ("질문 분해", "에이전트 추론", "게임 검색")
+# 전 문항 공통으로 실행돼야 하는 단계. 두 저장소의 구조가 달라 프로필로 가른다.
+#   agent    = 이 저장소. LLM이 Tool을 골라 부른다(에이전트 추론).
+#   baseline = 원본 game-recommend-be. 고정 파이프라인이 단계를 순서대로 돌리고
+#              마지막에 답변을 쓴다(최종 답변 생성).
+BASE_STAGES = {
+    "agent": ("질문 분해", "에이전트 추론", "게임 검색"),
+    "baseline": ("질문 분해", "게임 검색", "최종 답변 생성"),
+}
+
+
+def detect_profile() -> str:
+    """이 저장소가 에이전트인지 고정 파이프라인인지 본다.
+
+    `app.agent`가 있으면 에이전트 저장소다. 평가 코드를 두 저장소에 같은 내용으로 두고,
+    실행할 때 어느 쪽인지 스스로 판단하게 한다.
+    """
+    try:
+        import app.agent  # noqa: F401
+    except ImportError:
+        return "baseline"
+    return "agent"
 
 
 def count_sentences(text: str) -> int:
@@ -105,14 +124,14 @@ def check_constraints(item: dict, response: RecommendationResponse) -> list[str]
     return problems
 
 
-def check_trajectory(item: dict, stages: list[dict]) -> list[str]:
+def check_trajectory(item: dict, stages: list[dict], profile: str = "agent") -> list[str]:
     """필요한 단계가 실행됐는지, 순서가 맞는지 본다."""
     problems: list[str] = []
     started = [event["stage"] for event in stages if event["status"] == "started"]
     completed = {event["stage"] for event in stages if event["status"] == "completed"}
     failed = [event["stage"] for event in stages if event["status"] == "failed"]
 
-    for stage in BASE_STAGES:
+    for stage in BASE_STAGES[profile]:
         if stage not in completed:
             problems.append(f"공통 단계 '{stage}'가 완료되지 않았다")
     for stage in item.get("required_stages", []):
@@ -151,9 +170,11 @@ def check_answer_format(response: RecommendationResponse) -> list[str]:
     return problems
 
 
-def score_case(item: dict, response: RecommendationResponse, stages: list[dict]) -> dict:
+def score_case(
+    item: dict, response: RecommendationResponse, stages: list[dict], profile: str = "agent"
+) -> dict:
     constraints = check_constraints(item, response)
-    trajectory = check_trajectory(item, stages)
+    trajectory = check_trajectory(item, stages, profile)
     answer = check_answer_format(response)
     return {
         "id": item["id"],

@@ -1,0 +1,198 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1700" viewBox="0 0 2560 1700" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
+<defs>
+<filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0F172A" flood-opacity="0.08"/></filter>
+<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#94A3B8"/></marker>
+<marker id="arr_s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker>
+</defs>
+<rect width="2560" height="1700" fill="#F5F6FA"/>
+<text x="56" y="118" font-size="56" fill="#111827" font-weight="700">게임 추천 에이전트 프롬프트 엔지니어링 아키텍처</text>
+<text x="56" y="170" font-size="26" fill="#6B7280">질의 한 건이 통과하는 프롬프트와, 그 프롬프트를 고치기 위한 프롬프트  —  운영 4 · 조립 2 · 평가 1</text>
+<rect x="2336" y="128" width="168" height="40" rx="20" fill="white" stroke="#D1D5DB"/>
+<circle cx="2358" cy="148" r="8" fill="#334155"/>
+<text x="2376" y="156" font-size="22" fill="#111827">코드가 집행</text>
+<rect x="2108" y="128" width="214" height="40" rx="20" fill="white" stroke="#D1D5DB"/>
+<circle cx="2130" cy="148" r="8" fill="#D97706"/>
+<text x="2148" y="156" font-size="22" fill="#111827">평가 · 오프라인</text>
+<rect x="1906" y="128" width="188" height="40" rx="20" fill="white" stroke="#D1D5DB"/>
+<circle cx="1928" cy="148" r="8" fill="#6D5DF6"/>
+<text x="1946" y="156" font-size="22" fill="#111827">LLM 직접 호출</text>
+<rect x="1640" y="128" width="252" height="40" rx="20" fill="white" stroke="#D1D5DB"/>
+<circle cx="1662" cy="148" r="8" fill="#0E9F9F"/>
+<text x="1680" y="156" font-size="22" fill="#111827">AGENT (LangChain)</text>
+<text x="56" y="238" font-size="24" fill="#334155" font-weight="700">운영 경로 — 질의 한 건이 지나는 프롬프트, 그리고 코드가 조립하는 프롬프트</text>
+<rect x="56" y="270" width="360" height="600" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="56" y="270" width="360" height="10" rx="5" fill="#6D5DF6"/>
+<circle cx="102" cy="332" r="24" fill="#6D5DF6"/>
+<text x="102" y="341" font-size="24" fill="white" font-weight="700" text-anchor="middle">1</text>
+<rect x="320" y="314" width="68" height="36" rx="18" fill="#6D5DF6" fill-opacity="0.12"/>
+<text x="354.0" y="339" font-size="20" fill="#6D5DF6" font-weight="600" text-anchor="middle">LLM</text>
+<circle cx="236.0" cy="420" r="44" fill="#6D5DF6" fill-opacity="0.10"/>
+<path d="M214.0 420 h16 M230.0 420 L244.0 404 M230.0 420 h14 M230.0 420 L244.0 436" fill="none" stroke="#6D5DF6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="250.0" cy="404" r="6" fill="#6D5DF6"/><circle cx="250.0" cy="420" r="6" fill="#6D5DF6"/><circle cx="250.0" cy="436" r="6" fill="#6D5DF6"/>
+<text x="236.0" y="515" font-size="30" fill="#111827" font-weight="700" text-anchor="middle">질문 분해</text>
+<text x="84" y="570" font-size="21" fill="#111827" font-weight="600">QUERY_PARSER_SYSTEM</text>
+<text x="84" y="600" font-size="19" fill="#6B7280">총칙 + 6절 + 출력 규칙</text>
+<text x="84" y="630" font-size="19" fill="#6B7280">자연어 → GameConditions</text>
+<text x="84" y="682" font-size="21" fill="#111827" font-weight="600">response_format</text>
+<text x="84" y="712" font-size="19" fill="#6B7280">Pydantic 모델로 받는다</text>
+<text x="84" y="742" font-size="19" fill="#6B7280">추천도 검색도 하지 않는다</text>
+<line x1="84" y1="762" x2="388" y2="762" stroke="#D1D5DB" stroke-width="2"/>
+<text x="84" y="796" font-size="19" fill="#6D5DF6" font-weight="600">QueryParser</text>
+<text x="84" y="826" font-size="18" fill="#6B7280">전용 필드가 있는 조건은</text>
+<text x="84" y="854" font-size="18" fill="#6B7280">preferences에 넣지 않는다</text>
+<line x1="420" y1="420" x2="469" y2="420" stroke="#94A3B8" stroke-width="3.5" marker-end="url(#arr)"/>
+<rect x="473" y="270" width="360" height="600" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="473" y="270" width="360" height="10" rx="5" fill="#334155"/>
+<circle cx="519" cy="332" r="24" fill="#334155"/>
+<text x="519" y="341" font-size="24" fill="white" font-weight="700" text-anchor="middle">2</text>
+<rect x="724" y="314" width="81" height="36" rx="18" fill="#334155" fill-opacity="0.12"/>
+<text x="764.5" y="339" font-size="20" fill="#334155" font-weight="600" text-anchor="middle">CODE</text>
+<circle cx="653.0" cy="420" r="44" fill="#334155" fill-opacity="0.10"/>
+<rect x="631.0" y="398" width="44" height="11" rx="4" fill="none" stroke="#334155" stroke-width="3.5"/>
+<rect x="631.0" y="415" width="30" height="11" rx="4" fill="none" stroke="#334155" stroke-width="3.5"/>
+<rect x="631.0" y="432" width="38" height="11" rx="4" fill="none" stroke="#334155" stroke-width="3.5"/>
+<text x="653.0" y="515" font-size="30" fill="#111827" font-weight="700" text-anchor="middle">실행 지시 조립</text>
+<text x="501" y="570" font-size="21" fill="#111827" font-weight="600">build_user_input</text>
+<text x="501" y="600" font-size="19" fill="#6B7280">질문 · 조건 · 검색 JSON을</text>
+<text x="501" y="630" font-size="19" fill="#6B7280">세 블록으로 갈라 넣는다</text>
+<text x="501" y="682" font-size="21" fill="#111827" font-weight="600">조건부 지시 5갈래</text>
+<text x="501" y="712" font-size="19" fill="#6B7280">무료 · 예산 없음 · 무료 선호</text>
+<text x="501" y="742" font-size="19" fill="#6B7280">리뷰 기준 · 동반자 언급</text>
+<line x1="501" y1="762" x2="805" y2="762" stroke="#D1D5DB" stroke-width="2"/>
+<text x="501" y="796" font-size="19" fill="#334155" font-weight="600">요청마다 달라진다</text>
+<text x="501" y="826" font-size="18" fill="#6B7280">고정 문구가 아니라 조건에서</text>
+<text x="501" y="854" font-size="18" fill="#6B7280">계산해 붙이는 지시다</text>
+<line x1="837" y1="420" x2="886" y2="420" stroke="#94A3B8" stroke-width="3.5" marker-end="url(#arr)"/>
+<rect x="890" y="270" width="360" height="600" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="890" y="270" width="360" height="10" rx="5" fill="#0E9F9F"/>
+<circle cx="936" cy="332" r="24" fill="#0E9F9F"/>
+<text x="936" y="341" font-size="24" fill="white" font-weight="700" text-anchor="middle">3</text>
+<rect x="1127" y="314" width="95" height="36" rx="18" fill="#0E9F9F" fill-opacity="0.12"/>
+<text x="1174.5" y="339" font-size="20" fill="#0E9F9F" font-weight="600" text-anchor="middle">AGENT</text>
+<circle cx="1070.0" cy="420" r="44" fill="#0E9F9F" fill-opacity="0.10"/>
+<path d="M1079.0 404.4 A 18 18 0 1 1 1054.4 411.0" fill="none" stroke="#0E9F9F" stroke-width="3.5" stroke-linecap="round"/>
+<path d="M1059.4 402.3 L1058.5 416.8 L1047.3 410.3 z" fill="#0E9F9F"/>
+<text x="1070.0" y="515" font-size="30" fill="#111827" font-weight="700" text-anchor="middle">에이전트 루프</text>
+<text x="918" y="570" font-size="21" fill="#111827" font-weight="600">AGENT_SYSTEM · 6블록</text>
+<text x="918" y="600" font-size="19" fill="#6B7280">신뢰 경계 · 도구 선택 절차</text>
+<text x="918" y="630" font-size="19" fill="#6B7280">중복 · 작성 · 실패 · 거부</text>
+<text x="918" y="682" font-size="21" fill="#111827" font-weight="600">ToolStrategy</text>
+<text x="918" y="712" font-size="19" fill="#6B7280">RecommendationDraft로만 종료</text>
+<line x1="918" y1="762" x2="1222" y2="762" stroke="#D1D5DB" stroke-width="2"/>
+<text x="918" y="796" font-size="19" fill="#0E9F9F" font-weight="600">create_agent</text>
+<text x="918" y="826" font-size="18" fill="#6B7280">자유 텍스트로 끝내지 못하게</text>
+<text x="918" y="854" font-size="18" fill="#6B7280">최종 출력을 도구 호출로 받는다</text>
+<line x1="1254" y1="420" x2="1303" y2="420" stroke="#94A3B8" stroke-width="3.5" marker-end="url(#arr)"/>
+<rect x="1307" y="270" width="360" height="600" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="1307" y="270" width="360" height="10" rx="5" fill="#6D5DF6"/>
+<circle cx="1353" cy="332" r="24" fill="#6D5DF6"/>
+<text x="1353" y="341" font-size="24" fill="white" font-weight="700" text-anchor="middle">4</text>
+<rect x="1571" y="314" width="68" height="36" rx="18" fill="#6D5DF6" fill-opacity="0.12"/>
+<text x="1605.0" y="339" font-size="20" fill="#6D5DF6" font-weight="600" text-anchor="middle">LLM</text>
+<circle cx="1487.0" cy="420" r="44" fill="#6D5DF6" fill-opacity="0.10"/>
+<rect x="1471.0" y="404" width="32" height="32" rx="5" fill="none" stroke="#6D5DF6" stroke-width="3.5"/><rect x="1481.0" y="414" width="12" height="12" rx="3" fill="none" stroke="#6D5DF6" stroke-width="3.5"/>
+<path d="M1479.0 404 v-8 M1479.0 436 v8 M1471.0 412 h-8 M1503.0 412 h8 M1487.0 404 v-8 M1487.0 436 v8 M1471.0 420 h-8 M1503.0 420 h8 M1495.0 404 v-8 M1495.0 436 v8 M1471.0 428 h-8 M1503.0 428 h8" fill="none" stroke="#6D5DF6" stroke-width="3.5" stroke-linecap="round"/>
+<text x="1487.0" y="515" font-size="30" fill="#111827" font-weight="700" text-anchor="middle">사양 판정</text>
+<text x="1335" y="570" font-size="21" fill="#111827" font-weight="600">SpecJudge</text>
+<text x="1335" y="600" font-size="19" fill="#6B7280">부품별 met · unmet · unknown</text>
+<text x="1335" y="630" font-size="19" fill="#6B7280">30자 근거 한 구절만</text>
+<text x="1335" y="682" font-size="21" fill="#111827" font-weight="600">compose_assessment</text>
+<text x="1335" y="712" font-size="19" fill="#6B7280">전체 판정과 이유 문장은 코드</text>
+<line x1="1335" y1="762" x2="1639" y2="762" stroke="#D1D5DB" stroke-width="2"/>
+<text x="1335" y="796" font-size="19" fill="#6D5DF6" font-weight="600">v1에서 배운 것</text>
+<text x="1335" y="826" font-size="18" fill="#6B7280">문장을 맡겼더니 GPU만 보고</text>
+<text x="1335" y="854" font-size="18" fill="#6B7280">통과시키고 부품명을 베꼈다</text>
+<line x1="1671" y1="420" x2="1720" y2="420" stroke="#94A3B8" stroke-width="3.5" marker-end="url(#arr)"/>
+<rect x="1724" y="270" width="360" height="600" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="1724" y="270" width="360" height="10" rx="5" fill="#6D5DF6"/>
+<circle cx="1770" cy="332" r="24" fill="#6D5DF6"/>
+<text x="1770" y="341" font-size="24" fill="white" font-weight="700" text-anchor="middle">5</text>
+<rect x="1988" y="314" width="68" height="36" rx="18" fill="#6D5DF6" fill-opacity="0.12"/>
+<text x="2022.0" y="339" font-size="20" fill="#6D5DF6" font-weight="600" text-anchor="middle">LLM</text>
+<circle cx="1904.0" cy="420" r="44" fill="#6D5DF6" fill-opacity="0.10"/>
+<rect x="1882.0" y="400" width="44" height="32" rx="8" fill="none" stroke="#6D5DF6" stroke-width="3.5"/><path d="M1894.0 432 v10 l13 -10" fill="none" stroke="#6D5DF6" stroke-width="3.5" stroke-linejoin="round"/><path d="M1892.0 411 h24 M1892.0 421 h15" fill="none" stroke="#6D5DF6" stroke-width="3.5" stroke-linecap="round"/>
+<text x="1904.0" y="515" font-size="30" fill="#111827" font-weight="700" text-anchor="middle">리뷰 한줄평</text>
+<text x="1752" y="570" font-size="21" fill="#111827" font-weight="600">ReviewSummary</text>
+<text x="1752" y="600" font-size="19" fill="#6B7280">Steam · 웹 리뷰 상위 20개</text>
+<text x="1752" y="630" font-size="19" fill="#6B7280">리뷰당 1000자로 잘라 투입</text>
+<text x="1752" y="682" font-size="21" fill="#111827" font-weight="600">반복 신호 우선</text>
+<text x="1752" y="712" font-size="19" fill="#6B7280">한두 건의 의견은 쓰지 않는다</text>
+<line x1="1752" y1="762" x2="2056" y2="762" stroke="#D1D5DB" stroke-width="2"/>
+<text x="1752" y="796" font-size="19" fill="#6D5DF6" font-weight="600">억지 요소 금지</text>
+<text x="1752" y="826" font-size="18" fill="#6B7280">전투 · 탐험을 채워 넣지 않아</text>
+<text x="1752" y="854" font-size="18" fill="#6B7280">장르가 달라도 일반화된다</text>
+<line x1="2088" y1="420" x2="2137" y2="420" stroke="#94A3B8" stroke-width="3.5" marker-end="url(#arr)"/>
+<rect x="2141" y="270" width="360" height="600" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="2141" y="270" width="360" height="10" rx="5" fill="#334155"/>
+<circle cx="2187" cy="332" r="24" fill="#334155"/>
+<text x="2187" y="341" font-size="24" fill="white" font-weight="700" text-anchor="middle">6</text>
+<rect x="2392" y="314" width="81" height="36" rx="18" fill="#334155" fill-opacity="0.12"/>
+<text x="2432.5" y="339" font-size="20" fill="#334155" font-weight="600" text-anchor="middle">CODE</text>
+<circle cx="2321.0" cy="420" r="44" fill="#334155" fill-opacity="0.10"/>
+<path d="M2321.0 398 l18 8 v12 c0 12 -8 20 -18 24 c-10 -4 -18 -12 -18 -24 v-12 z" fill="none" stroke="#334155" stroke-width="3.5" stroke-linejoin="round"/><path d="M2313.0 420 l6 6 l11 -13" fill="none" stroke="#334155" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="2321.0" y="515" font-size="30" fill="#111827" font-weight="700" text-anchor="middle">후검증 · 거부</text>
+<text x="2169" y="570" font-size="21" fill="#111827" font-weight="600">validate_draft</text>
+<text x="2169" y="600" font-size="19" fill="#6B7280">후보 밖 id · 개수 초과</text>
+<text x="2169" y="630" font-size="19" fill="#6B7280">unmet · unknown 추천을 잡는다</text>
+<text x="2169" y="682" font-size="21" fill="#111827" font-weight="600">build_rejection</text>
+<text x="2169" y="712" font-size="19" fill="#6B7280">문제 목록을 붙여 재호출 1회</text>
+<line x1="2169" y1="762" x2="2473" y2="762" stroke="#D1D5DB" stroke-width="2"/>
+<text x="2169" y="796" font-size="19" fill="#334155" font-weight="600">그래도 남으면 502</text>
+<text x="2169" y="826" font-size="18" fill="#6B7280">추천하지 않는 쪽을 택한다</text>
+<text x="2169" y="854" font-size="18" fill="#6B7280">빈 추천에는 경고를 남긴다</text>
+<text x="56" y="922" font-size="24" fill="#334155" font-weight="700">오프라인 — 프롬프트를 채점하는 프롬프트, 그리고 프롬프트만으로는 안 된 것</text>
+<rect x="56" y="950" width="1500" height="400" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="56" y="950" width="1500" height="10" rx="5" fill="#D97706"/>
+<text x="92" y="1016" font-size="28" fill="#111827" font-weight="700">평가하는 프롬프트</text>
+<text x="92" y="1052" font-size="20" fill="#6B7280">심판은 생성기와 따로 선다 — 코드로 셀 수 있는 것은 코드가 세고, LLM 심판은 남은 두 가지만 본다</text>
+<text x="92" y="1116" font-size="21" fill="#D97706" font-weight="600">답변 심판 · AnswerJudge</text>
+<text x="92" y="1150" font-size="19" fill="#6B7280">답변을 근거와 대조해 채점한다</text>
+<text x="92" y="1180" font-size="19" fill="#6B7280">grounded — 근거 밖 수치 · 단정</text>
+<text x="92" y="1210" font-size="19" fill="#6B7280">linked — 조건과 이유의 연결</text>
+<text x="92" y="1240" font-size="19" fill="#6B7280">1~5점과 사유 한 문장</text>
+<line x1="544" y1="1080" x2="544" y2="1254" stroke="#D1D5DB" stroke-width="2"/>
+<text x="568" y="1116" font-size="21" fill="#D97706" font-weight="600">코드 채점 3축 · E2E</text>
+<text x="568" y="1150" font-size="19" fill="#6B7280">constraints — 필수 조건 준수</text>
+<text x="568" y="1180" font-size="19" fill="#6B7280">trajectory — 단계 실행과 순서</text>
+<text x="568" y="1210" font-size="19" fill="#6B7280">answer_format — 문단 형식</text>
+<text x="568" y="1240" font-size="19" fill="#6B7280">정답 추천 목록은 없다</text>
+<line x1="1020" y1="1080" x2="1020" y2="1254" stroke="#D1D5DB" stroke-width="2"/>
+<text x="1044" y="1116" font-size="21" fill="#D97706" font-weight="600">평가셋 4종 · 390문항</text>
+<text x="1044" y="1150" font-size="19" fill="#6B7280">파서 조건 200 · E2E 100</text>
+<text x="1044" y="1180" font-size="19" fill="#6B7280">가격 · 사양 50 · 비Steam 40</text>
+<text x="1044" y="1210" font-size="19" fill="#6B7280">사람이 쓰고 라벨을 붙였다</text>
+<text x="1044" y="1240" font-size="19" fill="#6B7280">LangSmith 실험으로 남는다</text>
+<line x1="92" y1="1276" x2="1520" y2="1276" stroke="#D1D5DB" stroke-width="2"/>
+<text x="92" y="1312" font-size="19" fill="#111827" font-weight="600">심판도 틀린다 — 프롬프트에 기댄 점수라 코드 자동 채점과 섞지 않고 따로 보고한다</text>
+<rect x="1604" y="950" width="900" height="400" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="1604" y="950" width="900" height="10" rx="5" fill="#334155"/>
+<text x="1640" y="1016" font-size="28" fill="#111827" font-weight="700">실측이 되돌린 프롬프트</text>
+<text x="1640" y="1052" font-size="20" fill="#6B7280">예시까지 적어 둔 규칙이 실측에서 그대로 깨졌다</text>
+<text x="1640" y="1116" font-size="21" fill="#334155" font-weight="600">프롬프트에 썼는데 지켜지지 않았다</text>
+<text x="1640" y="1150" font-size="19" fill="#6B7280">친구 N명이서 → N+1  18/18 실패</text>
+<text x="1640" y="1180" font-size="19" fill="#6B7280">내장그래픽을 gpu 모델명 자리에</text>
+<text x="1640" y="1210" font-size="19" fill="#6B7280">턴제 소프트 불호 → 하드 필터</text>
+<text x="1640" y="1240" font-size="19" fill="#6B7280">판단 불가 → 미달 단정 16/26</text>
+<line x1="1640" y1="1276" x2="2468" y2="1276" stroke="#D1D5DB" stroke-width="2"/>
+<text x="1640" y="1312" font-size="19" fill="#111827" font-weight="600">문구를 더 붙이는 대신 코드 안전망과 계약을 고칠 자리를 실측이 짚었다</text>
+<path d="M1700 940 V 928 H 1487 V 878" fill="none" stroke="#334155" stroke-width="3" stroke-dasharray="10 8" marker-end="url(#arr_s)"/>
+<text x="1512" y="918" font-size="19" fill="#334155" font-weight="600">판정 문장을 코드로 되돌렸다</text>
+<text x="56" y="1392" font-size="24" fill="#334155" font-weight="700">프롬프트를 문서가 아니라 계약으로 만드는 축</text>
+<rect x="56" y="1420" width="800" height="200" rx="20" fill="white" stroke="#D1D5DB"/>
+<rect x="56" y="1448" width="6" height="30" rx="3" fill="#334155"/>
+<text x="82" y="1472" font-size="23" fill="#111827" font-weight="700">출력이 스키마다</text>
+<text x="82" y="1520" font-size="19" fill="#6B7280">GameConditions · RecommendationDraft · _JudgeOutput —</text>
+<text x="82" y="1552" font-size="19" fill="#6B7280">네 프롬프트 중 셋을 Pydantic 모델로 파싱해 받는다.</text>
+<text x="82" y="1584" font-size="19" fill="#6B7280">형식 위반은 파싱에서 끝나고 본문 규칙만 남는다.</text>
+<rect x="880" y="1420" width="800" height="200" rx="20" fill="white" stroke="#D1D5DB"/>
+<rect x="880" y="1448" width="6" height="30" rx="3" fill="#334155"/>
+<text x="906" y="1472" font-size="23" fill="#111827" font-weight="700">집행은 프롬프트 밖에 둔다</text>
+<text x="906" y="1520" font-size="19" fill="#6B7280">추천 개수와 판정 통과는 validate_draft가, 조건 중복 제거는</text>
+<text x="906" y="1552" font-size="19" fill="#6B7280">conditions.py의 validator가, 사양 최종 판정은 compose_assessment가</text>
+<text x="906" y="1584" font-size="19" fill="#6B7280">집행한다. 프롬프트는 요청하고, 거부는 코드가 한다.</text>
+<rect x="1704" y="1420" width="800" height="200" rx="20" fill="white" stroke="#D1D5DB"/>
+<rect x="1704" y="1448" width="6" height="30" rx="3" fill="#334155"/>
+<text x="1730" y="1472" font-size="23" fill="#111827" font-weight="700">트레이스에 이름이 남는다</text>
+<text x="1730" y="1520" font-size="19" fill="#6B7280">QueryParser · SpecJudge · ReviewSummary · AnswerJudge가</text>
+<text x="1730" y="1552" font-size="19" fill="#6B7280">wrap_openai로 감싸져 LangSmith 자식 run으로 남는다.</text>
+<text x="1730" y="1584" font-size="19" fill="#6B7280">어느 프롬프트가 무엇을 냈는지 한 트레이스에서 읽힌다.</text>
+</svg>
