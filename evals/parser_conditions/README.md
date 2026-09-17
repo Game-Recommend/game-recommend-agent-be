@@ -71,7 +71,7 @@ LangSmith에 올리지 않아도 `runs/<UTC timestamp>/`에 같은 기록을 남
 ```bash
 # 데이터 재생성. 정답을 바꾸면 기존 runs/의 dataset_sha256과 달라진다
 .venv/bin/python evals/parser_conditions/build_dataset.py
-.venv/bin/python -m pytest -q evals/parser_conditions/test_score.py
+.venv/bin/python -m pytest -q evals/parser_conditions/test_parser_score.py
 .venv/bin/python -m ruff check .
 ```
 
