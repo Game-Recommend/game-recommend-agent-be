@@ -150,8 +150,8 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 리뷰 담당의 [steam_reviews.py](app/clients/steam_reviews.py)의 `SteamReviewSummaryClient`가
 `ReviewSummaryClient` 계약을 구현합니다. Steam 리뷰를 한국어 우선으로 최대 100개 받아 80자 미만을
 버리고 `votes_up` 순으로 20개를 고른 뒤 OpenAI(gpt-4o-mini)로 100자 내외 한줄평을 만듭니다.
-`steam_app_id`가 없는 게임은 건너뛰어 경고만 남습니다. 클라이언트는 `load_dotenv()`로 `.env`를 읽어
-환경 변수 `OPENAI_API_KEY`를 직접 사용합니다.
+`steam_app_id`가 없는 게임은 건너뛰어 경고만 남습니다. 클라이언트는 `Settings` 대신 환경 변수
+`OPENAI_API_KEY`를 직접 읽습니다(`.env`는 [app/__init__.py](app/__init__.py)가 올립니다).
 
 ## 리뷰 점수
 
@@ -217,7 +217,9 @@ make run                # http://127.0.0.1:8000/health
 
 키 목록의 기준은 [.env.example](.env.example)입니다. 서버 시작 시 [app/assembly.py](app/assembly.py)가
 이 설정을 읽어 어댑터를 조립하므로, 키를 채우고 `make run`하면 추천 기능이 켜집니다.
-`steam_reviews.py`는 `load_dotenv()`로 `.env`를 직접 읽으므로 서버는 저장소 루트에서 실행합니다.
+`.env`는 [app/__init__.py](app/__init__.py)의 `load_dotenv()`가 app 패키지 import 시점에 한 번 올립니다.
+`steam_reviews.py`와 LangSmith 추적처럼 환경 변수를 직접 보는 쪽이 여기에 기댑니다. 이미 있는 환경
+변수는 덮어쓰지 않으므로 배포 환경 값이 우선하고, 로컬에서는 저장소 루트에서 실행합니다.
 
 ### 개발·검증 명령
 
