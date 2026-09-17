@@ -12,6 +12,7 @@ from app.schemas.hardware import HardwareResult, HardwareSpecs
 from app.schemas.price import PriceQuote, PriceResult
 from app.schemas.recommendation import EvaluatedGame, RecommendationResponse
 from evals.agent_e2e.judge import build_evidence
+from evals.agent_e2e.rescore import rescore_record
 from evals.agent_e2e.score import (
     BASE_STAGES,
     check_answer_format,
@@ -240,6 +241,35 @@ def test_answer_with_markdown_fails():
 def test_answer_too_short_fails():
     resp = response([], answer="한 문장뿐입니다.")
     assert any("문장이다" in problem for problem in check_answer_format(resp))
+
+
+def test_empty_recommendation_may_answer_in_two_sentences():
+    # 추천이 없으면 "없다 + 왜 없다" 두 문장을 받는다. 추천이 있으면 여전히 3문장부터다.
+    two = "조건에 맞는 게임이 없습니다. 모든 후보가 예산을 넘었습니다."
+    assert check_answer_format(response([], answer=two)) == []
+    with_game = response([game(1, "Game A")], answer="Game A를 추천합니다. 예산 안입니다.")
+    assert any("3~6문장" in problem for problem in check_answer_format(with_game))
+
+
+def test_rescore_recomputes_only_answer_format():
+    two = "조건에 맞는 게임이 없습니다. 모든 후보가 예산을 넘었습니다."
+    base = {
+        "id": "E1",
+        "constraints_passed": True,
+        "trajectory_passed": True,
+        "answer_format_passed": False,
+        "passed": False,
+        "answer_format_problems": ["답변이 2문장이다(3~6문장이어야 한다)"],
+        "recommended": [],
+        "answer": two,
+    }
+    assert rescore_record(base)["passed"] is True
+    # 다른 축이 실패한 문항은 형식이 풀려도 통과가 아니다
+    assert rescore_record({**base, "constraints_passed": False})["passed"] is False
+    # 추천이 있는 2문장은 여전히 위반이다
+    assert rescore_record({**base, "recommended": ["조건"]})["answer_format_passed"] is False
+    failed = {"id": "E2", "error": "PipelineStageError: x", "passed": False}
+    assert rescore_record(failed) == failed
 
 
 def test_empty_answer_fails():

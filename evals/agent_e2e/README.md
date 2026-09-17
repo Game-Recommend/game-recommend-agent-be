@@ -58,7 +58,8 @@
 2. **trajectory** — 필요한 단계 실행. 진행 이벤트(`progress` 콜백)로 본다.
    공통 단계(질문 분해·에이전트 추론·게임 검색) 완료, 문항별 필수 단계 완료, 실패 단계 없음,
    `게임 검색`이 `가격`·`하드웨어`보다 먼저.
-3. **answer_format** — 답변 문단의 형식. 한국어, 마크다운·표·링크 없음, 3~6문장,
+3. **answer_format** — 답변 문단의 형식. 한국어, 마크다운·표·링크 없음, 3~6문장(**추천이 0개면
+   2~6문장**. 게임마다 쓸 이유가 없어 "없다 + 왜 없다"로 끝나는 답을 받는다. 2026-09-18 변경),
    **추천한 게임이 모두 답변에 언급됨**. 마지막 항목이 실측에서 실제 결함을 잡았다(REPORT.md 참고).
 
 [judge.py](judge.py)의 LLM 심판(`gpt-4o-mini`)이 코드로 볼 수 없는 두 가지를 1~5로 채점한다.
@@ -97,6 +98,14 @@ LangSmith에는 `agent-e2e` 데이터셋으로 올라간다. 파서 평가와 �
 기록은 `runs/<UTC timestamp>/`에 남고 기존 디렉터리는 덮어쓰지 않는다. `metadata.json`에
 모델·시각·데이터·에이전트 프롬프트 SHA-256, `results.jsonl`에 건별 결과·단계 타임라인·답변·
 심판 점수, `summary.json`에 집계가 들어간다. 키는 기록하지 않는다.
+
+채점 규칙이 바뀌면 다시 돌리지 않고 저장된 기록을 재채점한다. [rescore.py](rescore.py)는 외부 API를
+부르지 않고 `results.jsonl`의 답변·추천 이름으로 **답변 형식 축만** 다시 계산해, 같은 디렉터리에
+`summary.rescored.json`을 쓴다. 원본 `results.jsonl`·`summary.json`은 그대로 둔다.
+
+```bash
+.venv/bin/python -m evals.agent_e2e.rescore evals/agent_e2e/runs/20260917T070118Z
+```
 
 ```bash
 .venv/bin/python evals/agent_e2e/build_dataset.py   # 데이터 재생성

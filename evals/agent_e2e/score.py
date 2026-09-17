@@ -13,7 +13,12 @@ import re
 
 from app.schemas.recommendation import RecommendationResponse
 
-# 프롬프트가 요구하는 답변 형식: 한국어 3~6문장, 마크다운·표·링크 없이
+# 프롬프트가 요구하는 답변 형식: 한국어 3~6문장, 마크다운·표·링크 없이.
+# 추천이 0개면 2문장도 받는다. 게임마다 쓸 이유가 없어 "없다 + 왜 없다"로 끝나는 것이 자연스럽고,
+# 프롬프트도 빈 결과의 길이는 따로 정하지 않았다(REPORT 발견 5). 1문장은 이유가 빠진 것이라 막는다.
+MIN_SENTENCES = 3
+MIN_SENTENCES_EMPTY = 2
+MAX_SENTENCES = 6
 MARKDOWN = re.compile(r"(\*\*)|(^\s*[-*+]\s)|(^\s*#{1,6}\s)|(\|)|(\[.+?\]\(.+?\))", re.MULTILINE)
 SENTENCE_END = re.compile(r"[.!?。]\s|[.!?。]$")
 HANGUL = re.compile(r"[가-힣]")
@@ -152,8 +157,13 @@ def check_trajectory(item: dict, stages: list[dict], profile: str = "agent") -> 
 
 def check_answer_format(response: RecommendationResponse) -> list[str]:
     """답변 문단의 형식. 내용 품질은 LLM 심판이 본다."""
+    return answer_format_problems(response.answer, [game.game.name for game in response.games])
+
+
+def answer_format_problems(answer: str, game_names: list[str]) -> list[str]:
+    """답변과 추천 게임 이름만으로 본다. rescore.py가 저장된 기록을 다시 채점할 때도 쓴다."""
     problems: list[str] = []
-    answer = response.answer.strip()
+    answer = answer.strip()
     if not answer:
         return ["답변이 비었다"]
     if not HANGUL.search(answer):
@@ -161,12 +171,15 @@ def check_answer_format(response: RecommendationResponse) -> list[str]:
     if MARKDOWN.search(answer):
         problems.append("답변에 마크다운·표·링크가 있다")
     sentences = count_sentences(answer)
-    if not 3 <= sentences <= 6:
-        problems.append(f"답변이 {sentences}문장이다(3~6문장이어야 한다)")
+    minimum = MIN_SENTENCES if game_names else MIN_SENTENCES_EMPTY
+    if not minimum <= sentences <= MAX_SENTENCES:
+        problems.append(
+            f"답변이 {sentences}문장이다({minimum}~{MAX_SENTENCES}문장이어야 한다)"
+        )
     # 추천한 게임은 답변에서 언급돼야 한다
-    for game in response.games:
-        if game.game.name not in answer:
-            problems.append(f"추천한 '{game.game.name}'이 답변에 없다")
+    for name in game_names:
+        if name not in answer:
+            problems.append(f"추천한 '{name}'이 답변에 없다")
     return problems
 
 
