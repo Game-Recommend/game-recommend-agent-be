@@ -62,7 +62,8 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 | 완료 | `app/agent/schemas.py` | 최종 출력 `RecommendationDraft` |
 | 완료 | `app/agent/tools/__init__.py` | `build_tools()` Tool 목록 |
 | 완료 | `app/agent/progress.py` | 진행 콜백·`PipelineStageError`·`stream_progress()`·`Recommender` 계약 |
-| 완료 | `app/config.py`, `app/assembly.py`, `.env.example` | `OPENAI_AGENT_MODEL`, LangSmith 변수, 에이전트 조립 |
+| 완료 | `app/config.py`, `app/assembly.py` | `OPENAI_AGENT_MODEL`(비면 `OPENAI_MODEL`), 에이전트 조립 |
+| 완료 | `.env.example`, `app/__init__.py` | LangSmith 변수는 `LANGSMITH_TRACING`·`LANGSMITH_API_KEY`·`LANGSMITH_PROJECT` 세 개이고 `.env.example`에 주석으로 있다. LangChain이 환경 변수만 보고 켜므로 `Settings`에는 넣지 않았다. `.env`는 `app/__init__.py`의 `load_dotenv()`가 app 패키지 import 시점에 올린다 |
 | 완료 | `tests/agent/` | 대본 모델(`ScriptedChatModel`)로 루프·후검증·안전망·SSE 검증 |
 | 완료 | Tool 5개로 늘어난 계약 반영 | `get_review_scores` 추가에 맞춰 README·TEAM.md의 Tool 목록·SSE 단계명(`리뷰 점수`)·`ToolSet`을 맞췄다. FE도 `AGENT_TOOL_STAGES`에 `리뷰 점수`를 넣어 반영했다(agent-fe `5b41bc7`) |
 | 완료 | 실제 키로 예상 질문 5개 전후 비교 | 요약은 README `## 전후 비교`, 질문별 타임라인·원시 기록·재실행 방법은 `evals/agent_questions/`다. 같은 턴 병렬 호출과 안전망이 타임라인에 그대로 보인다 |

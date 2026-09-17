@@ -357,10 +357,13 @@ warnings
 환경 변수 예시:
 
 ```env
-LANGCHAIN_API_KEY=...
-LANGCHAIN_PROJECT=game-recommend-agent
-LANGCHAIN_TRACING_V2=true
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=...
+LANGSMITH_PROJECT=game-recommend-agent
 ```
+
+`.env`에 넣으면 된다. `app/__init__.py`의 `load_dotenv()`가 app 패키지 import 시점에 올려주므로
+에이전트가 만들어지기 전에 추적이 켜진다. 배포 환경에서는 플랫폼 환경 변수로 넣는다.
 
 LangSmith에서는 다음을 확인한다.
 

@@ -13,7 +13,7 @@ dependencies = [
     "langchain-openai>=1.6",
     "pydantic>=2.8",
     "pydantic-settings>=2.4",
-    # 리뷰 요약(app/clients/steam_reviews.py)이 load_dotenv()로 .env를 직접 읽는다
+    # app/__init__.py가 load_dotenv()로 .env를 os.environ에 올린다(steam_reviews.py, LangSmith 추적)
     "python-dotenv>=1.0",
 ]
 
