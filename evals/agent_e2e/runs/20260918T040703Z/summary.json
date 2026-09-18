@@ -1,0 +1,169 @@
+{
+  "attempted": 100,
+  "scored": 100,
+  "passed": 80,
+  "accuracy": 0.8,
+  "errors": 0,
+  "error_kinds": {},
+  "axes": {
+    "constraints": 98,
+    "trajectory": 99,
+    "answer_format": 83
+  },
+  "empty_recommendations": 47,
+  "latency_seconds": {
+    "median": 10.45,
+    "max": 19.2
+  },
+  "judge": {
+    "judged": 100,
+    "errors": 0,
+    "grounded_mean": 4.15,
+    "linked_mean": 4.36,
+    "grounded_distribution": {
+      "1": 3,
+      "2": 12,
+      "3": 10,
+      "4": 17,
+      "5": 58
+    },
+    "linked_distribution": {
+      "1": 4,
+      "2": 7,
+      "3": 8,
+      "4": 11,
+      "5": 70
+    },
+    "grounded_below_4": [
+      "E005",
+      "E007",
+      "E010",
+      "E015",
+      "E019",
+      "E020",
+      "E038",
+      "E040",
+      "E044",
+      "E049",
+      "E054",
+      "E058",
+      "E061",
+      "E062",
+      "E065",
+      "E067",
+      "E070",
+      "E072",
+      "E074",
+      "E084",
+      "E089",
+      "E090",
+      "E091",
+      "E096",
+      "E098"
+    ],
+    "linked_below_4": [
+      "E005",
+      "E007",
+      "E010",
+      "E015",
+      "E019",
+      "E040",
+      "E044",
+      "E054",
+      "E058",
+      "E065",
+      "E067",
+      "E070",
+      "E072",
+      "E074",
+      "E089",
+      "E090",
+      "E091",
+      "E093",
+      "E096"
+    ]
+  },
+  "by_family": {
+    "budget": {
+      "attempted": 20,
+      "scored": 20,
+      "passed": 16,
+      "errors": 0,
+      "failed_ids": [
+        "E001",
+        "E005",
+        "E007",
+        "E015"
+      ],
+      "accuracy": 0.8
+    },
+    "combined": {
+      "attempted": 20,
+      "scored": 20,
+      "passed": 17,
+      "errors": 0,
+      "failed_ids": [
+        "E084",
+        "E089",
+        "E096"
+      ],
+      "accuracy": 0.85
+    },
+    "count": {
+      "attempted": 15,
+      "scored": 15,
+      "passed": 13,
+      "errors": 0,
+      "failed_ids": [
+        "E034",
+        "E036"
+      ],
+      "accuracy": 0.8667
+    },
+    "exclude": {
+      "attempted": 15,
+      "scored": 15,
+      "passed": 12,
+      "errors": 0,
+      "failed_ids": [
+        "E054",
+        "E056",
+        "E058"
+      ],
+      "accuracy": 0.8
+    },
+    "free": {
+      "attempted": 10,
+      "scored": 10,
+      "passed": 10,
+      "errors": 0,
+      "failed_ids": [],
+      "accuracy": 1.0
+    },
+    "hardware": {
+      "attempted": 15,
+      "scored": 15,
+      "passed": 7,
+      "errors": 0,
+      "failed_ids": [
+        "E061",
+        "E062",
+        "E065",
+        "E067",
+        "E070",
+        "E071",
+        "E072",
+        "E074"
+      ],
+      "accuracy": 0.4667
+    },
+    "tight": {
+      "attempted": 5,
+      "scored": 5,
+      "passed": 5,
+      "errors": 0,
+      "failed_ids": [],
+      "accuracy": 1.0
+    }
+  }
+}

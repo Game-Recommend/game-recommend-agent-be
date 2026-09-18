@@ -14,6 +14,15 @@
 테스트에서는 가짜 연동과 대본 모델을 주입해 흐름을 검증합니다. 필수 키(`OPENAI_API_KEY`, `IGDB_CLIENT_ID`,
 `IGDB_CLIENT_SECRET`)가 비어 있으면 `POST /recommend`는 503을 반환합니다.
 
+## 서비스 바로가기
+
+![게임 추천 에이전트 서비스 QR 코드](docs/service_qr.png)
+
+QR을 찍으면 배포된 프론트엔드
+[game-recommend-agent-fe.vercel.app](https://game-recommend-agent-fe.vercel.app/)으로 갑니다.
+발표·시연 때는 이 이미지를 띄워 바로 열게 합니다. 슬라이드에 크게 넣거나 인쇄할 때는
+[SVG](docs/service_qr.svg)를 씁니다.
+
 ## 기술 구성
 
 | 구분 | 현재 구성 |
@@ -112,7 +121,7 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 | `build_user_input` | 질문·조건·검색 JSON과 조건부 실행 지시를 요청마다 조립 | [app/agent/prompts.py](app/agent/prompts.py) | 사용자 메시지 |
 | `AGENT_SYSTEM` | 신뢰 경계·도구 선택 절차·답변 작성 규칙 | [app/agent/prompts.py](app/agent/prompts.py) | `RecommendationDraft` |
 | `SYSTEM_PROMPT` (사양 판정) | 부품별 `met`·`unmet`·`unknown`과 30자 근거 | [app/clients/hardware_judge.py](app/clients/hardware_judge.py) | `_JudgeOutput` |
-| 리뷰 한줄평 | Steam·웹 리뷰 상위 20개를 100자 한 문장으로 | [app/clients/steam_reviews.py](app/clients/steam_reviews.py) | 자유 문장 |
+| 리뷰 한줄평 | Steam 리뷰 도움순 상위 20개를 100자 한 문장으로 | [app/clients/steam_reviews.py](app/clients/steam_reviews.py) | 자유 문장 |
 | `build_rejection` | 후검증 실패 사유와 재제출 규칙 | [app/agent/prompts.py](app/agent/prompts.py) | 사용자 메시지 |
 | `JUDGE_SYSTEM` | 답변 문단의 `grounded`·`linked` 채점 (오프라인) | [evals/agent_e2e/judge.py](evals/agent_e2e/judge.py) | `JudgeVerdict` |
 
@@ -468,7 +477,7 @@ app/
 │  ├─ exchange_rate.py      가격·하드웨어 담당: Frankfurter USD→KRW 환율
 │  ├─ free_games.py         가격·하드웨어 담당: 자체 런처 무료 게임 표
 │  ├─ pcgamingwiki.py       가격·하드웨어 담당: 비Steam 요구 사양 폴백
-│  ├─ steam_reviews.py      리뷰 담당: Steam·웹 리뷰 수집과 LLM 한줄평 (SteamReviewSummaryClient)
+│  ├─ steam_reviews.py      리뷰 담당: Steam 리뷰 수집과 LLM 한줄평 (SteamReviewSummaryClient)
 │  ├─ steam_review_score.py 리뷰 담당: Steam 리뷰 통계 (SteamReviewScoreClient)
 │  ├─ steamgriddb.py        미디어 담당: SteamGridDB 로고·히어로
 │  ├─ igdb_media.py         미디어 담당: IGDB 아트워크·트레일러
