@@ -1,8 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1316" height="674" viewBox="0 0 1316 674" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
-<rect width="1316" height="674" fill="#F5F6FA"/>
-<text x="56" y="96" font-size="38" fill="#111827" font-weight="700" text-anchor="start">엔드투엔드 100문항</text>
-<text x="56" y="136" font-size="23" fill="#6B7280" font-weight="400" text-anchor="start">질문에서 추천까지 전체. 사용자가 말한 필수 조건을 추천 결과가 지켰는지 기계로 검증한다</text>
-<rect x="56" y="172" width="1204" height="446" rx="14" fill="white"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1204" height="368" viewBox="56 172 1204 368" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
+<rect x="56" y="172" width="1204" height="368" rx="14" fill="white"/>
 <path d="M56 228 V186 Q56 172 70 172 H1246 Q1260 172 1260 186 V228 Z" fill="#EEF0F6"/>
 <text x="80" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">항목</text>
 <circle cx="528" cy="201" r="8" fill="#0E9F9F"/>
@@ -10,7 +7,7 @@
 <circle cx="816" cy="201" r="8" fill="#6D5DF6"/>
 <text x="834" y="209" font-size="22" fill="#111827" font-weight="600" text-anchor="start">에이전트 · LangGraph</text>
 <text x="1096" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">차이</text>
-<text x="80" y="264" font-size="27" fill="#111827" font-weight="600" text-anchor="start">조건 준수</text>
+<text x="80" y="264" font-size="27" fill="#111827" font-weight="600" text-anchor="start">최종 게임후보 필수 조건 만족</text>
 <text x="80" y="290" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">가격 · 개수 · 제외 장르 · 사양</text>
 <text x="520" y="264" font-size="30" fill="#111827" font-weight="500" text-anchor="start">98/100</text>
 <text x="643.5" y="264" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">98%</text>
@@ -48,20 +45,13 @@
 <path d="M808 434 H920.3636363636364 Q924.3636363636364 434 924.3636363636364 438 V440 Q924.3636363636364 444 920.3636363636364 444 H808 Z" fill="#6D5DF6"/>
 <text x="1096" y="420" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+29%p</text>
 <line x1="56" y1="462" x2="1260" y2="462" stroke="#E5E7EB"/>
-<text x="80" y="498" font-size="27" fill="#111827" font-weight="600" text-anchor="start">LLM 심판 · 근거 점수</text>
-<text x="80" y="524" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">답변에 포함된 정보가 Tool 조회 결과에 있는가 (1~5점)</text>
-<text x="520" y="510" font-size="30" fill="#111827" font-weight="500" text-anchor="start">3.54</text>
-<text x="808" y="510" font-size="30" fill="#111827" font-weight="700" text-anchor="start">4.36</text>
-<text x="1096" y="498" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+0.82점</text>
+<text x="80" y="498" font-size="27" fill="#111827" font-weight="600" text-anchor="start">지연 중앙값</text>
+<text x="80" y="524" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동시성 2</text>
+<text x="520" y="510" font-size="30" fill="#111827" font-weight="500" text-anchor="start">11.6초</text>
+<text x="625.8" y="510" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">최대 41.7초</text>
+<text x="808" y="510" font-size="30" fill="#111827" font-weight="700" text-anchor="start">10.4초</text>
+<text x="913.8" y="510" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">최대 19.2초</text>
+<text x="1096" y="498" font-size="28" fill="#111827" font-weight="700" text-anchor="start">−1.2초</text>
 <text x="1096" y="525" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
-<line x1="56" y1="540" x2="1260" y2="540" stroke="#E5E7EB"/>
-<text x="80" y="576" font-size="27" fill="#111827" font-weight="600" text-anchor="start">지연 중앙값</text>
-<text x="80" y="602" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동시성 2</text>
-<text x="520" y="588" font-size="30" fill="#111827" font-weight="500" text-anchor="start">11.6초</text>
-<text x="625.8" y="588" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">최대 41.7초</text>
-<text x="808" y="588" font-size="30" fill="#111827" font-weight="500" text-anchor="start">12.3초</text>
-<text x="913.8" y="588" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">최대 25.2초</text>
-<text x="1096" y="576" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+0.7초</text>
-<text x="1096" y="603" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동률</text>
-<rect x="56" y="172" width="1204" height="446" rx="14" fill="none" stroke="#D1D5DB"/>
+<rect x="56.5" y="172.5" width="1203" height="367" rx="13.5" fill="none" stroke="#D1D5DB"/>
 </svg>
