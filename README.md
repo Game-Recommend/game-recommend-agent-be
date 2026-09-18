@@ -203,7 +203,7 @@ Steam에 없는 후보용 가격·사양 폴백은 구현되어 있습니다.
 | [cheapshark.py](app/clients/cheapshark.py) | 무료 게임 표 확인 후 CheapShark USD 최저가를 원화로 변환 |
 | [exchange_rate.py](app/clients/exchange_rate.py) | Frankfurter USD→KRW 환율 (키 불필요, 1시간 캐시) |
 | [free_games.py](app/clients/free_games.py) | 자체 런처 무료 게임 수동 목록 (LoL, 발로란트 등) |
-| [pcgamingwiki.py](app/clients/pcgamingwiki.py) | PCGamingWiki `System requirements` 템플릿에서 PC 요구 사양 조회, Steam과 같은 판정 규칙 적용 (키 불필요) |
+| [pcgamingwiki.py](app/clients/pcgamingwiki.py) | PCGamingWiki `System requirements` 템플릿에서 PC 요구 사양 조회, Steam과 같은 판정 규칙 적용 (키 불필요, 제목 50개씩 묶음 조회, 1시간 캐시) |
 
 ## 시작하기
 
@@ -459,7 +459,7 @@ app/
 │  └─ media.py              Tool 5 (선택)
 ├─ clients/
 │  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py · media.py
-│  ├─ igdb.py               IGDB 담당: 후보 검색 `search()`와 어댑터 `IgdbCatalogClient`
+│  ├─ igdb.py               IGDB 담당: 후보 검색 `search()`와 어댑터 `IgdbCatalogClient` (Twitch 앱 토큰 재사용)
 │  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API 클라이언트 (가격·사양)
 │  ├─ hardware_assessor.py  가격·하드웨어 담당: Steam·폴백 공통 사양 판정 규칙
 │  ├─ hardware_judge.py     가격·하드웨어 담당: GPU·CPU 판정기 계약과 OpenAI 구현

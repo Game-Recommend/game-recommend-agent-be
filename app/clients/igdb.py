@@ -1,14 +1,23 @@
-"""조건 JSON → 지정된 조건만 적용 → 1차 후보 최대 30개. 가격·사양은 후속 단계 담당."""
+"""조건 JSON → 지정된 조건만 적용 → 1차 후보 최대 30개. 가격·사양은 후속 단계 담당.
+
+IGDB 인증은 Twitch 앱 토큰(client credentials)이다. 토큰은 약 60일 유효하므로 검색마다 새로 받지
+않고 프로세스 안에서 만료 전까지 재사용한다(`TwitchAppToken`, igdb_media.py와 같은 방식). 검색마다
+토큰 요청 왕복(0.3~0.5초)을 없앤다. IGDB가 토큰을 거부하면(401) 버리고 한 번 다시 받는다.
+"""
 
 import asyncio
 import json
+import time
 from pathlib import Path
 
 import httpx2 as httpx
 
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.pipeline.query_processing.conditions import GameConditions
 from app.schemas.game import GameCandidate
+
+TOKEN_URL = "https://id.twitch.tv/oauth2/token"
+API_URL = "https://api.igdb.com/v4"
 
 ALIASES = {
     "pc": "PC (Microsoft Windows)", "windows": "PC (Microsoft Windows)",
@@ -21,6 +30,74 @@ ALIASES = {
 
 def normalize(value: str) -> str:
     return ALIASES.get(value.strip().lower(), value.strip()).lower()
+
+
+class TwitchAppToken:
+    """Twitch client credentials 앱 토큰.
+
+    만료 1분 전까지 재사용하고, 자격 증명이 바뀌면 다시 받는다.
+    """
+
+    def __init__(self) -> None:
+        self._client_id: str | None = None
+        self._token: str | None = None
+        self._expires_at = 0.0
+        self._lock = asyncio.Lock()
+
+    async def get(self, client: httpx.AsyncClient, client_id: str, client_secret: str) -> str:
+        async with self._lock:
+            if (
+                self._token
+                and self._client_id == client_id
+                and time.monotonic() < self._expires_at
+            ):
+                return self._token
+            response = await client.post(
+                TOKEN_URL,
+                data={
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "grant_type": "client_credentials",
+                },
+            )
+            response.raise_for_status()
+            payload = response.json()
+            self._client_id = client_id
+            self._token = payload["access_token"]
+            # 만료 1분 전에 갱신한다
+            self._expires_at = time.monotonic() + max(payload.get("expires_in", 0) - 60, 0)
+            return self._token
+
+    def invalidate(self) -> None:
+        """IGDB가 토큰을 거부했을 때 다음 호출이 새로 받게 한다."""
+        self._token = None
+
+
+# 프로세스 전체가 공유한다. search()는 호출마다 HTTP 클라이언트를 새로 만들지만 토큰은 여기 남는다
+_app_token = TwitchAppToken()
+
+
+async def _post(
+    client: httpx.AsyncClient, settings: Settings, endpoint: str, body: str
+) -> list[dict]:
+    """앱 토큰으로 IGDB 엔드포인트를 부른다. 토큰이 거부되면(401) 새로 받아 한 번 더 시도한다."""
+    response = await _post_once(client, settings, endpoint, body)
+    if response.status_code == 401:
+        _app_token.invalidate()
+        response = await _post_once(client, settings, endpoint, body)
+    response.raise_for_status()
+    return response.json()
+
+
+async def _post_once(
+    client: httpx.AsyncClient, settings: Settings, endpoint: str, body: str
+) -> httpx.Response:
+    token = await _app_token.get(client, settings.igdb_client_id, settings.igdb_client_secret)
+    return await client.post(
+        f"{API_URL}/{endpoint}",
+        headers={"Client-ID": settings.igdb_client_id, "Authorization": f"Bearer {token}"},
+        content=body,
+    )
 
 
 async def search(conditions: dict) -> list[dict]:
@@ -47,23 +124,12 @@ async def search(conditions: dict) -> list[dict]:
 
     settings = get_settings()
     async with httpx.AsyncClient(timeout=30) as client:
-        # 1. Twitch 인증
-        response = await client.post(
-            "https://id.twitch.tv/oauth2/token",
-            data={
-                "client_id": settings.igdb_client_id,
-                "client_secret": settings.igdb_client_secret,
-                "grant_type": "client_credentials",
-            },
-        )
-        client.headers.update({
-            "Client-ID": settings.igdb_client_id,
-            "Authorization": f"Bearer {response.json()['access_token']}",
-        })
-
-        response = await client.post(
-            "https://api.igdb.com/v4/games",
-            content=(
+        # 1. 후보 검색. Twitch 앱 토큰은 _post가 붙이며 만료 전까지 재사용한다
+        games = await _post(
+            client,
+            settings,
+            "games",
+            (
                 "fields name,summary,url,genres.name,themes.name,platforms.name,"
                 "external_games.uid,external_games.external_game_source.name,"
                 "multiplayer_modes.platform,multiplayer_modes.offlinecoopmax,"
@@ -72,20 +138,21 @@ async def search(conditions: dict) -> list[dict]:
                 f"{query_filter}sort id asc; limit 500;"
             ),
         )
-        games = response.json()
         if not games:
             return []
 
-        # 3. 전체 완료 시간을 조회하고 초 → 시간으로 변환
+        # 2. 전체 완료 시간을 조회하고 초 → 시간으로 변환
         ids = ",".join(str(game["id"]) for game in games)
-        response = await client.post(
-            "https://api.igdb.com/v4/game_time_to_beats",
-            content=f"fields game_id,normally; where game_id = ({ids}); limit 500;",
+        rows = await _post(
+            client,
+            settings,
+            "game_time_to_beats",
+            f"fields game_id,normally; where game_id = ({ids}); limit 500;",
         )
         hours = {row["game_id"]: row["normally"] / 3600
-                 for row in response.json() if row.get("normally", 0) > 0}
+                 for row in rows if row.get("normally", 0) > 0}
 
-    # 4. 지정된 제외 장르·인원·시간 검사
+    # 3. 지정된 제외 장르·인원·시간 검사
     result = []
     for game in games:
         genres = [item["name"] for item in game.get("genres", [])]
