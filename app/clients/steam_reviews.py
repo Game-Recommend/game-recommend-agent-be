@@ -26,7 +26,7 @@ from app.schemas.review import ReviewSummary
 class SteamReviewSummaryClient:
     """steam리뷰를 우선 사용하여 게임별 한줄평을 생성한다"""
 
-    def __init__(self, *, max_concurrency: int = 4):
+    def __init__(self, *, max_concurrency: int = 8):
 
         # wrap_openai는 LANGSMITH_TRACING이 켜져 있을 때만 트레이스를 남긴다
         self.llm = wrap_openai(
