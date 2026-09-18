@@ -178,37 +178,78 @@ WIKITEXT = """{{Infobox game|title=Alan Wake II}}
 }}
 """
 
-
-def wiki_parse(title: str, wikitext: str = WIKITEXT, *, redirected_from: str | None = None):
-    parse = {"title": title, "wikitext": {"*": wikitext}}
-    if redirected_from:
-        parse["redirects"] = [{"from": redirected_from, "to": title}]
-    return {"parse": parse}
+NO_TEMPLATE = "{{Infobox game|title=Roblox}}"
 
 
-MISSING = {"error": {"code": "missingtitle", "info": "The page you specified doesn't exist."}}
+def wiki_http(
+    pages: dict[str, str],
+    *,
+    redirects: dict[str, str] | None = None,
+    search: list[str] = (),
+    error: dict | None = None,
+    split_after: int | None = None,
+    calls=None,
+):
+    """최종 제목 → 원문. MediaWiki 묶음 조회(action=query)를 흉내 낸다.
 
-
-def wiki_http(pages: dict[str, dict], search: list[str] = (), calls=None):
-    """page 제목 → parse 응답. 없는 제목은 missingtitle. opensearch는 search 목록을 돌려준다."""
+    요청 제목은 MediaWiki처럼 첫 글자를 대문자로 정규화(`normalized`)하고 `redirects`(요청 제목 →
+    최종 제목)를 거쳐 pages에서 찾는다. 없으면 missing, `|`가 든 제목은 invalid다. opensearch는
+    search 목록을 돌려준다. split_after가 있으면 첫 응답은 그 수까지만 원문을 싣고 continue를 붙인다
+    (잘린 응답). error가 있으면 그 오류를 돌려준다.
+    """
     calls = calls if calls is not None else []
+    redirects = redirects or {}
 
     def handler(request: httpx2.Request) -> httpx2.Response:
         calls.append(request)
         params = request.url.params
         if params.get("action") == "opensearch":
             body = [params["search"], list(search), [""] * len(search), []]
-        else:
-            body = pages.get(params.get("page", ""), MISSING)
+            return httpx2.Response(200, content=json.dumps(body))
+        if error is not None:
+            return httpx2.Response(200, content=json.dumps({"error": error}))
+        normalized, redirected, entries = [], [], []
+        for title in queried_titles(request):
+            if "|" in title:
+                entries.append({"title": title, "invalid": True})
+                continue
+            canonical = title[:1].upper() + title[1:]
+            if canonical != title:
+                normalized.append({"from": title, "to": canonical})
+            final = redirects.get(canonical, canonical)
+            if final != canonical:
+                redirected.append({"from": canonical, "to": final})
+            if final in pages:
+                revisions = [{"slots": {"main": {"content": pages[final]}}}]
+                entries.append({"pageid": 1, "title": final, "revisions": revisions})
+            else:
+                entries.append({"title": final, "missing": True})
+        query = {"pages": entries}
+        if normalized:
+            query["normalized"] = normalized
+        if redirected:
+            query["redirects"] = redirected
+        body = {"query": query}
+        if split_after is not None and "rvcontinue" not in params:
+            for entry in entries[split_after:]:
+                entry.pop("revisions", None)
+            body["continue"] = {"rvcontinue": "next", "continue": "||"}
         return httpx2.Response(200, content=json.dumps(body))
 
     return httpx2.AsyncClient(transport=httpx2.MockTransport(handler)), calls
 
 
+def wiki_actions(calls: list[httpx2.Request]) -> list[str]:
+    return [call.url.params["action"] for call in calls]
+
+
+def queried_titles(call: httpx2.Request) -> list[str]:
+    """묶음 조회 요청의 제목들. 값이 U+001F로 시작하면 그것이 구분자다."""
+    return call.url.params["titles"].lstrip("\x1f").split("\x1f")
+
+
 def test_pcgamingwiki_parses_windows_template_and_joins_alternatives():
-    http, calls = wiki_http(
-        {"Alan Wake 2": wiki_parse("Alan Wake II", redirected_from="Alan Wake 2")}
-    )
+    http, calls = wiki_http({"Alan Wake II": WIKITEXT}, redirects={"Alan Wake 2": "Alan Wake II"})
     client = PcGamingWikiClient(http, FakeSpecJudge())
     requirements = asyncio.run(client.fetch_requirements([game(1, "Alan Wake 2")]))
 
@@ -225,37 +266,88 @@ def test_pcgamingwiki_parses_windows_template_and_joins_alternatives():
     assert calls[0].headers["User-Agent"].startswith("game-recommend-be")
 
 
-def test_pcgamingwiki_uses_search_only_for_normalized_exact_title():
+def test_pcgamingwiki_fetches_all_titles_in_one_query():
     http, calls = wiki_http(
-        {"VALORANT": wiki_parse("VALORANT")}, search=["Valorant (mod)", "VALORANT"]
+        {"Alan Wake II": WIKITEXT, "League of Legends": NO_TEMPLATE},
+        redirects={"Alan Wake 2": "Alan Wake II"},
     )
+    client = PcGamingWikiClient(http, FakeSpecJudge())
+    games = [game(1, "Alan Wake 2"), game(2, "League of Legends"), game(3, "Bloodborne")]
+    requirements = asyncio.run(client.fetch_requirements(games))
+
+    assert set(requirements) == {1, 2}  # 없는 페이지(Bloodborne)는 키가 없다
+    assert requirements[1].minimum is not None
+    assert requirements[1].minimum.source_url.endswith("/Alan_Wake_II")  # 리다이렉트된 최종 제목
+    assert requirements[2].minimum is None  # 페이지는 있지만 템플릿이 없다
+    # 게임 수와 무관하게 묶음 조회 한 번, 못 찾은 게임만 제목 검색
+    assert wiki_actions(calls) == ["query", "opensearch"]
+    assert queried_titles(calls[0]) == ["Alan Wake 2", "League of Legends", "Bloodborne"]
+    assert calls[1].url.params["search"] == "Bloodborne"
+
+
+def test_pcgamingwiki_uses_search_only_for_normalized_exact_title():
+    http, calls = wiki_http({"VALORANT": WIKITEXT}, search=["Valorant (mod)", "VALORANT"])
     client = PcGamingWikiClient(http, FakeSpecJudge())
     requirements = asyncio.run(client.fetch_requirements([game(1, "valorant")]))
     assert requirements[1].minimum is not None
-    actions = [c.url.params["action"] for c in calls]
-    assert actions == ["parse", "opensearch", "parse"]  # 직접 조회 실패 → 검색 → 일치 제목만 조회
+    # 묶음 조회 실패 → 검색 → 정규화 제목이 같은 것만 다시 묶음 조회
+    assert wiki_actions(calls) == ["query", "opensearch", "query"]
+    assert queried_titles(calls[2]) == ["VALORANT"]
 
 
 def test_pcgamingwiki_missing_page_is_absent_and_similar_titles_are_ignored():
-    http, _ = wiki_http({}, search=["Alan Wake", "Alan Wake II Deluxe"])
+    http, calls = wiki_http({}, search=["Alan Wake", "Alan Wake II Deluxe"])
     client = PcGamingWikiClient(http, FakeSpecJudge())
     assert asyncio.run(client.fetch_requirements([game(1, "Alan Wake 2")])) == {}
+    assert wiki_actions(calls) == ["query", "opensearch"]
 
     results = asyncio.run(client.assess([game(1, "Alan Wake 2")], HardwareSpecs(ram_gb=16)))
     assert results[0].status == "unknown" and results[0].requirement is None
+    assert len(calls) == 2  # 못 찾은 결과도 캐시한다
 
 
 def test_pcgamingwiki_page_without_template_counts_as_looked_up_and_is_cached():
-    http, calls = wiki_http({"Roblox": wiki_parse("Roblox", "{{Infobox game|title=Roblox}}")})
+    http, calls = wiki_http({"Roblox": NO_TEMPLATE})
     client = PcGamingWikiClient(http, FakeSpecJudge())
-    first = asyncio.run(client.fetch_requirements([game(1, "Roblox")]))
+    first = asyncio.run(client.fetch_requirements([game(1, "Roblox"), game(2, "roblox")]))
     second = asyncio.run(client.fetch_requirements([game(1, "Roblox")]))
-    assert first[1].minimum is None and first == second
-    assert len(calls) == 1  # 두 번째는 캐시
+    assert first[1].minimum is None and first[2] == first[1]
+    assert second == {1: first[1]}
+    assert len(calls) == 1  # 정규화 제목이 같은 후보는 한 번만, 두 번째 호출은 캐시
+    assert queried_titles(calls[0]) == ["Roblox"]
+
+
+def test_pcgamingwiki_follows_continue_when_response_is_truncated():
+    http, calls = wiki_http({"Alan Wake II": WIKITEXT, "Roblox": NO_TEMPLATE}, split_after=1)
+    client = PcGamingWikiClient(http, FakeSpecJudge())
+    requirements = asyncio.run(
+        client.fetch_requirements([game(1, "Alan Wake II"), game(2, "Roblox")])
+    )
+    assert set(requirements) == {1, 2} and requirements[1].minimum is not None
+    assert wiki_actions(calls) == ["query", "query"]
+    assert calls[1].url.params["rvcontinue"] == "next"  # 첫 응답의 continue를 그대로 돌려보낸다
+
+
+def test_pcgamingwiki_splits_more_than_fifty_titles():
+    names = [f"Game {index}" for index in range(51)]
+    http, calls = wiki_http(dict.fromkeys(names, NO_TEMPLATE))
+    client = PcGamingWikiClient(http, FakeSpecJudge())
+    games = [game(index + 1, name) for index, name in enumerate(names)]
+    assert len(asyncio.run(client.fetch_requirements(games))) == 51
+    assert wiki_actions(calls) == ["query", "query"]
+    assert sorted(len(queried_titles(call)) for call in calls) == [1, 50]
+
+
+def test_pcgamingwiki_invalid_title_is_treated_as_missing():
+    http, calls = wiki_http({})
+    client = PcGamingWikiClient(http, FakeSpecJudge())
+    assert asyncio.run(client.fetch_requirements([game(1, "Foo|Bar")])) == {}
+    assert wiki_actions(calls) == ["query", "opensearch"]
+    assert queried_titles(calls[0]) == ["Foo|Bar"]  # U+001F 구분자라 |가 든 이름도 그대로 간다
 
 
 def test_pcgamingwiki_raises_on_other_api_errors():
-    http, _ = wiki_http({"X": {"error": {"code": "ratelimited"}}})
+    http, _ = wiki_http({}, error={"code": "ratelimited"})
     client = PcGamingWikiClient(http, FakeSpecJudge())
     with pytest.raises(RuntimeError):
         asyncio.run(client.fetch_requirements([game(1, "X")]))
@@ -265,7 +357,7 @@ def test_pcgamingwiki_assess_uses_shared_rules_and_judge():
     judge = FakeSpecJudge(
         [HardwareAssessment(igdb_id=1, status="met", reason="GPU 충족: GTX 960 이상")]
     )
-    http, _ = wiki_http({"Alan Wake 2": wiki_parse("Alan Wake II")})
+    http, _ = wiki_http({"Alan Wake II": WIKITEXT}, redirects={"Alan Wake 2": "Alan Wake II"})
     client = PcGamingWikiClient(http, judge)
 
     low_memory = asyncio.run(client.assess([game(1, "Alan Wake 2")], HardwareSpecs(ram_gb=4)))
