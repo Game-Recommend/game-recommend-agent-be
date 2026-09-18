@@ -32,7 +32,7 @@ def calculate_wilson_score(positive: int, total: int) -> float:
 class SteamReviewScoreClient:
     """Steam 리뷰 통계를 이용해 게임별 리뷰 점수를 조회한다."""
 
-    def __init__(self, http: httpx.AsyncClient, *, max_concurrency: int = 4):
+    def __init__(self, http: httpx.AsyncClient, *, max_concurrency: int = 8):
         self.http = http
         self._semaphore = asyncio.Semaphore(max_concurrency)
 
