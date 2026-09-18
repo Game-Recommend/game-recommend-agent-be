@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="830" viewBox="0 0 2560 830" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
+<rect width="2560" height="830" fill="#F5F6FA"/>
+<circle cx="78" cy="83" r="22" fill="#111827"/>
+<text x="78" y="93" font-size="26" fill="white" font-weight="700" text-anchor="middle">1</text>
+<text x="116" y="96" font-size="38" fill="#111827" font-weight="700" text-anchor="start">엔드투엔드 100문항</text>
+<text x="116" y="136" font-size="23" fill="#6B7280" font-weight="400" text-anchor="start">질문에서 추천까지 전체. 사용자가 말한 필수 조건을 추천 결과가 지켰는지 기계로 검증한다</text>
+<rect x="56" y="172" width="1204" height="602" rx="14" fill="white"/>
+<path d="M56 228 V186 Q56 172 70 172 H1246 Q1260 172 1260 186 V228 Z" fill="#EEF0F6"/>
+<text x="80" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">항목</text>
+<circle cx="488" cy="201" r="8" fill="#0E9F9F"/>
+<text x="506" y="209" font-size="22" fill="#111827" font-weight="600" text-anchor="start">원본 · 고정 파이프라인</text>
+<circle cx="776" cy="201" r="8" fill="#6D5DF6"/>
+<text x="794" y="209" font-size="22" fill="#111827" font-weight="600" text-anchor="start">에이전트 · LangGraph</text>
+<text x="1056" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">차이</text>
+<text x="80" y="264" font-size="27" fill="#111827" font-weight="600" text-anchor="start">세 축 모두 통과</text>
+<text x="80" y="290" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">조건 · 궤적 · 답변 형식을 모두 통과</text>
+<text x="480" y="264" font-size="30" fill="#111827" font-weight="500" text-anchor="start">45/100</text>
+<text x="603.5" y="264" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">45%</text>
+<path d="M480 278 H716 Q720 278 720 282 V284 Q720 288 716 288 H480 Z" fill="#D4EEEE"/>
+<path d="M480 278 H584.0 Q588.0 278 588.0 282 V284 Q588.0 288 584.0 288 H480 Z" fill="#0E9F9F"/>
+<text x="768" y="264" font-size="30" fill="#111827" font-weight="700" text-anchor="start">85/99</text>
+<text x="872.9" y="264" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">85.9%</text>
+<path d="M768 278 H1004 Q1008 278 1008 282 V284 Q1008 288 1004 288 H768 Z" fill="#E5E2FD"/>
+<path d="M768 278 H970.060606060606 Q974.060606060606 278 974.060606060606 282 V284 Q974.060606060606 288 970.060606060606 288 H768 Z" fill="#6D5DF6"/>
+<text x="1056" y="264" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+41%p</text>
+<text x="1056" y="291" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
+<line x1="56" y1="306" x2="1260" y2="306" stroke="#E5E7EB"/>
+<text x="80" y="342" font-size="27" fill="#111827" font-weight="600" text-anchor="start">추천을 낸 문항만 보면</text>
+<text x="80" y="368" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">빈 추천은 조건 검사를 자동 통과한다</text>
+<text x="480" y="342" font-size="30" fill="#111827" font-weight="500" text-anchor="start">29/81</text>
+<text x="584.9" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">35.8%</text>
+<path d="M480 356 H716 Q720 356 720 360 V362 Q720 366 716 366 H480 Z" fill="#D4EEEE"/>
+<path d="M480 356 H561.9259259259259 Q565.9259259259259 356 565.9259259259259 360 V362 Q565.9259259259259 366 561.9259259259259 366 H480 Z" fill="#0E9F9F"/>
+<text x="768" y="342" font-size="30" fill="#111827" font-weight="700" text-anchor="start">39/51</text>
+<text x="872.9" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">76.5%</text>
+<path d="M768 356 H1004 Q1008 356 1008 360 V362 Q1008 366 1004 366 H768 Z" fill="#E5E2FD"/>
+<path d="M768 356 H947.5294117647059 Q951.5294117647059 356 951.5294117647059 360 V362 Q951.5294117647059 366 947.5294117647059 366 H768 Z" fill="#6D5DF6"/>
+<text x="1056" y="342" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+41%p</text>
+<text x="1056" y="369" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
+<line x1="56" y1="384" x2="1260" y2="384" stroke="#E5E7EB"/>
+<text x="80" y="420" font-size="27" fill="#111827" font-weight="600" text-anchor="start">조건 준수</text>
+<text x="80" y="446" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">가격 · 개수 · 제외 장르 · 사양</text>
+<text x="480" y="420" font-size="30" fill="#111827" font-weight="500" text-anchor="start">98/100</text>
+<text x="603.5" y="420" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">98%</text>
+<path d="M480 434 H716 Q720 434 720 438 V440 Q720 444 716 444 H480 Z" fill="#D4EEEE"/>
+<path d="M480 434 H711.2 Q715.2 434 715.2 438 V440 Q715.2 444 711.2 444 H480 Z" fill="#0E9F9F"/>
+<text x="768" y="420" font-size="30" fill="#111827" font-weight="500" text-anchor="start">97/99</text>
+<text x="872.9" y="420" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">98%</text>
+<path d="M768 434 H1004 Q1008 434 1008 438 V440 Q1008 444 1004 444 H768 Z" fill="#E5E2FD"/>
+<path d="M768 434 H999.1515151515151 Q1003.1515151515151 434 1003.1515151515151 438 V440 Q1003.1515151515151 444 999.1515151515151 444 H768 Z" fill="#6D5DF6"/>
+<text x="1056" y="420" font-size="28" fill="#111827" font-weight="700" text-anchor="start">0%p</text>
+<text x="1056" y="447" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동률</text>
+<line x1="56" y1="462" x2="1260" y2="462" stroke="#E5E7EB"/>
+<text x="80" y="498" font-size="27" fill="#111827" font-weight="600" text-anchor="start">답변 형식</text>
+<text x="80" y="524" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">마크다운 없음 · 문장 수 · 게임 이름 언급</text>
+<text x="480" y="498" font-size="30" fill="#111827" font-weight="500" text-anchor="start">50/100</text>
+<text x="603.5" y="498" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">50%</text>
+<path d="M480 512 H716 Q720 512 720 516 V518 Q720 522 716 522 H480 Z" fill="#D4EEEE"/>
+<path d="M480 512 H596.0 Q600.0 512 600.0 516 V518 Q600.0 522 596.0 522 H480 Z" fill="#0E9F9F"/>
+<text x="768" y="498" font-size="30" fill="#111827" font-weight="700" text-anchor="start">88/99</text>
+<text x="872.9" y="498" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">88.9%</text>
+<path d="M768 512 H1004 Q1008 512 1008 516 V518 Q1008 522 1004 522 H768 Z" fill="#E5E2FD"/>
+<path d="M768 512 H977.3333333333334 Q981.3333333333334 512 981.3333333333334 516 V518 Q981.3333333333334 522 977.3333333333334 522 H768 Z" fill="#6D5DF6"/>
+<text x="1056" y="498" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+39%p</text>
+<text x="1056" y="525" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
+<line x1="56" y1="540" x2="1260" y2="540" stroke="#E5E7EB"/>
+<text x="80" y="576" font-size="27" fill="#111827" font-weight="600" text-anchor="start">추천 0개로 끝난 문항</text>
+<text x="80" y="602" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">낮을수록 좋다</text>
+<text x="480" y="576" font-size="30" fill="#111827" font-weight="700" text-anchor="start">19/100</text>
+<text x="603.5" y="576" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">19%</text>
+<path d="M480 590 H716 Q720 590 720 594 V596 Q720 600 716 600 H480 Z" fill="#D4EEEE"/>
+<path d="M480 590 H521.6 Q525.6 590 525.6 594 V596 Q525.6 600 521.6 600 H480 Z" fill="#0E9F9F"/>
+<text x="768" y="576" font-size="30" fill="#111827" font-weight="500" text-anchor="start">48/99</text>
+<text x="872.9" y="576" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">48.5%</text>
+<path d="M768 590 H1004 Q1008 590 1008 594 V596 Q1008 600 1004 600 H768 Z" fill="#E5E2FD"/>
+<path d="M768 590 H880.3636363636364 Q884.3636363636364 590 884.3636363636364 594 V596 Q884.3636363636364 600 880.3636363636364 600 H768 Z" fill="#6D5DF6"/>
+<text x="1056" y="576" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+29%p</text>
+<path d="M1067 585 L1078 605 H1056 Z" fill="#D97706"/>
+<text x="1067" y="602" font-size="15" fill="white" font-weight="700" text-anchor="middle">!</text>
+<text x="1086" y="603" font-size="19" fill="#111827" font-weight="600" text-anchor="start">원본 우세</text>
+<line x1="56" y1="618" x2="1260" y2="618" stroke="#E5E7EB"/>
+<text x="80" y="654" font-size="27" fill="#111827" font-weight="600" text-anchor="start">LLM 심판 · 근거 점수</text>
+<text x="80" y="680" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">사실 주장이 Tool 결과에 있는가 (1~5점)</text>
+<text x="480" y="666" font-size="30" fill="#111827" font-weight="500" text-anchor="start">3.54</text>
+<text x="768" y="666" font-size="30" fill="#111827" font-weight="700" text-anchor="start">4.36</text>
+<text x="1056" y="654" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+0.82점</text>
+<text x="1056" y="681" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
+<line x1="56" y1="696" x2="1260" y2="696" stroke="#E5E7EB"/>
+<text x="80" y="732" font-size="27" fill="#111827" font-weight="600" text-anchor="start">지연 중앙값</text>
+<text x="80" y="758" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동시성 2</text>
+<text x="480" y="744" font-size="30" fill="#111827" font-weight="500" text-anchor="start">11.6초</text>
+<text x="585.8" y="744" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">최대 41.7초</text>
+<text x="768" y="744" font-size="30" fill="#111827" font-weight="500" text-anchor="start">12.3초</text>
+<text x="873.8" y="744" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">최대 25.2초</text>
+<text x="1056" y="732" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+0.7초</text>
+<text x="1056" y="759" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동률</text>
+<rect x="56" y="172" width="1204" height="602" rx="14" fill="none" stroke="#D1D5DB"/>
+<circle cx="1322" cy="83" r="22" fill="#111827"/>
+<text x="1322" y="93" font-size="26" fill="white" font-weight="700" text-anchor="middle">2</text>
+<text x="1360" y="96" font-size="38" fill="#111827" font-weight="700" text-anchor="start">질문 파서 200문항</text>
+<text x="1360" y="136" font-size="23" fill="#6B7280" font-weight="400" text-anchor="start">자연어 질문 → GameConditions. 파서만 떼어 프롬프트 계약을 지키는지 본다</text>
+<rect x="1300" y="172" width="1204" height="602" rx="14" fill="white"/>
+<path d="M1300 228 V186 Q1300 172 1314 172 H2490 Q2504 172 2504 186 V228 Z" fill="#EEF0F6"/>
+<text x="1324" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">항목</text>
+<circle cx="1732" cy="201" r="8" fill="#0E9F9F"/>
+<text x="1750" y="209" font-size="22" fill="#111827" font-weight="600" text-anchor="start">원본 · 고정 파이프라인</text>
+<circle cx="2020" cy="201" r="8" fill="#6D5DF6"/>
+<text x="2038" y="209" font-size="22" fill="#111827" font-weight="600" text-anchor="start">에이전트 · LangGraph</text>
+<text x="2300" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">차이</text>
+<text x="1324" y="264" font-size="27" fill="#111827" font-weight="600" text-anchor="start">3회 모두 통과</text>
+<text x="1324" y="290" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">3회 실행해 전부 통과해야 통과</text>
+<text x="1724" y="264" font-size="30" fill="#111827" font-weight="500" text-anchor="start">177/200</text>
+<text x="1866.1" y="264" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">88.5%</text>
+<path d="M1724 278 H1960 Q1964 278 1964 282 V284 Q1964 288 1960 288 H1724 Z" fill="#D4EEEE"/>
+<path d="M1724 278 H1932.4 Q1936.4 278 1936.4 282 V284 Q1936.4 288 1932.4 288 H1724 Z" fill="#0E9F9F"/>
+<text x="2012" y="264" font-size="30" fill="#111827" font-weight="700" text-anchor="start">188/200</text>
+<text x="2154.1" y="264" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">94%</text>
+<path d="M2012 278 H2248 Q2252 278 2252 282 V284 Q2252 288 2248 288 H2012 Z" fill="#E5E2FD"/>
+<path d="M2012 278 H2233.6 Q2237.6 278 2237.6 282 V284 Q2237.6 288 2233.6 288 H2012 Z" fill="#6D5DF6"/>
+<text x="2300" y="264" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+11문항</text>
+<text x="2300" y="291" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
+<line x1="1300" y1="306" x2="2504" y2="306" stroke="#E5E7EB"/>
+<text x="1324" y="342" font-size="27" fill="#111827" font-weight="600" text-anchor="start">회차 단위 통과</text>
+<text x="1324" y="368" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">200문항 × 3회 = 600회</text>
+<text x="1724" y="342" font-size="30" fill="#111827" font-weight="500" text-anchor="start">535/600</text>
+<text x="1866.1" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">89.2%</text>
+<path d="M1724 356 H1960 Q1964 356 1964 360 V362 Q1964 366 1960 366 H1724 Z" fill="#D4EEEE"/>
+<path d="M1724 356 H1934.0 Q1938.0 356 1938.0 360 V362 Q1938.0 366 1934.0 366 H1724 Z" fill="#0E9F9F"/>
+<text x="2012" y="342" font-size="30" fill="#111827" font-weight="700" text-anchor="start">567/600</text>
+<text x="2154.1" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">94.5%</text>
+<path d="M2012 356 H2248 Q2252 356 2252 360 V362 Q2252 366 2248 366 H2012 Z" fill="#E5E2FD"/>
+<path d="M2012 356 H2234.8 Q2238.8 356 2238.8 360 V362 Q2238.8 366 2234.8 366 H2012 Z" fill="#6D5DF6"/>
+<text x="2300" y="342" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+32회</text>
+<text x="2300" y="369" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
+<line x1="1300" y1="384" x2="2504" y2="384" stroke="#E5E7EB"/>
+<text x="1324" y="420" font-size="27" fill="#111827" font-weight="600" text-anchor="start">공통 불변식 축</text>
+<text x="1324" y="446" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">무료 강제와 무료 표현 공존 금지 등 (600회)</text>
+<text x="1724" y="420" font-size="30" fill="#111827" font-weight="500" text-anchor="start">561/600</text>
+<text x="1866.1" y="420" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">93.5%</text>
+<path d="M1724 434 H1960 Q1964 434 1964 438 V440 Q1964 444 1960 444 H1724 Z" fill="#D4EEEE"/>
+<path d="M1724 434 H1944.4 Q1948.4 434 1948.4 438 V440 Q1948.4 444 1944.4 444 H1724 Z" fill="#0E9F9F"/>
+<text x="2012" y="420" font-size="30" fill="#111827" font-weight="700" text-anchor="start">597/600</text>
+<text x="2154.1" y="420" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">99.5%</text>
+<path d="M2012 434 H2248 Q2252 434 2252 438 V440 Q2252 444 2248 444 H2012 Z" fill="#E5E2FD"/>
+<path d="M2012 434 H2246.8 Q2250.8 434 2250.8 438 V440 Q2250.8 444 2246.8 444 H2012 Z" fill="#6D5DF6"/>
+<text x="2300" y="420" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+36회</text>
+<text x="2300" y="447" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
+<line x1="1300" y1="462" x2="2504" y2="462" stroke="#E5E7EB"/>
+<text x="1324" y="498" font-size="27" fill="#111827" font-weight="600" text-anchor="start">3회 모두 실패한 문항</text>
+<text x="1324" y="524" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">재현되는 실패. 낮을수록 좋다</text>
+<text x="1724" y="510" font-size="30" fill="#111827" font-weight="500" text-anchor="start">20문항</text>
+<text x="2012" y="510" font-size="30" fill="#111827" font-weight="700" text-anchor="start">10문항</text>
+<text x="2300" y="498" font-size="28" fill="#111827" font-weight="700" text-anchor="start">−10문항</text>
+<text x="2300" y="525" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
+<line x1="1300" y1="540" x2="2504" y2="540" stroke="#E5E7EB"/>
+<text x="1324" y="576" font-size="27" fill="#111827" font-weight="600" text-anchor="start">회차마다 결과가 갈린 문항</text>
+<text x="1324" y="602" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">모델 흔들림</text>
+<text x="1724" y="588" font-size="30" fill="#111827" font-weight="500" text-anchor="start">3문항</text>
+<text x="2012" y="588" font-size="30" fill="#111827" font-weight="500" text-anchor="start">2문항</text>
+<text x="2300" y="576" font-size="28" fill="#111827" font-weight="700" text-anchor="start">−1문항</text>
+<text x="2300" y="603" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동률</text>
+<line x1="1300" y1="618" x2="2504" y2="618" stroke="#E5E7EB"/>
+<text x="1324" y="654" font-size="27" fill="#111827" font-weight="600" text-anchor="start">combined 계열</text>
+<text x="1324" y="680" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">README 예상 질문 5개 + 복합 조건 15개</text>
+<text x="1724" y="654" font-size="30" fill="#111827" font-weight="500" text-anchor="start">13/20</text>
+<text x="1828.9" y="654" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">65%</text>
+<path d="M1724 668 H1960 Q1964 668 1964 672 V674 Q1964 678 1960 678 H1724 Z" fill="#D4EEEE"/>
+<path d="M1724 668 H1876.0 Q1880.0 668 1880.0 672 V674 Q1880.0 678 1876.0 678 H1724 Z" fill="#0E9F9F"/>
+<text x="2012" y="654" font-size="30" fill="#111827" font-weight="700" text-anchor="start">16/20</text>
+<text x="2116.9" y="654" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">80%</text>
+<path d="M2012 668 H2248 Q2252 668 2252 672 V674 Q2252 678 2248 678 H2012 Z" fill="#E5E2FD"/>
+<path d="M2012 668 H2200.0 Q2204.0 668 2204.0 672 V674 Q2204.0 678 2200.0 678 H2012 Z" fill="#6D5DF6"/>
+<text x="2300" y="654" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+3문항</text>
+<text x="2300" y="681" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
+<line x1="1300" y1="696" x2="2504" y2="696" stroke="#E5E7EB"/>
+<text x="1324" y="732" font-size="27" fill="#111827" font-weight="600" text-anchor="start">players 계열</text>
+<text x="1324" y="758" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">인원 수 30문항</text>
+<text x="1724" y="732" font-size="30" fill="#111827" font-weight="500" text-anchor="start">25/30</text>
+<text x="1828.9" y="732" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">83.3%</text>
+<path d="M1724 746 H1960 Q1964 746 1964 750 V752 Q1964 756 1960 756 H1724 Z" fill="#D4EEEE"/>
+<path d="M1724 746 H1920.0 Q1924.0 746 1924.0 750 V752 Q1924.0 756 1920.0 756 H1724 Z" fill="#0E9F9F"/>
+<text x="2012" y="732" font-size="30" fill="#111827" font-weight="500" text-anchor="start">25/30</text>
+<text x="2116.9" y="732" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">83.3%</text>
+<path d="M2012 746 H2248 Q2252 746 2252 750 V752 Q2252 756 2248 756 H2012 Z" fill="#E5E2FD"/>
+<path d="M2012 746 H2208.0 Q2212.0 746 2212.0 750 V752 Q2212.0 756 2208.0 756 H2012 Z" fill="#6D5DF6"/>
+<text x="2300" y="732" font-size="28" fill="#111827" font-weight="700" text-anchor="start">0문항</text>
+<text x="2300" y="759" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동률</text>
+<rect x="1300" y="172" width="1204" height="602" rx="14" fill="none" stroke="#D1D5DB"/>
+</svg>
