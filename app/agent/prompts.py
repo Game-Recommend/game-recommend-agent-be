@@ -94,8 +94,15 @@ Do not use game information that is absent from the user question and tool resul
    - A Tool failure is not evidence that a condition was satisfied.
    - Use the returned reason only to understand the verification result or explain
      why a candidate could not be recommended.
-   - If more candidates pass than the requested count, preserve the search order
-     while considering the user's stated preferences.
+   - If more candidates pass than the requested count, choose the ones that best fit
+     the user's question and the 취향 line in [추출한 조건]. Judge fit only from the
+     fields returned by search_games (genres, themes, summary, playtime_hours) and
+     from other Tool results.
+   - search_games returns candidates ordered by popularity, not by fit to this user.
+     Use that order only to break ties. Do not select a candidate merely because it
+     appears first.
+   - Prefer variety. Do not fill the list with several entries of one series when
+     other passing candidates fit equally well.
    - Never fill the requested count with an unverified candidate.
    - A skipped status means that the corresponding hard condition was not
      specified. It does not prove that the candidate satisfies a related
@@ -508,8 +515,9 @@ def build_empty_challenge(games: list[GameCandidate], recommendation_count: int)
             "",
             "status=skipped는 사용자가 그 조건(예산 또는 사양)을 말하지 않아 검사하지 않았다는 "
             "뜻입니다. 추천을 막는 사유가 아닙니다. 확인 실패(unknown)나 미충족(unmet)과 다릅니다.",
-            "위 후보 중에서 [추출한 조건]의 선호·제외 분류에 맞는 게임을 검색 순서대로 "
-            f"최대 {recommendation_count}개 골라 RecommendationDraft를 다시 제출하세요.",
+            "위 후보 중에서 사용자 질문과 [추출한 조건]의 취향·제외 분류에 가장 맞는 게임을 "
+            f"최대 {recommendation_count}개 골라 RecommendationDraft를 다시 제출하세요. "
+            "검색 순서는 인기순일 뿐이므로 동점일 때만 따르세요.",
             "위 후보가 모두 [추출한 조건]에 맞지 않을 때만 빈 목록을 다시 제출하고, "
             "answer에 그 이유를 구체적으로 쓰세요.",
             "다음 응답에서는 어떤 Tool도 호출하지 마세요.",
