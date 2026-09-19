@@ -1,4 +1,4 @@
-"""질문 파서 평가셋 200문항. 모델을 호출하거나 모델 출력으로 정답을 만들지 않는다.
+"""질문 파서 평가셋 210문항. 모델을 호출하거나 모델 출력으로 정답을 만들지 않는다.
 
 정답의 근거는 `app/pipeline/query_processing/prompts.py`의 QUERY_PARSER_SYSTEM이다.
 각 문항의 `basis`에 어느 절의 규칙인지 적어, 프롬프트를 고칠 때 어느 문항이 흔들리는지 찾게 한다.
@@ -884,6 +884,57 @@ for question, gold in COMBINED_MORE:
     )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# exclude_combo: 제외하는 분류가 질문의 유일한 분류이고 다른 조건이 뒤따를 때 (프롬프트 2절)
+#
+# "공포 빼고 게임 6개 알려줘"(Q161)는 늘 맞는데, 엔드투엔드 평가의 "공포 빼고 3만 원 이하 게임
+# 알려줘"는 확인한 8번 모두 genres=["Horror"]로 뒤집혔다. 그러면 검색이 공포 게임을 찾는다.
+# 기존 문항에는 이 조합이 없었다. 문항 번호가 밀리지 않도록 맨 뒤에 붙인다.
+# ─────────────────────────────────────────────────────────────────────────────
+EXCLUDE_COMBO = [
+    ("공포 빼고 3만 원 이하 게임 알려줘", [HORROR], {"max_price_krw": 30000}),
+    (
+        "공포 빼고 1만 원 이하 게임 2개 알려줘",
+        [HORROR],
+        {"max_price_krw": 10000, "recommendation_count": 2},
+    ),
+    ("슈팅 빼고 2만 원 이하 게임 추천해줘", [SHOOTER], {"max_price_krw": 20000}),
+    ("퍼즐은 싫어. 5만 원 이하로 추천해줘", [PUZZLE], {"max_price_krw": 50000}),
+    (
+        "공포 게임은 싫고 혼자 할 게임 추천",
+        [HORROR],
+        {"players": 1, "play_mode": "singleplayer"},
+    ),
+    ("공포 게임은 못 하겠어. 협동 게임 추천해줘", [HORROR], {"play_mode": "cooperative"}),
+    (
+        "RTX 3060인데 공포 게임 빼고 추천해줘",
+        [HORROR],
+        {"hardware": {"gpu": "RTX 3060"}},
+    ),
+    ("액션은 제외하고 온라인으로 할 게임 추천", [ACTION], {"connection": "online"}),
+]
+for question, excluded, extra in EXCLUDE_COMBO:
+    case(
+        "exclude_combo",
+        question,
+        {"genres": [], "excluded_genres": excluded, **extra},
+        "2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다",
+    )
+
+# 대조군: 같은 모양의 질문에서 원하는 분류는 genres에 남아야 한다
+EXCLUDE_COMBO_CONTROLS = [
+    ("공포 게임 3만 원 이하로 알려줘", [HORROR], {"max_price_krw": 30000}),
+    ("혼자 할 공포 게임 추천해줘", [HORROR], {"players": 1, "play_mode": "singleplayer"}),
+]
+for question, genres, extra in EXCLUDE_COMBO_CONTROLS:
+    case(
+        "exclude_combo",
+        question,
+        {"genres": genres, "excluded_genres": [], **extra},
+        "2절: 원하는 분류를 excluded_genres로 뒤집지 않는다(대조군)",
+    )
+
+
 FAMILIES = [
     ("price", "max_price_krw 경계, 무료 강제와 무료 선호, 모호 표현"),
     ("time", "세션 길이와 총 플레이타임 혼동"),
@@ -893,6 +944,7 @@ FAMILIES = [
     ("count", "recommendation_count"),
     ("no_dup", "전용 필드가 있는 조건의 preferences 중복"),
     ("combined", "실제 사용자 질문에 가까운 복합 조건"),
+    ("exclude_combo", "제외하는 분류가 유일한 분류이고 가격·인원·사양 조건이 뒤따를 때"),
 ]
 
 

@@ -1,6 +1,6 @@
 # 질문 파서 평가 문항
 
-총 200문항. [build_dataset.py](build_dataset.py)가 만들고 [dataset.json](dataset.json)이 실행 데이터다.
+총 210문항. [build_dataset.py](build_dataset.py)가 만들고 [dataset.json](dataset.json)이 실행 데이터다.
 정답의 근거는 `app/pipeline/query_processing/prompts.py`의 QUERY_PARSER_SYSTEM이며,
 문항마다 어느 절의 규칙인지 `basis`에 적었다.
 
@@ -14,6 +14,7 @@
 | count | 15 | recommendation_count |
 | no_dup | 14 | 전용 필드가 있는 조건의 preferences 중복 |
 | combined | 20 | 실제 사용자 질문에 가까운 복합 조건 |
+| exclude_combo | 10 | 제외하는 분류가 유일한 분류이고 가격·인원·사양 조건이 뒤따를 때 |
 
 ## 문항
 
@@ -417,3 +418,23 @@
   - 근거: 복합 조건: 여러 절이 동시에 걸린다
 - **Q200** (combined): "Ryzen 5 5600, RX 6600, RAM 16GB PC로 할 공포 게임 2개"
   - 근거: 복합 조건: 여러 절이 동시에 걸린다
+- **Q201** (exclude_combo): "공포 빼고 3만 원 이하 게임 알려줘"
+  - 근거: 2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다
+- **Q202** (exclude_combo): "공포 빼고 1만 원 이하 게임 2개 알려줘"
+  - 근거: 2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다
+- **Q203** (exclude_combo): "슈팅 빼고 2만 원 이하 게임 추천해줘"
+  - 근거: 2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다
+- **Q204** (exclude_combo): "퍼즐은 싫어. 5만 원 이하로 추천해줘"
+  - 근거: 2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다
+- **Q205** (exclude_combo): "공포 게임은 싫고 혼자 할 게임 추천"
+  - 근거: 2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다
+- **Q206** (exclude_combo): "공포 게임은 못 하겠어. 협동 게임 추천해줘"
+  - 근거: 2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다
+- **Q207** (exclude_combo): "RTX 3060인데 공포 게임 빼고 추천해줘"
+  - 근거: 2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다
+- **Q208** (exclude_combo): "액션은 제외하고 온라인으로 할 게임 추천"
+  - 근거: 2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다
+- **Q209** (exclude_combo): "공포 게임 3만 원 이하로 알려줘"
+  - 근거: 2절: 원하는 분류를 excluded_genres로 뒤집지 않는다(대조군)
+- **Q210** (exclude_combo): "혼자 할 공포 게임 추천해줘"
+  - 근거: 2절: 원하는 분류를 excluded_genres로 뒤집지 않는다(대조군)

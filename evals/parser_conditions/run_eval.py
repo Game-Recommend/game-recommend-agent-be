@@ -1,9 +1,9 @@
 """질문 파서 평가 실행기. LangSmith 데이터셋에 올리고 실험을 돌린다.
 
 저장소 루트에서 실행한다. `.env`의 `OPENAI_API_KEY`와 `LANGSMITH_API_KEY`를 읽는다.
-LLM 호출은 문항 수만큼(200문항 = 200회)이며 gpt-4o-mini 기준 약 $0.1다.
+LLM 호출은 문항 수만큼(210문항 = 210회)이며 gpt-4o-mini 기준 약 $0.1다.
 
-    .venv/bin/python -m evals.parser_conditions.run_eval                 # 전체 200문항
+    .venv/bin/python -m evals.parser_conditions.run_eval                 # 전체 210문항
     .venv/bin/python -m evals.parser_conditions.run_eval --limit 20      # 앞 20문항만
     .venv/bin/python -m evals.parser_conditions.run_eval --no-langsmith  # 로컬 기록만
 

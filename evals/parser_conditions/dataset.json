@@ -2653,5 +2653,149 @@
       "recommendation_count": 2
     },
     "basis": "복합 조건: 여러 절이 동시에 걸린다"
+  },
+  {
+    "id": "Q201",
+    "family": "exclude_combo",
+    "question": "공포 빼고 3만 원 이하 게임 알려줘",
+    "gold": {
+      "genres": [],
+      "excluded_genres": [
+        "Horror"
+      ],
+      "max_price_krw": 30000,
+      "recommendation_count": 5
+    },
+    "basis": "2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다"
+  },
+  {
+    "id": "Q202",
+    "family": "exclude_combo",
+    "question": "공포 빼고 1만 원 이하 게임 2개 알려줘",
+    "gold": {
+      "genres": [],
+      "excluded_genres": [
+        "Horror"
+      ],
+      "max_price_krw": 10000,
+      "recommendation_count": 2
+    },
+    "basis": "2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다"
+  },
+  {
+    "id": "Q203",
+    "family": "exclude_combo",
+    "question": "슈팅 빼고 2만 원 이하 게임 추천해줘",
+    "gold": {
+      "genres": [],
+      "excluded_genres": [
+        "Shooter"
+      ],
+      "max_price_krw": 20000,
+      "recommendation_count": 5
+    },
+    "basis": "2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다"
+  },
+  {
+    "id": "Q204",
+    "family": "exclude_combo",
+    "question": "퍼즐은 싫어. 5만 원 이하로 추천해줘",
+    "gold": {
+      "genres": [],
+      "excluded_genres": [
+        "Puzzle"
+      ],
+      "max_price_krw": 50000,
+      "recommendation_count": 5
+    },
+    "basis": "2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다"
+  },
+  {
+    "id": "Q205",
+    "family": "exclude_combo",
+    "question": "공포 게임은 싫고 혼자 할 게임 추천",
+    "gold": {
+      "genres": [],
+      "excluded_genres": [
+        "Horror"
+      ],
+      "players": 1,
+      "play_mode": "singleplayer",
+      "recommendation_count": 5
+    },
+    "basis": "2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다"
+  },
+  {
+    "id": "Q206",
+    "family": "exclude_combo",
+    "question": "공포 게임은 못 하겠어. 협동 게임 추천해줘",
+    "gold": {
+      "genres": [],
+      "excluded_genres": [
+        "Horror"
+      ],
+      "play_mode": "cooperative",
+      "recommendation_count": 5
+    },
+    "basis": "2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다"
+  },
+  {
+    "id": "Q207",
+    "family": "exclude_combo",
+    "question": "RTX 3060인데 공포 게임 빼고 추천해줘",
+    "gold": {
+      "genres": [],
+      "excluded_genres": [
+        "Horror"
+      ],
+      "hardware": {
+        "gpu": "RTX 3060"
+      },
+      "recommendation_count": 5
+    },
+    "basis": "2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다"
+  },
+  {
+    "id": "Q208",
+    "family": "exclude_combo",
+    "question": "액션은 제외하고 온라인으로 할 게임 추천",
+    "gold": {
+      "genres": [],
+      "excluded_genres": [
+        "Action"
+      ],
+      "connection": "online",
+      "recommendation_count": 5
+    },
+    "basis": "2절: 제외한 분류는 그것이 질문의 유일한 분류여도 genres에 넣지 않는다"
+  },
+  {
+    "id": "Q209",
+    "family": "exclude_combo",
+    "question": "공포 게임 3만 원 이하로 알려줘",
+    "gold": {
+      "genres": [
+        "Horror"
+      ],
+      "excluded_genres": [],
+      "max_price_krw": 30000,
+      "recommendation_count": 5
+    },
+    "basis": "2절: 원하는 분류를 excluded_genres로 뒤집지 않는다(대조군)"
+  },
+  {
+    "id": "Q210",
+    "family": "exclude_combo",
+    "question": "혼자 할 공포 게임 추천해줘",
+    "gold": {
+      "genres": [
+        "Horror"
+      ],
+      "excluded_genres": [],
+      "players": 1,
+      "play_mode": "singleplayer",
+      "recommendation_count": 5
+    },
+    "basis": "2절: 원하는 분류를 excluded_genres로 뒤집지 않는다(대조군)"
   }
 ]

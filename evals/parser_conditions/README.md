@@ -1,13 +1,13 @@
 # 질문 파서 평가
 
-자연어 질문 200개와 `GameConditions` 정답을 고정한 평가셋이다. 질문 목록은
+자연어 질문 210개와 `GameConditions` 정답을 고정한 평가셋이다. 질문 목록은
 [questions.md](questions.md), 실행 데이터는 [dataset.json](dataset.json), 최초 실측은
 [REPORT.md](REPORT.md), 원시 기록은 [runs/](runs)에 있다.
 
 평가 대상은 `LLMQueryParser`(`app/pipeline/query_processing/llm_parser.py`) 하나다.
 질문을 `GameConditions`로 바꾸는 계약만 본다. IGDB 검색, 가격·사양 조회, 리뷰, 에이전트
 루프, 최종 답변은 포함하지 않는다. 외부 API를 부르지 않으므로 결과가 시간에 따라 바뀌지
-않고, 200문항 1회가 약 $0.05·2분이라 회귀 검사로 반복할 수 있다.
+않고, 210문항 1회가 약 $0.05·2분이라 회귀 검사로 반복할 수 있다.
 
 **정답의 근거는 `game-recommend-agent-be`의 `QUERY_PARSER_SYSTEM`이다.** 문항마다 어느 절의 어떤
 규칙인지 `basis`에 적었다. 프롬프트를 고치면 어느 문항이 흔들릴지 `basis`로 찾는다. 프롬프트가
@@ -32,6 +32,7 @@
 | count | 15 | `recommendation_count`. 미지정은 5(프롬프트 6절·스키마 기본값 일치) |
 | no_dup | 14 | 전용 필드가 있는 조건을 `preferences`에 중복하지 않음 |
 | combined | 20 | 루트 README의 예상 질문 5개 + 복합 조건 15개 |
+| exclude_combo | 10 | 제외하는 분류가 질문의 유일한 분류이고 가격·인원·사양 조건이 뒤따를 때(8) + 대조군(2). 2026-09-20 추가. 엔드투엔드 평가에서 "공포 빼고 3만 원 이하 게임"이 `genres=["Horror"]`로 뒤집히던 형태다. 기존 Q001~Q200의 번호는 그대로다 |
 
 ## 채점
 
@@ -57,7 +58,7 @@
 저장소 루트에서 실행한다. `.env`의 `OPENAI_API_KEY`와 `LANGSMITH_API_KEY`를 읽는다.
 
 ```bash
-# 3회 반복. 200문항 x 3 = 600회 호출, 약 $0.15 / 4분
+# 3회 반복. 210문항 x 3 = 630회 호출, 약 $0.15 / 4분
 .venv/bin/python -m evals.parser_conditions.run_eval --repeats 3 --concurrency 8
 
 # 1회. 약 $0.05 / 2분
