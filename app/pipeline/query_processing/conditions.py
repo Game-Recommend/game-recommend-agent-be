@@ -136,4 +136,13 @@ class GameConditions(BaseModel):
                 if genre.strip().casefold() not in turn_based_filters
             ]
 
+        # 같은 분류가 원하는 쪽과 제외하는 쪽에 함께 있으면 제외가 이긴다.
+        # "공포 게임은 못 하겠어. 협동 게임 추천해줘"에서 모델이 Horror를 양쪽에 다 넣은 적이 있고,
+        # 그러면 검색이 "공포이면서 공포가 아닌" 게임을 찾아 후보가 0개가 된다. 싫다고 한 분류를
+        # 추천하는 것보다 원한 분류 하나를 놓치는 쪽이 덜 나쁘다.
+        excluded = {genre.strip().casefold() for genre in self.excluded_genres}
+        self.genres = [
+            genre for genre in self.genres if genre.strip().casefold() not in excluded
+        ]
+
         return self

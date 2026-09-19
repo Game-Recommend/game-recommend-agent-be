@@ -90,6 +90,25 @@ General rules:
      "어드벤처 게임 중 공포는 제외" means
      genres=["Adventure"] and excluded_genres=["Horror"].
      Do not put "Horror" in genres in this example.
+   - A rejected category never goes in genres, even when it is
+     the only category in the question and a price, player,
+     hardware, or count condition follows it. Hard rejection
+     cues are "빼고", "제외", "말고", "싫어", "싫고",
+     "안 돼", and "못 하겠어".
+     "퍼즐 빼고 4만 원 이하 게임 알려줘" means genres=[],
+     excluded_genres=["Puzzle"], and max_price_krw=40000.
+     "액션 게임은 싫고 혼자 할 게임 추천" means genres=[],
+     excluded_genres=["Action"], players=1, and
+     play_mode="singleplayer".
+     "슈팅은 못 하겠어. 협동 게임 추천해줘" means
+     genres=[], excluded_genres=["Shooter"], and
+     play_mode="cooperative".
+   - The same category must never appear in both genres and
+     excluded_genres.
+   - A mild dislike such as "별로야" or "별로 안 좋아해" is
+     not a hard rejection. Do not put it in excluded_genres;
+     record it in preferences as the "턴제 비선호" rule below
+     describes.
    - Extract every category in a compound request:
      "액션 슈팅 게임, 공포 제외" means
      genres=["Action", "Shooter"] and

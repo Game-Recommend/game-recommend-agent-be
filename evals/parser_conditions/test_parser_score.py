@@ -14,9 +14,9 @@ DATA = json.loads((Path(__file__).parent / "dataset.json").read_text(encoding="u
 BY_ID = {item["id"]: item for item in DATA}
 
 
-def test_dataset_has_200_unique_cases():
-    assert len(DATA) == 200
-    assert len({item["id"] for item in DATA}) == 200
+def test_dataset_has_210_unique_cases():
+    assert len(DATA) == 210
+    assert len({item["id"] for item in DATA}) == 210
 
 
 def test_every_case_records_its_basis():

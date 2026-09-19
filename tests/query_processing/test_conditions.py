@@ -65,6 +65,25 @@ def test_explicit_turn_based_exclusion_remains_without_soft_preference():
     assert conditions.excluded_genres == ["Turn-based"]
 
 
+def test_category_in_both_lists_is_excluded_not_wanted():
+    # 모델이 싫다고 한 분류를 양쪽에 다 넣은 적이 있다. 그러면 검색 후보가 0개가 된다
+    conditions = GameConditions(
+        genres=["Horror", "Adventure"],
+        excluded_genres=["horror "],
+        play_mode="cooperative",
+    )
+
+    assert conditions.genres == ["Adventure"]
+    assert conditions.excluded_genres == ["horror "]
+
+
+def test_distinct_wanted_and_excluded_categories_are_untouched():
+    conditions = GameConditions(genres=["Adventure"], excluded_genres=["Horror"])
+
+    assert conditions.genres == ["Adventure"]
+    assert conditions.excluded_genres == ["Horror"]
+
+
 def test_pc_platform_is_not_hardware():
     conditions = GameConditions(
         hardware=HardwareSpecs(
