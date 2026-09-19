@@ -1,0 +1,213 @@
+{
+  "attempted": 100,
+  "scored": 100,
+  "passed": 73,
+  "accuracy": 0.73,
+  "errors": 0,
+  "error_kinds": {},
+  "axes": {
+    "constraints": 97,
+    "trajectory": 96,
+    "answer_format": 80
+  },
+  "empty_recommendations": 21,
+  "overlooked_empty": 0,
+  "with_recommendations": {
+    "scored": 79,
+    "passed": 55,
+    "latency_median": 11.06,
+    "grounded_mean": 3.14,
+    "linked_mean": 3.63
+  },
+  "latency_seconds": {
+    "median": 10.45,
+    "max": 19.64
+  },
+  "judge": {
+    "judged": 100,
+    "errors": 0,
+    "grounded_mean": 3.53,
+    "linked_mean": 3.92,
+    "grounded_distribution": {
+      "1": 9,
+      "2": 18,
+      "3": 14,
+      "4": 29,
+      "5": 30
+    },
+    "linked_distribution": {
+      "1": 6,
+      "2": 12,
+      "3": 13,
+      "4": 22,
+      "5": 47
+    },
+    "grounded_below_4": [
+      "E004",
+      "E005",
+      "E007",
+      "E008",
+      "E015",
+      "E019",
+      "E031",
+      "E032",
+      "E033",
+      "E034",
+      "E035",
+      "E037",
+      "E039",
+      "E041",
+      "E042",
+      "E044",
+      "E045",
+      "E046",
+      "E047",
+      "E048",
+      "E049",
+      "E050",
+      "E051",
+      "E052",
+      "E053",
+      "E054",
+      "E055",
+      "E057",
+      "E058",
+      "E060",
+      "E062",
+      "E063",
+      "E069",
+      "E070",
+      "E074",
+      "E079",
+      "E082",
+      "E084",
+      "E086",
+      "E093",
+      "E096"
+    ],
+    "linked_below_4": [
+      "E005",
+      "E006",
+      "E007",
+      "E011",
+      "E015",
+      "E019",
+      "E020",
+      "E032",
+      "E034",
+      "E035",
+      "E036",
+      "E037",
+      "E039",
+      "E041",
+      "E042",
+      "E046",
+      "E052",
+      "E053",
+      "E054",
+      "E055",
+      "E058",
+      "E060",
+      "E062",
+      "E065",
+      "E070",
+      "E072",
+      "E074",
+      "E079",
+      "E082",
+      "E086",
+      "E096"
+    ]
+  },
+  "by_family": {
+    "budget": {
+      "attempted": 20,
+      "scored": 20,
+      "passed": 14,
+      "errors": 0,
+      "failed_ids": [
+        "E005",
+        "E006",
+        "E007",
+        "E010",
+        "E011",
+        "E019"
+      ],
+      "accuracy": 0.7
+    },
+    "combined": {
+      "attempted": 20,
+      "scored": 20,
+      "passed": 15,
+      "errors": 0,
+      "failed_ids": [
+        "E081",
+        "E084",
+        "E086",
+        "E096",
+        "E097"
+      ],
+      "accuracy": 0.75
+    },
+    "count": {
+      "attempted": 15,
+      "scored": 15,
+      "passed": 14,
+      "errors": 0,
+      "failed_ids": [
+        "E043"
+      ],
+      "accuracy": 0.9333
+    },
+    "exclude": {
+      "attempted": 15,
+      "scored": 15,
+      "passed": 11,
+      "errors": 0,
+      "failed_ids": [
+        "E050",
+        "E052",
+        "E058",
+        "E060"
+      ],
+      "accuracy": 0.7333
+    },
+    "free": {
+      "attempted": 10,
+      "scored": 10,
+      "passed": 10,
+      "errors": 0,
+      "failed_ids": [],
+      "accuracy": 1.0
+    },
+    "hardware": {
+      "attempted": 15,
+      "scored": 15,
+      "passed": 6,
+      "errors": 0,
+      "failed_ids": [
+        "E061",
+        "E062",
+        "E063",
+        "E065",
+        "E067",
+        "E070",
+        "E071",
+        "E072",
+        "E074"
+      ],
+      "accuracy": 0.4
+    },
+    "tight": {
+      "attempted": 5,
+      "scored": 5,
+      "passed": 3,
+      "errors": 0,
+      "failed_ids": [
+        "E079",
+        "E080"
+      ],
+      "accuracy": 0.6
+    }
+  }
+}
