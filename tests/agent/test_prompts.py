@@ -2,11 +2,13 @@ import json
 
 from app.agent.prompts import (
     AGENT_SYSTEM,
+    build_empty_challenge,
     build_rejection,
     build_user_input,
     describe_conditions,
 )
 from app.pipeline.query_processing.conditions import GameConditions
+from app.schemas.game import GameCandidate
 from app.schemas.hardware import HardwareSpecs
 
 
@@ -363,6 +365,25 @@ def test_build_user_input_includes_dynamic_recommendation_limit():
 
     assert "recommended_igdb_ids는 최대 3개" in message
     assert "제출 직전에 recommended_igdb_ids의 개수를 직접 세어" in message
+
+
+def test_empty_challenge_lists_passing_candidates_and_leaves_an_exit():
+    message = build_empty_challenge(
+        [GameCandidate(igdb_id=7, name="Game 7"), GameCandidate(igdb_id=9, name="Game 9")],
+        recommendation_count=2,
+    )
+
+    assert "[빈 RecommendationDraft 재확인]" in message
+    assert "통과한 후보가 2개" in message
+    assert "Game 7(igdb_id 7)" in message and "Game 9(igdb_id 9)" in message
+    # 실측에서 빈 추천을 만든 오독을 직접 짚는다
+    assert "status=skipped" in message and "통과입니다" in message
+    assert "최대 2개" in message
+    # 조건에 맞는 후보가 정말 없으면 빈 목록을 다시 낼 수 있다
+    assert "빈 목록을 다시 제출" in message
+    assert "다음 응답에서는 어떤 Tool도 호출하지 마세요" in message
+    # 되물은 답변이 게임 이름만 나열한 2문장으로 짧아지는 것을 실측에서 봤다
+    assert "3~6문장" in message and "이름을 Tool 결과에 나온 그대로 모두" in message
 
 
 def test_rejection_forbids_all_tool_retries():

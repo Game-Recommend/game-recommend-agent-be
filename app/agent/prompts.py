@@ -11,6 +11,7 @@ Tool 이름(
 """
 
 from app.pipeline.query_processing.conditions import GameConditions
+from app.schemas.game import GameCandidate
 
 CONNECTION_LABELS = {
     "online": "온라인",
@@ -489,6 +490,39 @@ def build_rejection(problems: list[str]) -> str:
             "단, 다른 응답이나 Tool 호출 없이 한 번만 제출하세요.",
         ]
     )
+
+
+def build_empty_challenge(games: list[GameCandidate], recommendation_count: int) -> str:
+    """빈 초안인데 판정을 통과한 후보가 남았을 때 러너가 한 번 되묻는 메시지.
+
+    거부가 아니라 재확인이다. 모델이 status=skipped를 "확인하지 못했다"로 읽고 빈 목록을 내는
+    경우가 실측에서 잦았다(evals/agent_e2e/REPORT.md). 조건에 맞는 후보가 정말 없으면 빈 목록을
+    다시 낼 수 있게 출구를 남긴다.
+    """
+    return "\n".join(
+        [
+            "[빈 RecommendationDraft 재확인]",
+            "추천을 0개로 제출했지만, 이미 완료된 가격·사양 판정을 통과한 후보가 "
+            f"{len(games)}개 있습니다.",
+            *(f"- {game.name}(igdb_id {game.igdb_id})" for game in games),
+            "",
+            "status=skipped는 사용자가 그 조건(예산 또는 사양)을 말하지 않았다는 뜻이며 "
+            "통과입니다. 확인 실패(unknown)나 미충족(unmet)이 아닙니다.",
+            "위 후보 중에서 [추출한 조건]의 선호·제외 분류에 맞는 게임을 검색 순서대로 "
+            f"최대 {recommendation_count}개 골라 RecommendationDraft를 다시 제출하세요.",
+            "위 후보가 모두 [추출한 조건]에 맞지 않을 때만 빈 목록을 다시 제출하고, "
+            "answer에 그 이유를 구체적으로 쓰세요.",
+            "다음 응답에서는 어떤 Tool도 호출하지 마세요.",
+            "search_games, get_prices, assess_hardware, get_review_scores, "
+            "summarize_reviews를 다시 호출하지 마세요.",
+            "위 목록에 없는 igdb_id를 추가하지 마세요.",
+            "추천 ID를 넣으면 answer도 [Response Writing Rules]대로 한국어 3~6문장으로 "
+            "다시 쓰세요. 추천한 게임의 이름을 Tool 결과에 나온 그대로 모두 넣고, 게임마다 "
+            "이미 받은 Tool 결과(장르·테마, 가격, 사양 판정)로 확인된 이유를 쓰세요.",
+            "다른 응답이나 Tool 호출 없이 한 번만 제출하세요.",
+        ]
+    )
+
 
 def requires_review_selection(conditions: GameConditions) -> bool:
     keywords = (

@@ -39,6 +39,7 @@ AgentRecommender (app/agent/runner.py, LangChain create_agent)
   └─ summarize_reviews app/agent/tools/reviews.py   → ReviewSummaryTool.run (리뷰 담당)
   ↓
 러너 후검증: 후보에 있는 id · 가격/사양 판정 통과 · 요청 개수 이하 → 위반 시 거부 사유를 붙여 1회 재호출
+빈 초안 되묻기: 판정을 통과한 후보가 있는데 추천이 0개 → 통과 후보 목록을 붙여 1회 되묻기 (다시 비면 그대로 받는다)
 안전망: 추천 후보 중 가격·사양·리뷰를 조회하지 않은 게임은 러너가 직접 조회
   ↓
 MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같은 형태)

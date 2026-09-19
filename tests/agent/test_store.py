@@ -70,6 +70,18 @@ def test_validate_draft_lists_every_problem(store):
     assert store.validate_draft(RecommendationDraft(recommended_igdb_ids=[], answer="없음")) == []
 
 
+def test_passing_ids_lists_checked_passes_in_search_order():
+    # 조건이 없으면 조회하지 않은 후보도 passes()는 참이지만, 판단한 적이 없으므로 넣지 않는다
+    store = CandidateStore(GameConditions())
+    store.add_candidates([GameCandidate(igdb_id=i, name=f"Game {i}") for i in (1, 2, 3, 4)])
+    _check(store, 3, price="skipped", hardware="skipped", amount=None)
+    _check(store, 1, price="skipped", hardware="skipped")
+    _check(store, 2, price="unmet", hardware="skipped", amount=None)
+
+    assert store.passes(4) and not store.checked(4)
+    assert store.passing_ids() == [1, 3]
+
+
 def test_build_evidence_excludes_only_checked_failures(store):
     _check(store, 1, price="unmet")
     _check(store, 3)
