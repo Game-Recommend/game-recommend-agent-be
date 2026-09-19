@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1204" height="432" viewBox="56 172 1204 432" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
-<rect x="56" y="172" width="1204" height="432" rx="14" fill="white"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1204" height="354" viewBox="56 172 1204 354" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
+<rect x="56" y="172" width="1204" height="354" rx="14" fill="white"/>
 <path d="M56 228 V186 Q56 172 70 172 H1246 Q1260 172 1260 186 V228 Z" fill="#EEF0F6"/>
 <text x="80" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">항목</text>
 <circle cx="528" cy="201" r="8" fill="#0E9F9F"/>
@@ -7,7 +7,7 @@
 <circle cx="816" cy="201" r="8" fill="#6D5DF6"/>
 <text x="834" y="209" font-size="22" fill="#111827" font-weight="600" text-anchor="start">에이전트 · LangGraph</text>
 <text x="1096" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">차이</text>
-<text x="80" y="264" font-size="27" fill="#111827" font-weight="600" text-anchor="start">최종 게임후보 필수 조건 만족</text>
+<text x="80" y="264" font-size="27" fill="#111827" font-weight="600" text-anchor="start">필수 조건 만족</text>
 <text x="80" y="290" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">가격 · 개수 · 제외 장르 · 사양 · 통과 후보 누락</text>
 <text x="520" y="264" font-size="30" fill="#111827" font-weight="500" text-anchor="start">98/100</text>
 <text x="643.5" y="264" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">98%</text>
@@ -20,42 +20,29 @@
 <text x="1096" y="264" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+1%p</text>
 <text x="1096" y="291" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동률 수준</text>
 <line x1="56" y1="306" x2="1260" y2="306" stroke="#E5E7EB"/>
-<text x="80" y="342" font-size="27" fill="#111827" font-weight="600" text-anchor="start">답변 형식</text>
-<text x="80" y="368" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">마크다운 없음 · 문장 수 · 게임 이름 언급</text>
-<text x="520" y="342" font-size="30" fill="#111827" font-weight="500" text-anchor="start">50/100</text>
-<text x="643.5" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">50%</text>
+<text x="80" y="342" font-size="27" fill="#111827" font-weight="600" text-anchor="start">선택 관련성</text>
+<text x="80" y="368" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">같은 통과 후보 · 인기순 선택과 쌍대 비교 · 비김 35</text>
+<text x="520" y="342" font-size="30" fill="#111827" font-weight="500" text-anchor="start">2승</text>
+<text x="586" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">판정 67번 중</text>
 <path d="M520 356 H756 Q760 356 760 360 V362 Q760 366 756 366 H520 Z" fill="#D4EEEE"/>
-<path d="M520 356 H636.0 Q640.0 356 640.0 360 V362 Q640.0 366 636.0 366 H520 Z" fill="#0E9F9F"/>
-<text x="808" y="342" font-size="30" fill="#111827" font-weight="700" text-anchor="start">94/100</text>
-<text x="931.5" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">94%</text>
+<path d="M520 356 H523.2 Q527.2 356 527.2 360 V362 Q527.2 366 523.2 366 H520 Z" fill="#0E9F9F"/>
+<text x="808" y="342" font-size="30" fill="#111827" font-weight="700" text-anchor="start">30승</text>
+<text x="892" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">판정 67번 중</text>
 <path d="M808 356 H1044 Q1048 356 1048 360 V362 Q1048 366 1044 366 H808 Z" fill="#E5E2FD"/>
-<path d="M808 356 H1029.6 Q1033.6 356 1033.6 360 V362 Q1033.6 366 1029.6 366 H808 Z" fill="#6D5DF6"/>
-<text x="1096" y="342" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+44%p</text>
+<path d="M808 356 H911.5 Q915.5 356 915.5 360 V362 Q915.5 366 911.5 366 H808 Z" fill="#6D5DF6"/>
+<text x="1096" y="342" font-size="28" fill="#111827" font-weight="700" text-anchor="start">30 : 2</text>
 <text x="1096" y="369" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
 <line x1="56" y1="384" x2="1260" y2="384" stroke="#E5E7EB"/>
-<text x="80" y="420" font-size="27" fill="#111827" font-weight="600" text-anchor="start">추천 0개로 끝난 문항</text>
-<text x="80" y="446" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">낮을수록 좋다</text>
-<text x="520" y="420" font-size="30" fill="#111827" font-weight="500" text-anchor="start">19/100</text>
-<text x="643.5" y="420" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">19%</text>
-<path d="M520 434 H756 Q760 434 760 438 V440 Q760 444 756 444 H520 Z" fill="#D4EEEE"/>
-<path d="M520 434 H561.6 Q565.6 434 565.6 438 V440 Q565.6 444 561.6 444 H520 Z" fill="#0E9F9F"/>
-<text x="808" y="420" font-size="30" fill="#111827" font-weight="500" text-anchor="start">17/100</text>
-<text x="931.5" y="420" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">17%</text>
-<path d="M808 434 H1044 Q1048 434 1048 438 V440 Q1048 444 1044 444 H808 Z" fill="#E5E2FD"/>
-<path d="M808 434 H844.8 Q848.8 434 848.8 438 V440 Q848.8 444 844.8 444 H808 Z" fill="#6D5DF6"/>
-<text x="1096" y="420" font-size="28" fill="#111827" font-weight="700" text-anchor="start">−2%p</text>
-<text x="1096" y="447" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동률 수준</text>
+<text x="80" y="420" font-size="27" fill="#111827" font-weight="600" text-anchor="start">LLM 왕복 시간</text>
+<text x="80" y="446" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">추천을 낸 문항의 중앙값 · Tool 실행 시간 제외</text>
+<text x="520" y="432" font-size="30" fill="#111827" font-weight="700" text-anchor="start">3.4초</text>
+<text x="612" y="432" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">분해 + 답변</text>
+<text x="808" y="432" font-size="30" fill="#111827" font-weight="500" text-anchor="start">6.1초</text>
+<text x="900" y="432" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">분해 + Tool 선택</text>
+<text x="1096" y="420" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+2.8초</text>
+<text x="1096" y="447" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">원본 우세</text>
 <line x1="56" y1="462" x2="1260" y2="462" stroke="#E5E7EB"/>
-<text x="80" y="498" font-size="27" fill="#111827" font-weight="600" text-anchor="start">지연 중앙값</text>
-<text x="80" y="524" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동시성 원본 2 · 에이전트 4</text>
-<text x="520" y="510" font-size="30" fill="#111827" font-weight="500" text-anchor="start">11.6초</text>
-<text x="625.8" y="510" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">최대 41.7초</text>
-<text x="808" y="510" font-size="30" fill="#111827" font-weight="700" text-anchor="start">10.6초</text>
-<text x="913.8" y="510" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">최대 48.5초</text>
-<text x="1096" y="498" font-size="28" fill="#111827" font-weight="700" text-anchor="start">−1.0초</text>
-<text x="1096" y="525" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
-<line x1="56" y1="540" x2="1260" y2="540" stroke="#E5E7EB"/>
-<text x="80" y="567" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">원본 2026-09-17 측정 · 에이전트 2026-09-20 측정. 같은 100문항을 같은 채점기로 채점했다.</text>
-<text x="80" y="591" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 열에는 구조 전환과 별개로 이 저장소에서만 한 수정(검색 후보 풀 · 질문 분해 · 리뷰 요약 병렬화)이 함께 들어 있다.</text>
-<rect x="56.5" y="172.5" width="1203" height="431" rx="13.5" fill="none" stroke="#D1D5DB"/>
+<text x="80" y="489" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">필수 조건 · LLM 왕복: 같은 100문항(원본 2026-09-17, 에이전트 2026-09-20). 선택 관련성: 취향·상황 질문 40문항 × 2회의 쌍대 심판.</text>
+<text x="80" y="513" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">답변 형식 · 추천 0개 · 전체 지연은 구조가 아닌 수정(출력 방식 · 가드 · 리뷰 요약 병렬화)에서 갈려 뺐다.</text>
+<rect x="56.5" y="172.5" width="1203" height="353" rx="13.5" fill="none" stroke="#D1D5DB"/>
 </svg>
