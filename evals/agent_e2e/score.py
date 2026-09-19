@@ -155,8 +155,13 @@ def check_overlooked_candidates(response: RecommendationResponse, stages: list[d
     이미 거른 후보라 추천할 수 있는 게임이다. 에이전트가 되물음 뒤에도 비운 경우까지 위반으로
     세므로, 정당한 빈 추천인지는 기록의 answer를 사람이 읽고 판단한다.
     """
+    return overlooked_problems(len(response.games), stages)
+
+
+def overlooked_problems(recommended_count: int, stages: list[dict]) -> list[str]:
+    """추천 개수와 단계 타임라인만으로 같은 검사를 한다. 저장된 기록의 재채점(rescore.py)이 쓴다."""
     passing = passing_count(stages)
-    if not response.games and passing:
+    if not recommended_count and passing:
         return [f"통과 후보가 {passing}개인데 추천이 0개다"]
     return []
 

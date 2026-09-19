@@ -12,10 +12,22 @@ import json
 from pathlib import Path
 
 TOOL_STAGES = ("게임 검색", "가격", "하드웨어", "리뷰 점수", "리뷰 요약")
+AGENT_STAGE = "에이전트 추론"
 
 
 def tool_calls(record: dict) -> list[str]:
-    return [stage for stage in record.get("stage_order", []) if stage in TOOL_STAGES]
+    """LLM이 부른 Tool 단계를 순서대로. 추론이 끝난 뒤의 단계는 러너가 부른 것이라 뺀다.
+
+    러너는 추천이 확정된 뒤 리뷰 요약(미조회분)을 직접 부른다. 이를 섞으면 에이전트가 고른 도구가
+    아닌 것까지 "에이전트가 부른 Tool"로 읽힌다.
+    """
+    calls = []
+    for event in record.get("events", []):
+        if event["stage"] == AGENT_STAGE and event["status"] != "started":
+            break
+        if event["status"] == "started" and event["stage"] in TOOL_STAGES:
+            calls.append(event["stage"])
+    return calls
 
 
 def cell(record: dict) -> str:
