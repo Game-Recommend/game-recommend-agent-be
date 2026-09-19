@@ -76,16 +76,28 @@ QR을 찍으면 배포된 프론트엔드
   복합 조건 질문에서 원본은 20개, 에이전트는 19개를 제외 근거로 남깁니다.
 
 2026-09-17의 에이전트 측정(19.7~40.1초. 같은 Tool을 되풀이해 부르고, LLM이 고른 후보만 조회하던 때)은
-REPORT에 그대로 남겨 두었습니다. 100문항 평가로 본 전후 비교는 아래 그림이고, 근거는
-[evals/agent_e2e/REPORT.md](evals/agent_e2e/REPORT.md)와 [evals/search_pool/REPORT.md](evals/search_pool/REPORT.md)에
-있습니다.
+REPORT에 그대로 남겨 두었습니다.
 
-![엔드투엔드 100문항 평가의 원본·에이전트 비교](docs/eval_comparison.png)
+### 구조에서 나온 차이
 
-에이전트 열의 수치에는 구조 전환과 별개로 이 저장소에서만 한 수정(검색 후보 풀 교체, 질문 분해의 제외
-표현, 리뷰 요약 병렬화)이 함께 들어 있습니다. 구조에서 나온 차이만 따로 잰 것은
-[evals/relevance/REPORT.md](evals/relevance/REPORT.md)입니다(같은 통과 후보에서 에이전트의 선택과 인기순
-선택을 쌍대 비교). 그림을 고칠 때는 [SVG](docs/eval_comparison.svg)를 씁니다.
+![고정 파이프라인과 에이전트의 구조에서 나온 차이](docs/eval_comparison.png)
+
+두 저장소의 수치 중 **구조(고정 파이프라인 대 LLM이 도구를 고르는 에이전트)에서 나온 것만** 남긴 그림입니다.
+고칠 때는 [SVG](docs/eval_comparison.svg)를 씁니다.
+
+- **필수 조건 만족은 동률입니다(98 대 99).** 선택을 LLM에 맡겨도 가격·사양·개수·제외 조건의 준수가 깨지지
+  않습니다. 판정과 후검증을 코드가 하기 때문입니다.
+- **선택 관련성이 구조의 이득입니다.** 같은 통과 후보에서 에이전트가 고른 목록과, 고정 파이프라인이 했을
+  선택(인기순으로 자른 목록)을 LLM 심판이 자리를 바꿔 두 번 비교했습니다. 판정 67번 중 에이전트 30승,
+  인기순 2승, 비김 35입니다([evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
+- **LLM 왕복 시간이 구조의 비용입니다.** 원본은 질문 분해와 최종 답변에 3.4초, 에이전트는 질문 분해와
+  Tool을 고르는 추론에 6.1초를 씁니다(추천을 낸 문항의 중앙값,
+  [latency_breakdown.py](evals/agent_e2e/latency_breakdown.py)).
+
+답변 형식(50 대 94), 추천 0개(19 대 17), 전체 지연(11.6초 대 10.6초)은 그림에서 뺐습니다. 구조가 아니라
+이 저장소에서만 한 수정에서 갈린 수치이기 때문입니다. 답변 형식은 답변을 구조화 출력의 필드로 받는 것과
+러너의 이름 되묻기, 추천 0개는 빈 초안 되묻기와 검색 수정, 전체 지연은 리뷰 요약 병렬화 같은 I/O 패치의
+영향입니다. 수치와 근거는 [evals/agent_e2e/REPORT.md](evals/agent_e2e/REPORT.md)에 있습니다.
 
 ## 에이전트 흐름
 
@@ -475,7 +487,7 @@ pyproject.toml             의존성·빌드·pytest·Ruff·Vercel 설정
 Makefile                   개발 서버·검증 명령
 TEAM.md                    역할별 담당 파일·연결 계약
 docs/game_recommend_flow.*  서비스 처리 흐름 다이어그램 (PNG 문서용 · SVG 수정용)
-docs/eval_comparison.*     엔드투엔드 100문항 평가의 원본·에이전트 비교 (rsvg-convert -z 2로 PNG를 만든다)
+docs/eval_comparison.*     구조에서 나온 차이 세 행: 조건 만족·선택 관련성·LLM 왕복 (rsvg-convert -z 2로 PNG를 만든다)
 app/
 ├─ main.py                  FastAPI 앱. 시작 시 조립, 종료 시 클라이언트 정리
 ├─ assembly.py              .env 설정으로 ToolSet을 만들고 에이전트 추천기를 조립
