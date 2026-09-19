@@ -3,6 +3,7 @@
     .venv/bin/python -m evals.relevance.run_eval --limit 5     # 먼저 작게 확인한다
     .venv/bin/python -m evals.relevance.run_eval --concurrency 2
     .venv/bin/python -m evals.relevance.run_eval --no-judge    # 목록이 달라지는지만 본다
+    .venv/bin/python -m evals.relevance.run_eval --ids R033 R038   # 지정한 문항만
 
 **실제 외부 API와 LLM을 부른다.** 40문항에 에이전트 약 $0.3, 심판(gpt-4o-mini, 문항당 두 번)
 약 $0.03, 10분 안팎이다. CI에서는 돌리지 않는다.
@@ -107,6 +108,7 @@ async def run_one(recommender, item: dict, judge: PairJudge | None) -> dict:
 async def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--limit", type=int, help="앞에서 N문항만 실행한다")
+    parser.add_argument("--ids", nargs="+", help="지정한 문항만 실행한다 (예: R033 R038)")
     parser.add_argument("--concurrency", type=int, default=2)
     parser.add_argument("--no-judge", action="store_true", help="심판을 생략한다")
     parser.add_argument("--judge-model", default=JUDGE_MODEL)
@@ -115,6 +117,8 @@ async def main() -> None:
 
     settings = get_settings()
     cases = json.loads((EVAL_DIR / "dataset.json").read_text(encoding="utf-8"))
+    if args.ids:
+        cases = [case for case in cases if case["id"] in set(args.ids)]
     if args.limit:
         cases = cases[: args.limit]
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")

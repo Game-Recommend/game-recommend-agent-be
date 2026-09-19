@@ -45,22 +45,39 @@ ALIASES = {
     "파티": "Party", "아케이드": "Arcade", "인디": "Indie", "생존": "Survival",
 }
 
-# IGDB의 장르 23개와 테마 22개(2026-09 조회). 검색은 이 둘을 한 분류로 본다.
-# 여기에 없는 분류어는 게임 모드(GAME_MODES)나 키워드로 찾는다. 전에는 장르·테마 이름으로만 찾아서
-# 파서가 genres=["Cooperative"]를 내면 후보가 0개였다.
-CATEGORIES = frozenset(
-    name.lower()
-    for name in (
-        "Point-and-click", "Fighting", "Shooter", "Music", "Platform", "Puzzle", "Racing",
-        "Real Time Strategy (RTS)", "Role-playing (RPG)", "Simulator", "Sport", "Strategy",
-        "Turn-based strategy (TBS)", "Tactical", "Hack and slash/Beat 'em up", "Quiz/Trivia",
-        "Pinball", "Adventure", "Indie", "Arcade", "Visual Novel", "Card & Board Game", "MOBA",
-        "Action", "Fantasy", "Science fiction", "Horror", "Thriller", "Survival", "Historical",
-        "Stealth", "Comedy", "Business", "Drama", "Non-fiction", "Sandbox", "Educational", "Kids",
-        "Open world", "Warfare", "Party", "4X (explore, expand, exploit, and exterminate)",
-        "Erotic", "Mystery", "Romance",
-    )
-)  # fmt: skip
+# IGDB의 장르 23개·테마 22개·게임 모드 6개와 그 id(2026-09 조회).
+# 검색은 장르와 테마를 한 분류로 본다.
+#
+# 조건은 **이름이 아니라 id로** 건다. `themes.name ~ "fantasy" & themes.name ~ "action"`처럼 같은
+# 배열에 이름 조건을 둘 걸면 IGDB는 "한 원소가 두 이름을 동시에 만족"으로 읽어 0건을 돌려준다.
+# Fantasy와 Action은 둘 다 테마라 "판타지 액션 RPG"의 후보가 0개였다.
+# `themes = [17,1]`(모두 포함)은 된다.
+GENRE_IDS = {
+    name.lower(): igdb_id
+    for name, igdb_id in {
+        "Point-and-click": 2, "Fighting": 4, "Shooter": 5, "Music": 7, "Platform": 8,
+        "Puzzle": 9, "Racing": 10, "Real Time Strategy (RTS)": 11, "Role-playing (RPG)": 12,
+        "Simulator": 13, "Sport": 14, "Strategy": 15, "Turn-based strategy (TBS)": 16,
+        "Tactical": 24, "Hack and slash/Beat 'em up": 25, "Quiz/Trivia": 26, "Pinball": 30,
+        "Adventure": 31, "Indie": 32, "Arcade": 33, "Visual Novel": 34,
+        "Card & Board Game": 35, "MOBA": 36,
+    }.items()
+}  # fmt: skip
+THEME_IDS = {
+    name.lower(): igdb_id
+    for name, igdb_id in {
+        "Action": 1, "Fantasy": 17, "Science fiction": 18, "Horror": 19, "Thriller": 20,
+        "Survival": 21, "Historical": 22, "Stealth": 23, "Comedy": 27, "Business": 28,
+        "Drama": 31, "Non-fiction": 32, "Sandbox": 33, "Educational": 34, "Kids": 35,
+        "Open world": 38, "Warfare": 39, "Party": 40,
+        "4X (explore, expand, exploit, and exterminate)": 41, "Erotic": 42, "Mystery": 43,
+        "Romance": 44,
+    }.items()
+}  # fmt: skip
+GAME_MODE_IDS = {
+    "Single player": 1, "Multiplayer": 2, "Co-operative": 3, "Split screen": 4,
+    "Massively Multiplayer Online (MMO)": 5, "Battle Royale": 6,
+}  # fmt: skip
 
 # 분류 자리에 온 플레이 방식 표현 → IGDB game_modes 이름
 GAME_MODES = {
@@ -103,31 +120,75 @@ def expand_platforms(values: list[str]) -> list[str]:
     ]
 
 
-def build_filters(conditions: dict) -> list[str]:
-    """IGDB where 절의 조건들. 없는 조건은 생략한다. 분류는 AND, 플랫폼은 OR로 조합한다."""
-    where = [f"game_type = ({GAME_TYPES})", f"total_rating_count >= {MIN_RATING_COUNT}"]
-    modes = []
+def classify(conditions: dict) -> tuple[list[int], list[int], list[int], list[str]]:
+    """원하는 분류와 플레이 방식을 장르 id, 테마 id, 게임 모드 id, 그 밖의 말로 가른다.
+
+    그 밖의 말은 IGDB 장르·테마에 없는 분류어다(roguelike, story-rich). 질문 분해가 취향을 분류로
+    지어내기도 한다(Story, Competition). 버리지 않고 키워드로 찾는다(`keyword_ids`).
+    """
+    genres, themes, modes, others = [], [], [], []
     for genre in conditions.get("genres") or []:
         name = normalize(genre)
-        if name in CATEGORIES:
-            where.append(f"(genres.name ~ {quote(name)} | themes.name ~ {quote(name)})")
+        if name in GENRE_IDS:
+            genres.append(GENRE_IDS[name])
+        elif name in THEME_IDS:
+            themes.append(THEME_IDS[name])
         elif name in GAME_MODES:
-            modes.append(GAME_MODES[name])
+            modes.append(GAME_MODE_IDS[GAME_MODES[name]])
         else:
-            # IGDB 장르·테마에 없는 분류어(roguelike, story-rich 등)는 키워드로 찾는다.
-            # 조건을 버리지 않는다. 맞는 키워드가 없으면 후보가 0개인 것이 옳다
-            spaced = name.replace("-", " ")
-            where.append(f"(keywords.name ~ {quote(name)} | keywords.name ~ {quote(spaced)})")
+            others.append(name)
     if mode := PLAY_MODES.get(conditions.get("play_mode") or ""):
-        modes.append(mode)
+        modes.append(GAME_MODE_IDS[mode])
     if conditions.get("players") == 1:
-        modes.append("Single player")
-    where.extend(f"game_modes.name = {quote(mode)}" for mode in dict.fromkeys(modes))
+        modes.append(GAME_MODE_IDS["Single player"])
+    dedupe = dict.fromkeys
+    return list(dedupe(genres)), list(dedupe(themes)), list(dedupe(modes)), list(dedupe(others))
+
+
+def build_filters(conditions: dict, keyword_ids: list[int] | None = None) -> list[str]:
+    """IGDB where 절의 조건들. 없는 조건은 생략한다. 분류는 AND, 플랫폼은 OR로 조합한다.
+
+    `[1,2]`는 모두 포함, `(1,2)`는 하나라도 포함이다. 장르·테마·게임 모드는 말한 것을 모두 가져야
+    하고, 키워드는 뜻이 넓은 말을 푼 것이라 하나만 맞아도 된다.
+    """
+    where = [f"game_type = ({GAME_TYPES})", f"total_rating_count >= {MIN_RATING_COUNT}"]
+    genres, themes, modes, _ = classify(conditions)
+    for field, ids in (("genres", genres), ("themes", themes), ("game_modes", modes)):
+        if ids:
+            where.append(f"{field} = [{','.join(map(str, ids))}]")
+    if keyword_ids:
+        where.append(f"keywords = ({','.join(map(str, keyword_ids))})")
     # 플랫폼을 말하지 않으면 PC로 본다. 가격·사양 판정이 PC 기준이다
     platforms = expand_platforms(conditions.get("platforms") or []) or [PC]
     names = " | ".join(f"platforms.name ~ {quote(normalize(name))}" for name in platforms)
     where.append(f"({names})")
     return where
+
+
+def keyword_stem(term: str) -> str:
+    """키워드를 찾을 어간. 긴 말은 끝을 잘라 competition이 competitive도 찾게 한다."""
+    term = term.replace("-", " ").strip()
+    return term if len(term) <= 5 or " " in term else term[: max(5, len(term) - 3)]
+
+
+def matching_keyword_ids(rows: list[dict], stems: list[str]) -> list[int]:
+    """키워드 이름의 어떤 단어가 어간으로 시작하는 것만 고른다.
+
+    IGDB의 부분 일치(`~ *"story"*`)는 "alternate history"도 돌려준다. 단어의 시작을 보면
+    "story rich"와 "emotional story"는 남고 "history"는 빠진다.
+    """
+
+    def matches(name: str, stem: str) -> bool:
+        # 여러 단어로 된 말은 그대로 들어 있는지, 한 단어는 어떤 단어의 시작인지 본다
+        if " " in stem:
+            return stem in name
+        return any(word.startswith(stem) for word in name.split())
+
+    return [
+        row["id"]
+        for row in rows
+        if any(matches(row["name"].lower().replace("-", " "), stem) for stem in stems)
+    ]
 
 
 class TwitchAppToken:
@@ -198,6 +259,16 @@ async def _post_once(
     )
 
 
+async def _keyword_ids(
+    client: httpx.AsyncClient, settings: Settings, terms: list[str]
+) -> list[int]:
+    """분류어에 해당하는 IGDB 키워드 id. 부분 일치로 넓게 받아 단어의 시작이 맞는 것만 남긴다."""
+    stems = [keyword_stem(term) for term in terms]
+    names = " | ".join(f"name ~ *{quote(stem)}*" for stem in stems)
+    rows = await _post(client, settings, "keywords", f"fields name; where {names}; limit 500;")
+    return matching_keyword_ids(rows, stems)
+
+
 async def search(conditions: dict) -> list[dict]:
     conditions = conditions or {}
     excluded = {normalize(name) for name in conditions.get("excluded_genres") or []}
@@ -205,10 +276,16 @@ async def search(conditions: dict) -> list[dict]:
     players = conditions.get("players")
     player_fields = PLAYER_FIELDS.get(conditions.get("connection"), PLAYER_FIELDS[None])
     max_hours = conditions.get("max_playtime_hours")
-    query_filter = f"where {' & '.join(build_filters(conditions))}; "
+    others = classify(conditions)[3]
 
     settings = get_settings()
     async with httpx.AsyncClient(timeout=30) as client:
+        # 0. IGDB 장르·테마에 없는 분류어는 키워드 id로 푼다. 그런 말이 없으면 부르지 않는다
+        keyword_ids = await _keyword_ids(client, settings, others) if others else []
+        if others and not keyword_ids:
+            return []  # 조건을 버리지 않는다. 맞는 키워드가 없으면 후보가 없는 것이다
+        query_filter = f"where {' & '.join(build_filters(conditions, keyword_ids))}; "
+
         # 1. 후보 검색. Twitch 앱 토큰은 _post가 붙이며 만료 전까지 재사용한다
         games = await _post(
             client,
