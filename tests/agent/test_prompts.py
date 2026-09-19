@@ -376,8 +376,10 @@ def test_empty_challenge_lists_passing_candidates_and_leaves_an_exit():
     assert "[빈 RecommendationDraft 재확인]" in message
     assert "통과한 후보가 2개" in message
     assert "Game 7(igdb_id 7)" in message and "Game 9(igdb_id 9)" in message
-    # 실측에서 빈 추천을 만든 오독을 직접 짚는다
-    assert "status=skipped" in message and "통과입니다" in message
+    # 실측에서 빈 추천을 만든 오독을 직접 짚는다. "통과"라고 쓰면 답변이 검사하지 않은 조건을
+    # 충족했다고 말하게 되므로(실측 9/27), 검사하지 않았다는 사실과 답변 금지 표현을 함께 적는다
+    assert "검사하지 않았다는" in message and "추천을 막는 사유가 아닙니다" in message
+    assert "충족했다거나 확인했다고 쓰지 마세요" in message
     assert "최대 2개" in message
     # 조건에 맞는 후보가 정말 없으면 빈 목록을 다시 낼 수 있다
     assert "빈 목록을 다시 제출" in message
