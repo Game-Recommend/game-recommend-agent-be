@@ -74,7 +74,7 @@ def services():
 
 
 # 에이전트 대본: 검색 → 가격·사양 병렬 → 통과한 3번 리뷰 → 3번 추천
-SCRIPT = (search(genres=[]), checks([1, 2, 3]), reviews([3]), draft([3], "테스트 답변"))
+SCRIPT = (search(genres=[]), checks([1, 2, 3]), reviews([3]), draft([3], "Game 3 테스트 답변"))
 
 
 @pytest.fixture

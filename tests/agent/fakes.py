@@ -30,8 +30,14 @@ def tool_calls(*calls: tuple[str, dict]) -> AIMessage:
     )
 
 
-def draft(ids: list[int], answer: str = "테스트 답변") -> AIMessage:
-    """최종 출력(RecommendationDraft) 제출. ToolStrategy는 이를 같은 이름의 도구 호출로 받는다."""
+def draft(ids: list[int], answer: str | None = None) -> AIMessage:
+    """최종 출력(RecommendationDraft) 제출. ToolStrategy는 이를 같은 이름의 도구 호출로 받는다.
+
+    러너는 추천한 게임 이름이 answer에 없으면 되묻는다. 그래서 기본 답변은 대역 후보의
+    이름(Game N)을 담는다.
+    """
+    if answer is None:
+        answer = " ".join(["테스트 답변", *(f"Game {igdb_id}" for igdb_id in ids)])
     return tool_calls((DRAFT_TOOL_NAME, {"recommended_igdb_ids": ids, "answer": answer}))
 
 

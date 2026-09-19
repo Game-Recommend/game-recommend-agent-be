@@ -86,7 +86,7 @@ def test_first_request_assembles_when_lifespan_did_not_run(recommender, monkeypa
     try:
         response = client.post("/recommend", json={"question": "게임 추천"})
         assert response.status_code == 200
-        assert response.json()["answer"] == "테스트 답변"
+        assert response.json()["answer"] == "Game 3 테스트 답변"
         assert app.state.recommender is recommender
     finally:
         app.state.recommender = None

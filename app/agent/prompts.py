@@ -534,6 +534,33 @@ def build_empty_challenge(games: list[GameCandidate], recommendation_count: int)
     )
 
 
+def build_name_challenge(missing: list[GameCandidate], recommended: list[GameCandidate]) -> str:
+    """추천 목록의 게임 이름이 answer에 없을 때 러너가 한 번 되묻는 메시지.
+
+    거부가 아니라 재확인이다. 다시 어긋나면 러너는 그대로 받는다.
+    """
+    return "\n".join(
+        [
+            "[RecommendationDraft 재확인: 추천 목록과 answer의 게임 이름]",
+            "recommended_igdb_ids에 있는데 answer에 이름이 나오지 않는 게임이 있습니다.",
+            *(f"- {game.name}(igdb_id {game.igdb_id})" for game in missing),
+            "",
+            "현재 추천 목록: "
+            + ", ".join(f"{game.name}(igdb_id {game.igdb_id})" for game in recommended),
+            "화면의 카드는 추천 목록을, 본문은 answer를 보여 줍니다. "
+            "둘이 같은 게임을 말해야 합니다.",
+            "answer를 고쳐 추천 목록의 모든 게임 이름을 Tool 결과에 나온 그대로 쓰세요. "
+            "같은 시리즈의 다른 작품 이름이나 줄인 이름, 번역한 이름으로 바꿔 쓰지 마세요.",
+            "answer에서 말하려던 게임이 목록과 다른 게임이고 그 게임이 가격·사양 판정을 "
+            "통과했다면, 대신 recommended_igdb_ids를 그 게임의 igdb_id로 바꿔도 됩니다.",
+            "다음 응답에서는 어떤 Tool도 호출하지 마세요.",
+            "search_games, get_prices, assess_hardware, get_review_scores, "
+            "summarize_reviews를 다시 호출하지 마세요.",
+            "다른 응답이나 Tool 호출 없이 한 번만 제출하세요.",
+        ]
+    )
+
+
 def requires_review_selection(conditions: GameConditions) -> bool:
     keywords = (
         "steam 평가",

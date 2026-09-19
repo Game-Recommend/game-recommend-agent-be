@@ -49,7 +49,7 @@ def test_recommend_returns_structured_evidence(client):
     response = client.post("/recommend", json={"question": "게임 추천"})
     assert response.status_code == 200
     assert response.json()["games"][0]["game"]["igdb_id"] == 3
-    assert response.json()["answer"] == "테스트 답변"
+    assert response.json()["answer"] == "Game 3 테스트 답변"
 
 
 @pytest.mark.parametrize("question", ["", "   ", "x" * 5001])

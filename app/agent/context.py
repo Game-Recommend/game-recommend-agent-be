@@ -155,6 +155,18 @@ class CandidateStore:
             igdb_id for igdb_id in self.candidates if self.checked(igdb_id) and self.passes(igdb_id)
         ]
 
+    def unmentioned_ids(self, draft: RecommendationDraft) -> list[int]:
+        """추천 목록에 있는데 answer에 이름이 나오지 않는 게임.
+
+        카드는 추천 목록을, 본문은 answer를 보여 준다. 모델은 시리즈의 다른 작품 이름을 본문에 쓰는
+        식으로 둘을 어긋나게 만든다(목록은 Half-Life 2, 본문은 Half-Life).
+        """
+        return [
+            igdb_id
+            for igdb_id in unique(draft.recommended_igdb_ids)
+            if igdb_id in self.candidates and self.candidates[igdb_id].name not in draft.answer
+        ]
+
     def failing_reasons(self, igdb_id: int) -> list[str]:
         """추천할 수 없는 이유. 비어 있으면 통과다."""
         evaluated = self.evaluate(igdb_id)

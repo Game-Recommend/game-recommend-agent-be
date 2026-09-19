@@ -13,9 +13,11 @@
    "실패나 누락은 필수 조건 통과로 처리하지 않는다"를 모델의 성실함에 맡기지 않는다.
 4. validate: 후검증. 후보에 있는 id인지, 판정을 통과했는지, 개수 이하인지 검사한다. 위반하면
    retry가 거부 사유를 메시지로 붙여 agent로 돌려보내고, 그래도 안 되면 502다.
-   빈 초안은 위반이 아니지만, 판정을 통과한 후보가 남아 있으면 retry가 그 목록을 붙여 한 번만
-   되묻는다. 모델이 status=skipped를 "확인 못 함"으로 읽고 빈손으로 끝내는 일을 막는다. 되묻기는
-   재시도 횟수를 쓰지 않고, 다시 비어 있으면 에이전트의 판단으로 받는다.
+   위반은 아니지만 되물을 일이 두 가지 있다. 각각 한 번만 되묻고, 재시도 횟수를 쓰지 않으며,
+   다시 같은 결과면 에이전트의 판단으로 받는다.
+   - 빈 초안인데 판정을 통과한 후보가 남아 있다. 모델이 status=skipped를 "확인 못 함"으로 읽고
+     빈손으로 끝내는 일을 막는다.
+   - 추천 목록의 게임 이름이 answer에 없다. 카드와 본문이 다른 게임을 말하는 일을 막는다.
 5. judge → reviews·media(병렬) → respond: 확정 후보의 리뷰 요약(미조회분)과 미디어를 붙이고
    RecommendationResponse를 만든다.
 
@@ -45,6 +47,7 @@ from app.agent.progress import PipelineStageError, Progress, silent, stream_prog
 from app.agent.prompts import (
     AGENT_SYSTEM,
     build_empty_challenge,
+    build_name_challenge,
     build_rejection,
     build_user_input,
 )
@@ -72,8 +75,10 @@ class PipelineState(TypedDict):
     attempts: NotRequired[int]  # 후검증에서 거부된 횟수
     problems: NotRequired[list[str]]  # 마지막 후검증의 거부 사유
     overlooked: NotRequired[list[int]]  # 빈 초안인데 판정을 통과한 후보 (되물을 대상)
-    # 되묻기 전의 빈 초안. 있으면 이미 되물었다
-    empty_draft: NotRequired[RecommendationDraft | None]
+    unmentioned: NotRequired[list[int]]  # 추천했는데 answer에 이름이 없는 게임 (되물을 대상)
+    asked: NotRequired[list[str]]  # 이미 한 되묻기 종류("empty", "names"). 종류마다 한 번만 한다
+    # 되묻기 전의 초안. 후검증은 통과한 초안이라, 되물은 뒤의 초안이 끝내 거부되면 여기로 돌아간다
+    fallback_draft: NotRequired[RecommendationDraft | None]
     recommended_ids: NotRequired[list[int]]
     response: NotRequired[RecommendationResponse]
 
@@ -160,8 +165,8 @@ class AgentRecommender:
     async def run(self, question: str, progress: Progress = silent) -> RecommendationResponse:
         ctx = AgentContext.pending(self.tools, progress, self.stage_timeout_seconds)
         # 서브그래프는 같은 상한을 자기 카운터로 센다. 부모 노드 수가 상한에 걸리지 않게만 한다.
-        # 루프는 첫 시도 + 거부 재시도 + 빈 초안 되묻기 한 번이다.
-        pipeline_steps = 4 * (self.max_validation_retries + 2) + 4
+        # 루프는 첫 시도 + 거부 재시도 + 되묻기 두 종류(빈 초안, 이름)다.
+        pipeline_steps = 4 * (self.max_validation_retries + 3) + 4
         try:
             result = await self.graph.ainvoke(
                 {"question": question, "messages": []},
@@ -218,34 +223,46 @@ class AgentRecommender:
     async def _validate(self, state: PipelineState, runtime: Runtime[AgentContext]) -> dict:
         """후검증. 거부 사유가 남고 재시도도 다 썼으면 필수 단계 실패다.
 
-        빈 초안은 거부 사유가 아니다. 다만 판정을 통과한 후보가 남아 있으면 한 번만 되묻는다.
+        거부 사유가 없어도 되물을 일이 있으면 종류마다 한 번만 되묻는다. 빈 초안인데 통과 후보가
+        있는 경우와, 추천한 게임 이름이 answer에 없는 경우다.
         """
         ctx = runtime.context
         draft = state["structured_response"]
         problems = ctx.store.validate_draft(draft)
         if problems and state["attempts"] >= self.max_validation_retries:
-            if (empty_draft := state.get("empty_draft")) is not None:
+            if (fallback := state.get("fallback_draft")) is not None:
                 # 되물은 뒤의 초안이 끝내 검증을 통과하지 못했다. 되묻기가 200이던 응답을 502로
-                # 바꾸지 않도록, 되묻기 전의 빈 초안으로 돌아간다.
-                logger.warning("Draft after empty challenge rejected, keeping empty: %s", problems)
-                return {"structured_response": empty_draft, "problems": [], "overlooked": []}
+                # 바꾸지 않도록, 되묻기 전의 초안으로 돌아간다.
+                logger.warning("Draft after challenge rejected, keeping earlier: %s", problems)
+                return {
+                    "structured_response": fallback,
+                    "problems": [],
+                    "overlooked": [],
+                    "unmentioned": [],
+                }
             logger.warning("Agent draft rejected after retries: %s", problems)
             ctx.progress(AGENT_STAGE, "failed", None)
             raise PipelineStageError("에이전트가 조건에 맞는 추천을 확정하지 못했습니다.")
+        asked = state.get("asked") or []
         overlooked: list[int] = []
-        if not problems and not draft.recommended_igdb_ids and state.get("empty_draft") is None:
-            overlooked = ctx.store.passing_ids()
-        return {"problems": problems, "overlooked": overlooked}
+        unmentioned: list[int] = []
+        if not problems:
+            if not draft.recommended_igdb_ids:
+                overlooked = ctx.store.passing_ids() if "empty" not in asked else []
+            elif "names" not in asked:
+                unmentioned = ctx.store.unmentioned_ids(draft)
+        return {"problems": problems, "overlooked": overlooked, "unmentioned": unmentioned}
 
     @staticmethod
     def _route(state: PipelineState) -> Literal["retry", "judge"]:
-        return "retry" if state["problems"] or state["overlooked"] else "judge"
+        asking = state["problems"] or state["overlooked"] or state["unmentioned"]
+        return "retry" if asking else "judge"
 
     async def _retry(self, state: PipelineState, runtime: Runtime[AgentContext]) -> dict:
         """메시지를 붙여 agent로 돌려보낸다. 지난 초안은 지운다.
 
-        거부면 사유를 붙이고 재시도 횟수를 센다. 빈 초안 되묻기면 통과 후보 목록을 붙이고, 횟수를
-        세지 않는 대신 빈 초안을 남겨 둔다(다시 되묻지 않는 표시이자 검증 실패 시 돌아갈 자리).
+        거부면 사유를 붙이고 재시도 횟수를 센다. 되묻기면 횟수를 세지 않는 대신 되물은 종류와
+        지금의 초안을 남겨 둔다(같은 것을 다시 묻지 않고, 뒤의 초안이 거부되면 돌아갈 자리다).
         """
         if state["problems"]:
             logger.info("Agent draft rejected, retrying: %s", state["problems"])
@@ -255,13 +272,23 @@ class AgentRecommender:
                 "attempts": state["attempts"] + 1,
             }
         ctx = runtime.context
-        games = ctx.store.resolve(state["overlooked"])
-        logger.info("Empty draft with %d passing candidates, asking once more", len(games))
-        challenge = build_empty_challenge(games, ctx.conditions.recommendation_count)
+        draft = state["structured_response"]
+        if state["overlooked"]:
+            kind = "empty"
+            games = ctx.store.resolve(state["overlooked"])
+            logger.info("Empty draft with %d passing candidates, asking once more", len(games))
+            challenge = build_empty_challenge(games, ctx.conditions.recommendation_count)
+        else:
+            kind = "names"
+            missing = ctx.store.resolve(state["unmentioned"])
+            logger.info("Answer omits %d recommended games, asking once more", len(missing))
+            recommended = ctx.store.resolve(unique(draft.recommended_igdb_ids))
+            challenge = build_name_challenge(missing, recommended)
         return {
             "messages": [HumanMessage(content=challenge)],
             "structured_response": None,
-            "empty_draft": state["structured_response"],
+            "fallback_draft": draft,
+            "asked": [*(state.get("asked") or []), kind],
         }
 
     async def _judge(self, state: PipelineState, runtime: Runtime[AgentContext]) -> dict:

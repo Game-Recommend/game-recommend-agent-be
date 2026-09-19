@@ -27,13 +27,13 @@ def assert_calls(services, *agent_calls):
 
 def test_agent_flow_builds_full_response(make_recommender, services):
     recommender = make_recommender(
-        search(**SEARCH), checks([1, 2, 3]), reviews([3]), draft([3], "답변")
+        search(**SEARCH), checks([1, 2, 3]), reviews([3]), draft([3], "Game 3 답변")
     )
 
     response = run(recommender)
 
     assert services.calls == ["parse", "search", "price", "hardware", "reviews", "media"]
-    assert response.answer == "답변"
+    assert response.answer == "Game 3 답변"
     assert response.conditions == services.parser.conditions
     assert [g.game.igdb_id for g in response.games] == [3]
     assert response.games[0].price.quote.amount_krw == 100
@@ -75,13 +75,13 @@ def test_stream_emits_tool_stages_and_matches_run(make_recommender):
 def test_rejected_draft_is_retried_with_reasons(make_recommender, services):
     # 1번은 예산 초과인데 추천했다 → 거부 → 3번으로 다시 제출
     recommender = make_recommender(
-        search(**SEARCH), checks([1, 2, 3]), draft([1]), draft([3], "수정")
+        search(**SEARCH), checks([1, 2, 3]), draft([1]), draft([3], "Game 3 수정")
     )
 
     response = run(recommender)
 
     assert [g.game.igdb_id for g in response.games] == [3]
-    assert response.answer == "수정"
+    assert response.answer == "Game 3 수정"
     assert_calls(services, "parse", "search", "price", "hardware")
 
 
@@ -134,12 +134,12 @@ def _challenges(recommender) -> list[str]:
 
 def test_empty_draft_with_passing_candidates_is_asked_once_more(make_recommender, services):
     # 3번이 가격·사양을 통과했는데 빈손으로 제출했다 → 통과 후보를 붙여 되묻는다 → 3번으로 제출
-    script = (search(**SEARCH), checks([1, 2, 3]), draft([], "없음"), draft([3], "다시"))
+    script = (search(**SEARCH), checks([1, 2, 3]), draft([], "없음"), draft([3], "Game 3 다시"))
 
     response = run(make_recommender(*script))
 
     assert [g.game.igdb_id for g in response.games] == [3]
-    assert response.answer == "다시"
+    assert response.answer == "Game 3 다시"
     assert "모든 필수 조건을 충족한다고 확인된 후보가 없습니다." not in response.warnings
     assert_calls(services, "parse", "search", "price", "hardware")
 
@@ -169,13 +169,13 @@ def test_second_empty_draft_is_accepted_as_the_agents_judgment(make_recommender)
 def test_empty_challenge_does_not_spend_the_rejection_retry(make_recommender):
     # 되물은 뒤의 초안이 거부돼도 거부 재시도 한 번은 그대로 남아 있다
     recommender = make_recommender(
-        search(**SEARCH), checks([1, 2, 3]), draft([]), draft([1]), draft([3], "수정")
+        search(**SEARCH), checks([1, 2, 3]), draft([]), draft([1]), draft([3], "Game 3 수정")
     )
 
     response = run(recommender)
 
     assert [g.game.igdb_id for g in response.games] == [3]
-    assert response.answer == "수정"
+    assert response.answer == "Game 3 수정"
 
 
 def test_rejections_after_challenge_fall_back_to_the_empty_draft(make_recommender):
@@ -201,6 +201,61 @@ def test_empty_draft_without_passing_candidates_is_not_challenged(make_recommend
     assert response.games == [] and response.answer == "없음"
     assert {g.game.igdb_id for g in response.excluded_games} == {1, 2, 3}
     assert _challenges(make_recommender(*script)) == []
+
+
+def test_answer_without_recommended_name_is_asked_once_more(make_recommender):
+    # 카드는 Game 3인데 본문은 다른 이름을 말한다 → 추천 목록을 붙여 되묻는다 → 이름을 맞춰 제출
+    script = (
+        search(**SEARCH),
+        checks([1, 2, 3]),
+        draft([3], "Half-Life를 추천합니다"),
+        draft([3], "Game 3을 추천합니다"),
+    )
+
+    response = run(make_recommender(*script))
+
+    assert response.answer == "Game 3을 추천합니다"
+    challenges = _challenges(make_recommender(*script))
+    assert len(challenges) == 1
+    assert "Game 3(igdb_id 3)" in challenges[0] and "answer에 이름이 나오지 않는" in challenges[0]
+
+
+def test_answer_still_missing_the_name_is_accepted_not_failed(make_recommender):
+    # 되물어도 이름이 빠져 있으면 그대로 받는다. 표현 문제로 502를 내지 않는다
+    script = (search(**SEARCH), checks([1, 2, 3]), draft([3], "첫 답변"), draft([3], "둘째 답변"))
+
+    response = run(make_recommender(*script))
+
+    assert [g.game.igdb_id for g in response.games] == [3]
+    assert response.answer == "둘째 답변"
+    assert len(_challenges(make_recommender(*script))) == 1
+
+
+def test_rejections_after_name_challenge_fall_back_to_the_earlier_draft(make_recommender):
+    # 되물은 뒤의 초안이 끝내 거부되면, 이름만 어긋났던 처음 초안으로 돌아간다
+    recommender = make_recommender(
+        search(**SEARCH), checks([1, 2, 3]), draft([3], "첫 답변"), draft([1]), draft([1])
+    )
+
+    response = run(recommender)
+
+    assert [g.game.igdb_id for g in response.games] == [3]
+    assert response.answer == "첫 답변"
+
+
+def test_empty_then_name_challenge_are_each_asked_once(make_recommender):
+    script = (
+        search(**SEARCH),
+        checks([1, 2, 3]),
+        draft([], "없음"),
+        draft([3], "이름 없는 답변"),
+        draft([3], "Game 3 답변"),
+    )
+
+    response = run(make_recommender(*script))
+
+    assert response.answer == "Game 3 답변"
+    assert len(_challenges(make_recommender(*script))) == 2
 
 
 def test_runner_fetches_skipped_checks_and_reviews_before_finalizing(make_recommender, services):

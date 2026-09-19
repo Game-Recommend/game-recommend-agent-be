@@ -3,6 +3,7 @@ import json
 from app.agent.prompts import (
     AGENT_SYSTEM,
     build_empty_challenge,
+    build_name_challenge,
     build_rejection,
     build_user_input,
     describe_conditions,
@@ -395,6 +396,21 @@ def test_empty_challenge_lists_passing_candidates_and_leaves_an_exit():
     assert "검색 순서는 인기순일 뿐" in message
     # 되물은 답변이 게임 이름만 나열한 2문장으로 짧아지는 것을 실측에서 봤다
     assert "3~6문장" in message and "이름을 Tool 결과에 나온 그대로 모두" in message
+
+
+def test_name_challenge_lists_missing_names_and_the_whole_recommendation():
+    games = [
+        GameCandidate(igdb_id=233, name="Half-Life 2"),
+        GameCandidate(igdb_id=72, name="Portal 2"),
+    ]
+    message = build_name_challenge(games[:1], games)
+
+    assert "- Half-Life 2(igdb_id 233)" in message
+    assert "현재 추천 목록: Half-Life 2(igdb_id 233), Portal 2(igdb_id 72)" in message
+    assert "같은 시리즈의 다른 작품 이름" in message
+    # 본문이 말한 게임 쪽으로 목록을 고치는 길도 열어 둔다
+    assert "recommended_igdb_ids를 그 게임의 igdb_id로 바꿔도 됩니다" in message
+    assert "다음 응답에서는 어떤 Tool도 호출하지 마세요" in message
 
 
 def test_rejection_forbids_all_tool_retries():
