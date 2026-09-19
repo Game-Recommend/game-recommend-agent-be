@@ -99,6 +99,15 @@ class CandidateStore:
             )
         return [self.candidates[igdb_id] for igdb_id in unique(igdb_ids)]
 
+    def all_ids(self) -> list[int]:
+        """검색된 후보 전체. 가격·사양 Tool은 LLM이 넘긴 id 목록 대신 이것을 조회한다.
+
+        프롬프트는 후보 전체를 한 번에 넘기라고 하지만, id가 1~30이 아니라 25076·119133처럼 길어지자
+        모델이 30개 중 10~26개만 넘기거나 없는 id를 섞었다(evals/agent_e2e/REPORT.md). 조회하지 않은
+        후보는 추천될 수 없으므로, 옮겨 적기 실수가 그대로 추천 범위를 줄였다.
+        """
+        return list(self.candidates)
+
     def checked(self, igdb_id: int) -> bool:
         """가격이나 사양을 한 번이라도 조회한 후보인가.
 
@@ -144,6 +153,18 @@ class CandidateStore:
         """
         return [
             igdb_id for igdb_id in self.candidates if self.checked(igdb_id) and self.passes(igdb_id)
+        ]
+
+    def unmentioned_ids(self, draft: RecommendationDraft) -> list[int]:
+        """추천 목록에 있는데 answer에 이름이 나오지 않는 게임.
+
+        카드는 추천 목록을, 본문은 answer를 보여 준다. 모델은 시리즈의 다른 작품 이름을 본문에 쓰는
+        식으로 둘을 어긋나게 만든다(목록은 Half-Life 2, 본문은 Half-Life).
+        """
+        return [
+            igdb_id
+            for igdb_id in unique(draft.recommended_igdb_ids)
+            if igdb_id in self.candidates and self.candidates[igdb_id].name not in draft.answer
         ]
 
     def failing_reasons(self, igdb_id: int) -> list[str]:

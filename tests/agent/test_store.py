@@ -82,6 +82,14 @@ def test_passing_ids_lists_checked_passes_in_search_order():
     assert store.passing_ids() == [1, 3]
 
 
+def test_unmentioned_ids_lists_recommended_games_missing_from_the_answer(store):
+    draft = RecommendationDraft(recommended_igdb_ids=[1, 3, 3, 99], answer="Game 1을 추천합니다")
+
+    # 1번은 본문에 있다. 99번은 후보가 아니라 validate_draft가 따로 잡는다
+    assert store.unmentioned_ids(draft) == [3]
+    assert store.unmentioned_ids(RecommendationDraft(recommended_igdb_ids=[], answer="없음")) == []
+
+
 def test_build_evidence_excludes_only_checked_failures(store):
     _check(store, 1, price="unmet")
     _check(store, 3)

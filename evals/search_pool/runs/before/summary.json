@@ -1,0 +1,112 @@
+{
+  "cases": 100,
+  "errors": 0,
+  "zero_candidates": [
+    "E056",
+    "E081",
+    "E097"
+  ],
+  "candidates_median": 30,
+  "on_steam": 0.6141,
+  "release_year_median": 2000,
+  "release_year_median_head5": 2000,
+  "distinct_games": 260,
+  "distinct_games_head5": 51,
+  "most_common_head5": [
+    {
+      "name": "Thief: The Dark Project",
+      "questions": 69,
+      "share": 0.7113
+    },
+    {
+      "name": "Thief: Deadly Shadows",
+      "questions": 67,
+      "share": 0.6907
+    },
+    {
+      "name": "Thief II: The Metal Age",
+      "questions": 67,
+      "share": 0.6907
+    },
+    {
+      "name": "Baldur's Gate",
+      "questions": 65,
+      "share": 0.6701
+    },
+    {
+      "name": "Thief",
+      "questions": 65,
+      "share": 0.6701
+    }
+  ],
+  "steam_top10": {
+    "candidates": 970,
+    "on_steam": 0.567,
+    "lookup_errors": 0,
+    "kr_available": 0.9436,
+    "priced": 0.9345,
+    "price_le_10000": 0.3236,
+    "price_le_30000": 0.9327,
+    "free": 0.0036,
+    "has_requirements": 0.5255,
+    "price_median_krw": 17000
+  },
+  "by_family": {
+    "budget": {
+      "cases": 20,
+      "zero_candidates": 0,
+      "priced": 0.9554,
+      "price_le_10000": 0.3304,
+      "price_le_30000": 0.9554,
+      "free": 0.0
+    },
+    "combined": {
+      "cases": 20,
+      "zero_candidates": 2,
+      "priced": 0.9009,
+      "price_le_10000": 0.3153,
+      "price_le_30000": 0.8919,
+      "free": 0.018
+    },
+    "count": {
+      "cases": 15,
+      "zero_candidates": 0,
+      "priced": 0.8977,
+      "price_le_10000": 0.3295,
+      "price_le_30000": 0.8977,
+      "free": 0.0
+    },
+    "exclude": {
+      "cases": 15,
+      "zero_candidates": 1,
+      "priced": 0.875,
+      "price_le_10000": 0.25,
+      "price_le_30000": 0.875,
+      "free": 0.0
+    },
+    "free": {
+      "cases": 10,
+      "zero_candidates": 0,
+      "priced": 0.9804,
+      "price_le_10000": 0.3137,
+      "price_le_30000": 0.9804,
+      "free": 0.0
+    },
+    "hardware": {
+      "cases": 15,
+      "zero_candidates": 0,
+      "priced": 1.0,
+      "price_le_10000": 0.3974,
+      "price_le_30000": 1.0,
+      "free": 0.0
+    },
+    "tight": {
+      "cases": 5,
+      "zero_candidates": 0,
+      "priced": 1.0,
+      "price_le_10000": 0.3333,
+      "price_le_30000": 1.0,
+      "free": 0.0
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "started_at": "20260919T141848Z",
+  "answer_model": "gpt-4o-mini",
+  "openai_model": "gpt-4o-mini",
+  "judge_model": "gpt-4o-mini",
+  "cases": 100,
+  "concurrency": 2,
+  "dataset_sha256": "0d178a4eb69f5e0af05d002dfa5efdddf66462e12b80adbfd67d93b0bfcd7c75",
+  "profile": "agent",
+  "answer_prompt_sha256": "7a011593634b3e47601bb5d7a88958c4219b7b0e2324dbdc6b3ad77afa9aadbd"
+}

@@ -60,8 +60,8 @@ Do not use game information that is absent from the user question and tool resul
      candidate was found under the confirmed conditions.
 
 2. get_prices and assess_hardware
-   - After search_games succeeds, pass all returned candidate igdb_ids to each Tool
-     as one batch.
+   - After search_games succeeds, call each Tool once with no arguments. The server
+     checks every candidate returned by search_games, so do not list igdb_ids.
    - These Tools are independent. Call get_prices and assess_hardware together in
      the same response turn so they can run in parallel.
    - Call both Tools even when the user did not specify a budget or hardware condition,
@@ -70,9 +70,9 @@ Do not use game information that is absent from the user question and tool resul
      The server reads those values from AgentContext.conditions.
    - Do not call either Tool again for candidates already checked.
    - Call get_prices at most once in the entire recommendation flow.
-   - Include every searched candidate igdb_id in that single batch call.
+   - That single call already covers every searched candidate. A second call returns
+     the same result.
    - Never emit more than one get_prices call in the same AI message.
-   - Do not split candidate IDs across multiple get_prices calls.
    - A price result with status=unknown, status=unmet, or quote=null
      is a completed result, not a reason to retry.
    - Never call get_prices again to search for a different price,
@@ -94,8 +94,15 @@ Do not use game information that is absent from the user question and tool resul
    - A Tool failure is not evidence that a condition was satisfied.
    - Use the returned reason only to understand the verification result or explain
      why a candidate could not be recommended.
-   - If more candidates pass than the requested count, preserve the search order
-     while considering the user's stated preferences.
+   - If more candidates pass than the requested count, choose the ones that best fit
+     the user's question and the 취향 line in [추출한 조건]. Judge fit only from the
+     fields returned by search_games (genres, themes, summary, playtime_hours) and
+     from other Tool results.
+   - search_games returns candidates ordered by popularity, not by fit to this user.
+     Use that order only to break ties. Do not select a candidate merely because it
+     appears first.
+   - Prefer variety. Do not fill the list with several entries of one series when
+     other passing candidates fit equally well.
    - Never fill the requested count with an unverified candidate.
    - A skipped status means that the corresponding hard condition was not
      specified. It does not prove that the candidate satisfies a related
@@ -508,8 +515,9 @@ def build_empty_challenge(games: list[GameCandidate], recommendation_count: int)
             "",
             "status=skipped는 사용자가 그 조건(예산 또는 사양)을 말하지 않아 검사하지 않았다는 "
             "뜻입니다. 추천을 막는 사유가 아닙니다. 확인 실패(unknown)나 미충족(unmet)과 다릅니다.",
-            "위 후보 중에서 [추출한 조건]의 선호·제외 분류에 맞는 게임을 검색 순서대로 "
-            f"최대 {recommendation_count}개 골라 RecommendationDraft를 다시 제출하세요.",
+            "위 후보 중에서 사용자 질문과 [추출한 조건]의 취향·제외 분류에 가장 맞는 게임을 "
+            f"최대 {recommendation_count}개 골라 RecommendationDraft를 다시 제출하세요. "
+            "검색 순서는 인기순일 뿐이므로 동점일 때만 따르세요.",
             "위 후보가 모두 [추출한 조건]에 맞지 않을 때만 빈 목록을 다시 제출하고, "
             "answer에 그 이유를 구체적으로 쓰세요.",
             "다음 응답에서는 어떤 Tool도 호출하지 마세요.",
@@ -521,6 +529,33 @@ def build_empty_challenge(games: list[GameCandidate], recommendation_count: int)
             "search_games 결과의 장르·테마와 get_prices의 amount_krw처럼 Tool 결과에 실제로 "
             "있는 값으로만 쓰세요.",
             "status=skipped인 조건은 검사하지 않은 것이므로 충족했다거나 확인했다고 쓰지 마세요.",
+            "다른 응답이나 Tool 호출 없이 한 번만 제출하세요.",
+        ]
+    )
+
+
+def build_name_challenge(missing: list[GameCandidate], recommended: list[GameCandidate]) -> str:
+    """추천 목록의 게임 이름이 answer에 없을 때 러너가 한 번 되묻는 메시지.
+
+    거부가 아니라 재확인이다. 다시 어긋나면 러너는 그대로 받는다.
+    """
+    return "\n".join(
+        [
+            "[RecommendationDraft 재확인: 추천 목록과 answer의 게임 이름]",
+            "recommended_igdb_ids에 있는데 answer에 이름이 나오지 않는 게임이 있습니다.",
+            *(f"- {game.name}(igdb_id {game.igdb_id})" for game in missing),
+            "",
+            "현재 추천 목록: "
+            + ", ".join(f"{game.name}(igdb_id {game.igdb_id})" for game in recommended),
+            "화면의 카드는 추천 목록을, 본문은 answer를 보여 줍니다. "
+            "둘이 같은 게임을 말해야 합니다.",
+            "answer를 고쳐 추천 목록의 모든 게임 이름을 Tool 결과에 나온 그대로 쓰세요. "
+            "같은 시리즈의 다른 작품 이름이나 줄인 이름, 번역한 이름으로 바꿔 쓰지 마세요.",
+            "answer에서 말하려던 게임이 목록과 다른 게임이고 그 게임이 가격·사양 판정을 "
+            "통과했다면, 대신 recommended_igdb_ids를 그 게임의 igdb_id로 바꿔도 됩니다.",
+            "다음 응답에서는 어떤 Tool도 호출하지 마세요.",
+            "search_games, get_prices, assess_hardware, get_review_scores, "
+            "summarize_reviews를 다시 호출하지 마세요.",
             "다른 응답이나 Tool 호출 없이 한 번만 제출하세요.",
         ]
     )

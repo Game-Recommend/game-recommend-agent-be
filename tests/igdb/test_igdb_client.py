@@ -9,7 +9,7 @@ import types
 import httpx2
 
 from app.clients import igdb
-from app.clients.igdb import IgdbCatalogClient, TwitchAppToken, to_candidate
+from app.clients.igdb import IgdbCatalogClient, TwitchAppToken, build_filters, to_candidate
 from app.config import Settings
 from app.pipeline.query_processing.conditions import GameConditions
 
@@ -60,11 +60,120 @@ def test_client_passes_conditions_as_dict_and_maps_rows(monkeypatch):
     assert [game.name for game in result] == ["The Witcher 3"]
 
 
+# ---------- 검색 조건과 정렬 ----------
+
+
+def test_filters_default_to_pc_main_games():
+    where = build_filters({})
+
+    assert "game_type = (0,8,9,10)" in where
+    assert any(clause.startswith("total_rating_count >=") for clause in where)
+    # 플랫폼을 말하지 않으면 PC로 본다
+    assert where[-1] == '(platforms.name ~ "pc (microsoft windows)")'
+    assert len(where) == 3
+
+
+def test_known_category_matches_genre_or_theme():
+    where = build_filters({"genres": ["RPG", "Horror"]})
+
+    assert '(genres.name ~ "role-playing (rpg)" | themes.name ~ "role-playing (rpg)")' in where
+    assert '(genres.name ~ "horror" | themes.name ~ "horror")' in where
+
+
+def test_play_mode_words_in_genres_become_game_modes():
+    # 파서가 협동을 genres=["Cooperative"]로도 낸다. IGDB에 그런 장르·테마는 없고 게임 모드다
+    where = build_filters({"genres": ["Cooperative"], "play_mode": "cooperative", "players": 2})
+
+    assert where.count('game_modes.name = "Co-operative"') == 1
+    assert not any("cooperative" in clause and "genres.name" in clause for clause in where)
+
+
+def test_play_mode_and_single_player_map_to_game_modes():
+    assert 'game_modes.name = "Multiplayer"' in build_filters({"play_mode": "competitive"})
+    single = build_filters({"play_mode": "singleplayer", "players": 1})
+    assert single.count('game_modes.name = "Single player"') == 1
+
+
+def test_unknown_category_falls_back_to_keywords_instead_of_being_dropped():
+    where = build_filters({"genres": ["Story-rich"]})
+
+    assert '(keywords.name ~ "story-rich" | keywords.name ~ "story rich")' in where
+
+
+def test_platform_aliases_and_explicit_platform_replace_the_pc_default():
+    assert build_filters({"platforms": ["노트북"]})[-1] == (
+        '(platforms.name ~ "pc (microsoft windows)")'
+    )
+    console = build_filters({"platforms": ["PS5", "모바일"]})[-1]
+    assert console == (
+        '(platforms.name ~ "playstation 5" | platforms.name ~ "android" | platforms.name ~ "ios")'
+    )
+
+
+def test_search_sorts_by_rating_count_not_by_id(monkeypatch):
+    calls = igdb_http(monkeypatch)
+    asyncio.run(igdb.search({"genres": ["Puzzle"]}))
+
+    body = next(c for c in calls if c.url.path.endswith("/games")).content.decode()
+    assert "sort total_rating_count desc; limit 500;" in body
+    assert "sort id" not in body
+    assert "where game_type = (0,8,9,10) & total_rating_count >= 5 & (genres.name ~" in body
+
+
+def _game(igdb_id, genres=("Adventure",), themes=("Fantasy",), modes=()):
+    return {
+        "id": igdb_id,
+        "name": f"Game {igdb_id}",
+        "genres": [{"name": name} for name in genres],
+        "themes": [{"name": name} for name in themes],
+        "multiplayer_modes": list(modes),
+    }
+
+
+def test_excluded_category_matches_by_substring(monkeypatch):
+    games = [
+        _game(1, genres=("Turn-based strategy (TBS)",)),
+        _game(2, genres=("Real Time Strategy (RTS)",)),
+        _game(3),
+        _game(4, themes=()),  # 테마를 모르면 제외 여부를 확인할 수 없어 뺀다
+    ]
+    igdb_http(monkeypatch, games=games)
+
+    turn_based = asyncio.run(igdb.search({"excluded_genres": ["Turn-based"]}))
+    strategy = asyncio.run(igdb.search({"excluded_genres": ["Strategy"]}))
+
+    assert [row["igdb_id"] for row in turn_based] == [2, 3]
+    assert [row["igdb_id"] for row in strategy] == [3]
+
+
+def test_players_filter_follows_connection(monkeypatch):
+    games = [
+        _game(1, modes=[{"onlinemax": 4}]),
+        _game(2, modes=[{"offlinecoopmax": 4}]),
+        _game(3),  # 멀티플레이 정보가 없으면 인원 조건을 확인할 수 없다
+    ]
+    igdb_http(monkeypatch, games=games)
+
+    def ids(conditions):
+        return [row["igdb_id"] for row in asyncio.run(igdb.search(conditions))]
+
+    assert ids({"players": 4}) == [1, 2]
+    assert ids({"players": 4, "connection": "online"}) == [1]
+    assert ids({"players": 4, "connection": "local"}) == [2]
+
+
 # ---------- Twitch 앱 토큰 재사용 ----------
 
 
-def igdb_http(monkeypatch, *, reject: frozenset[str] = frozenset(), expires_in: int = 5_000_000):
+def igdb_http(
+    monkeypatch,
+    *,
+    reject: frozenset[str] = frozenset(),
+    expires_in: int = 5_000_000,
+    games: list[dict] | None = None,
+):
     """Twitch 토큰 발급과 IGDB 두 엔드포인트를 흉내 낸다. reject에 든 토큰은 401로 거부한다."""
+    games = games if games is not None else [{"id": 1942, "name": "The Witcher 3"}]
     calls: list[httpx2.Request] = []
     issued = 0
 
@@ -79,7 +188,7 @@ def igdb_http(monkeypatch, *, reject: frozenset[str] = frozenset(), expires_in: 
         if token in reject:
             return httpx2.Response(401)
         if request.url.path.endswith("/games"):
-            return httpx2.Response(200, json=[{"id": 1942, "name": "The Witcher 3"}])
+            return httpx2.Response(200, json=games)
         return httpx2.Response(200, json=[])
 
     def make_client(**kwargs):

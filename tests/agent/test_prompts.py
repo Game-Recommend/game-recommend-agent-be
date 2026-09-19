@@ -3,6 +3,7 @@ import json
 from app.agent.prompts import (
     AGENT_SYSTEM,
     build_empty_challenge,
+    build_name_challenge,
     build_rejection,
     build_user_input,
     describe_conditions,
@@ -367,6 +368,14 @@ def test_build_user_input_includes_dynamic_recommendation_limit():
     assert "제출 직전에 recommended_igdb_ids의 개수를 직접 세어" in message
 
 
+def test_agent_selects_by_fit_not_by_search_order():
+    # 검색 결과는 인기순이다. 그 순서를 그대로 추천하면 질문과 무관하게 같은 게임이 나온다
+    assert "preserve the search order" not in AGENT_SYSTEM
+    assert "ordered by popularity, not by fit" in AGENT_SYSTEM
+    assert "Judge fit only from the" in AGENT_SYSTEM and "summary" in AGENT_SYSTEM
+    assert "Prefer variety" in AGENT_SYSTEM
+
+
 def test_empty_challenge_lists_passing_candidates_and_leaves_an_exit():
     message = build_empty_challenge(
         [GameCandidate(igdb_id=7, name="Game 7"), GameCandidate(igdb_id=9, name="Game 9")],
@@ -384,8 +393,24 @@ def test_empty_challenge_lists_passing_candidates_and_leaves_an_exit():
     # 조건에 맞는 후보가 정말 없으면 빈 목록을 다시 낼 수 있다
     assert "빈 목록을 다시 제출" in message
     assert "다음 응답에서는 어떤 Tool도 호출하지 마세요" in message
+    assert "검색 순서는 인기순일 뿐" in message
     # 되물은 답변이 게임 이름만 나열한 2문장으로 짧아지는 것을 실측에서 봤다
     assert "3~6문장" in message and "이름을 Tool 결과에 나온 그대로 모두" in message
+
+
+def test_name_challenge_lists_missing_names_and_the_whole_recommendation():
+    games = [
+        GameCandidate(igdb_id=233, name="Half-Life 2"),
+        GameCandidate(igdb_id=72, name="Portal 2"),
+    ]
+    message = build_name_challenge(games[:1], games)
+
+    assert "- Half-Life 2(igdb_id 233)" in message
+    assert "현재 추천 목록: Half-Life 2(igdb_id 233), Portal 2(igdb_id 72)" in message
+    assert "같은 시리즈의 다른 작품 이름" in message
+    # 본문이 말한 게임 쪽으로 목록을 고치는 길도 열어 둔다
+    assert "recommended_igdb_ids를 그 게임의 igdb_id로 바꿔도 됩니다" in message
+    assert "다음 응답에서는 어떤 Tool도 호출하지 마세요" in message
 
 
 def test_rejection_forbids_all_tool_retries():

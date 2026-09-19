@@ -1,0 +1,278 @@
+{
+ "550": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 11000,
+  "has_requirements": true
+ },
+ "620": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 11000,
+  "has_requirements": true
+ },
+ "1620": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 21000,
+  "has_requirements": false
+ },
+ "2600": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 27900,
+  "has_requirements": false
+ },
+ "6000": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 11000,
+  "has_requirements": true
+ },
+ "6060": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 11000,
+  "has_requirements": true
+ },
+ "6080": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 11000,
+  "has_requirements": true
+ },
+ "6980": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 9890,
+  "has_requirements": false
+ },
+ "7110": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 17000,
+  "has_requirements": false
+ },
+ "7650": {
+  "available": false,
+  "is_free": false,
+  "price_krw": null,
+  "has_requirements": false
+ },
+ "7660": {
+  "available": false,
+  "is_free": false,
+  "price_krw": null,
+  "has_requirements": false
+ },
+ "7670": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 21000,
+  "has_requirements": true
+ },
+ "7730": {
+  "available": false,
+  "is_free": false,
+  "price_krw": null,
+  "has_requirements": false
+ },
+ "7760": {
+  "available": false,
+  "is_free": false,
+  "price_krw": null,
+  "has_requirements": false
+ },
+ "8850": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 21000,
+  "has_requirements": true
+ },
+ "11450": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 5500,
+  "has_requirements": true
+ },
+ "12110": {
+  "available": true,
+  "is_free": false,
+  "price_krw": null,
+  "has_requirements": true
+ },
+ "12140": {
+  "available": false,
+  "is_free": false,
+  "price_krw": null,
+  "has_requirements": false
+ },
+ "12150": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 10500,
+  "has_requirements": true
+ },
+ "12710": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 10500,
+  "has_requirements": true
+ },
+ "12810": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 10500,
+  "has_requirements": true
+ },
+ "17430": {
+  "available": true,
+  "is_free": false,
+  "price_krw": null,
+  "has_requirements": true
+ },
+ "22300": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 11000,
+  "has_requirements": true
+ },
+ "28050": {
+  "available": false,
+  "is_free": false,
+  "price_krw": null,
+  "has_requirements": false
+ },
+ "32360": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 11000,
+  "has_requirements": true
+ },
+ "32380": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 6700,
+  "has_requirements": true
+ },
+ "38400": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 10500,
+  "has_requirements": true
+ },
+ "38410": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 10500,
+  "has_requirements": true
+ },
+ "38420": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 10500,
+  "has_requirements": true
+ },
+ "47780": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 4400,
+  "has_requirements": true
+ },
+ "47870": {
+  "available": true,
+  "is_free": false,
+  "price_krw": null,
+  "has_requirements": true
+ },
+ "202310": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 10500,
+  "has_requirements": true
+ },
+ "211740": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 7690,
+  "has_requirements": true
+ },
+ "217200": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 16000,
+  "has_requirements": true
+ },
+ "239160": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 21990,
+  "has_requirements": true
+ },
+ "240180": {
+  "available": false,
+  "is_free": false,
+  "price_krw": null,
+  "has_requirements": false
+ },
+ "559680": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 8400,
+  "has_requirements": true
+ },
+ "730820": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 7800,
+  "has_requirements": true
+ },
+ "730830": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 7800,
+  "has_requirements": true
+ },
+ "1238020": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 8250,
+  "has_requirements": true
+ },
+ "1695830": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 42000,
+  "has_requirements": true
+ },
+ "1812290": {
+  "available": true,
+  "is_free": true,
+  "price_krw": null,
+  "has_requirements": true
+ },
+ "1812390": {
+  "available": true,
+  "is_free": true,
+  "price_krw": null,
+  "has_requirements": true
+ },
+ "1812410": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 6650,
+  "has_requirements": true
+ },
+ "1812420": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 6650,
+  "has_requirements": true
+ },
+ "2616460": {
+  "available": true,
+  "is_free": false,
+  "price_krw": 5500,
+  "has_requirements": true
+ }
+}

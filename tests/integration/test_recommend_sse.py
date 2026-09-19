@@ -61,7 +61,7 @@ def test_stream_emits_stages_then_result(client, services):
     assert details[("조건 판정", "completed")] == "통과 1개 중 1개 추천, 제외 2개"
     result = events[-1][1]["result"]
     assert result["games"][0]["game"]["igdb_id"] == 3
-    assert result["answer"] == "테스트 답변"
+    assert result["answer"] == "Game 3 테스트 답변"
 
 
 def test_stream_reports_required_stage_failure_as_error_event(client, services, monkeypatch):
@@ -96,7 +96,7 @@ def test_json_accept_still_returns_plain_json(client):
     headers = {**HEADERS, "Accept": "application/json"}
     response = client.post("/recommend", json={"question": "게임 추천"}, headers=headers)
     assert response.headers["content-type"].startswith("application/json")
-    assert response.json()["answer"] == "테스트 답변"
+    assert response.json()["answer"] == "Game 3 테스트 답변"
 
 
 def test_stream_requires_api_key(recommender, monkeypatch):

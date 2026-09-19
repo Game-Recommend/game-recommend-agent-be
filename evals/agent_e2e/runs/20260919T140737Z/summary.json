@@ -1,0 +1,250 @@
+{
+  "attempted": 100,
+  "scored": 98,
+  "passed": 53,
+  "accuracy": 0.5408,
+  "errors": 2,
+  "error_kinds": {
+    "PipelineStageError": 2
+  },
+  "axes": {
+    "constraints": 94,
+    "trajectory": 90,
+    "answer_format": 62
+  },
+  "empty_recommendations": 15,
+  "overlooked_empty": 0,
+  "with_recommendations": {
+    "scored": 83,
+    "passed": 40,
+    "latency_median": 11.46,
+    "grounded_mean": 3.01,
+    "linked_mean": 3.61
+  },
+  "latency_seconds": {
+    "median": 11.36,
+    "max": 25.62
+  },
+  "judge": {
+    "judged": 98,
+    "errors": 0,
+    "grounded_mean": 3.32,
+    "linked_mean": 3.83,
+    "grounded_distribution": {
+      "1": 5,
+      "2": 25,
+      "3": 24,
+      "4": 22,
+      "5": 22
+    },
+    "linked_distribution": {
+      "1": 5,
+      "2": 15,
+      "3": 14,
+      "4": 22,
+      "5": 42
+    },
+    "grounded_below_4": [
+      "E005",
+      "E008",
+      "E009",
+      "E010",
+      "E011",
+      "E012",
+      "E014",
+      "E015",
+      "E017",
+      "E019",
+      "E020",
+      "E033",
+      "E034",
+      "E035",
+      "E036",
+      "E037",
+      "E039",
+      "E040",
+      "E041",
+      "E042",
+      "E043",
+      "E044",
+      "E045",
+      "E046",
+      "E048",
+      "E049",
+      "E050",
+      "E051",
+      "E053",
+      "E054",
+      "E055",
+      "E056",
+      "E057",
+      "E058",
+      "E061",
+      "E064",
+      "E065",
+      "E066",
+      "E067",
+      "E068",
+      "E074",
+      "E079",
+      "E081",
+      "E082",
+      "E086",
+      "E089",
+      "E090",
+      "E091",
+      "E093",
+      "E094",
+      "E095",
+      "E096",
+      "E098",
+      "E100"
+    ],
+    "linked_below_4": [
+      "E004",
+      "E005",
+      "E008",
+      "E009",
+      "E010",
+      "E017",
+      "E019",
+      "E031",
+      "E033",
+      "E034",
+      "E035",
+      "E036",
+      "E037",
+      "E040",
+      "E041",
+      "E042",
+      "E046",
+      "E049",
+      "E054",
+      "E055",
+      "E058",
+      "E064",
+      "E066",
+      "E068",
+      "E072",
+      "E074",
+      "E081",
+      "E082",
+      "E086",
+      "E090",
+      "E091",
+      "E096",
+      "E098",
+      "E100"
+    ]
+  },
+  "by_family": {
+    "budget": {
+      "attempted": 20,
+      "scored": 20,
+      "passed": 10,
+      "errors": 0,
+      "failed_ids": [
+        "E003",
+        "E005",
+        "E008",
+        "E009",
+        "E010",
+        "E011",
+        "E012",
+        "E013",
+        "E016",
+        "E017"
+      ],
+      "accuracy": 0.5
+    },
+    "combined": {
+      "attempted": 20,
+      "scored": 20,
+      "passed": 9,
+      "errors": 0,
+      "failed_ids": [
+        "E081",
+        "E082",
+        "E084",
+        "E086",
+        "E089",
+        "E090",
+        "E091",
+        "E093",
+        "E096",
+        "E098",
+        "E100"
+      ],
+      "accuracy": 0.45
+    },
+    "count": {
+      "attempted": 15,
+      "scored": 15,
+      "passed": 13,
+      "errors": 0,
+      "failed_ids": [
+        "E036",
+        "E041"
+      ],
+      "accuracy": 0.8667
+    },
+    "exclude": {
+      "attempted": 15,
+      "scored": 14,
+      "passed": 8,
+      "errors": 1,
+      "failed_ids": [
+        "E050",
+        "E052",
+        "E054",
+        "E055",
+        "E057",
+        "E058"
+      ],
+      "accuracy": 0.5714
+    },
+    "free": {
+      "attempted": 10,
+      "scored": 9,
+      "passed": 6,
+      "errors": 1,
+      "failed_ids": [
+        "E021",
+        "E025",
+        "E027"
+      ],
+      "accuracy": 0.6667
+    },
+    "hardware": {
+      "attempted": 15,
+      "scored": 15,
+      "passed": 4,
+      "errors": 0,
+      "failed_ids": [
+        "E061",
+        "E062",
+        "E063",
+        "E064",
+        "E065",
+        "E066",
+        "E067",
+        "E069",
+        "E071",
+        "E072",
+        "E074"
+      ],
+      "accuracy": 0.2667
+    },
+    "tight": {
+      "attempted": 5,
+      "scored": 5,
+      "passed": 3,
+      "errors": 0,
+      "failed_ids": [
+        "E079",
+        "E080"
+      ],
+      "accuracy": 0.6
+    }
+  }
+}
