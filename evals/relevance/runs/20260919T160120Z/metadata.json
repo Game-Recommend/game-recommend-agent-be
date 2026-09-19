@@ -1,0 +1,10 @@
+{
+  "started_at": "20260919T160120Z",
+  "agent_model": "gpt-4o-mini",
+  "judge_model": "gpt-4o-mini",
+  "cases": 40,
+  "concurrency": 2,
+  "dataset_sha256": "a723e63f4dc268c0bc21d5d0834b7c13867fbc3dd4bd39332a54fe006dfe2f01",
+  "agent_prompt_sha256": "8b39953249aa9c5e3767e44faf780526fb1e5c8262e535893333b96b8bdd32ea",
+  "judge_prompt_sha256": "f587f650079bcbf0e90be3eab50de6154161801a7b9d26895bbceba4ac1e3780"
+}
