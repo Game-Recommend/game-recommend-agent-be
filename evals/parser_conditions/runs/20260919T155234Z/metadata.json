@@ -1,0 +1,10 @@
+{
+  "started_at": "20260919T155234Z",
+  "model": "gpt-4o-mini",
+  "cases": 210,
+  "repeats": 3,
+  "concurrency": 8,
+  "dataset_sha256": "6334802b8aa7606bab4beeb5f2e18879fb1f302f2051bb3170b7f0c6ca0de0a0",
+  "prompt_sha256": "27a1b874ed8326c9169b299fde5fee38b1400bb8eb2871aee665ffd14eee65c9",
+  "langsmith_experiment": null
+}
