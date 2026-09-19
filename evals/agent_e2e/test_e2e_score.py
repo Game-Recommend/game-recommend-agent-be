@@ -286,7 +286,39 @@ def test_empty_recommendation_may_answer_in_two_sentences():
     assert any("3~6문장" in problem for problem in check_answer_format(with_game))
 
 
-def test_rescore_recomputes_only_answer_format():
+def test_rescore_applies_the_overlooked_rule_from_the_recorded_timeline():
+    base = {
+        "id": "E1",
+        "constraints_passed": True,
+        "trajectory_passed": True,
+        "answer_format_passed": True,
+        "passed": True,
+        "constraint_problems": [],
+        "recommended": [],
+        "answer": "조건에 맞는 게임이 없습니다. 모든 후보가 예산을 넘었습니다.",
+        "stages": judged("통과 14개 중 0개 선택, 제외 16개"),
+    }
+    rescored = rescore_record(base)
+    assert rescored["constraint_problems"] == ["통과 후보가 14개인데 추천이 0개다"]
+    assert rescored["constraints_passed"] is False and rescored["passed"] is False
+    assert rescored["passing_count"] == 14
+    # 이미 새 규칙으로 채점된 기록을 다시 채점해도 같은 위반이 두 번 들어가지 않는다
+    assert rescore_record(rescored) == rescored
+    # 통과 후보가 없었거나, 추천을 냈거나, 조건 판정까지 가지 못한 기록은 그대로다
+    nothing = rescore_record({**base, "stages": judged("통과 0개 중 0개 선택, 제외 30개")})
+    assert nothing["constraints_passed"] is True and nothing["passing_count"] == 0
+    chosen = {**base, "recommended": ["게임 가"], "answer": "게임 가를 추천합니다. 둘. 셋."}
+    assert rescore_record(chosen)["passed"] is True
+    assert rescore_record({**base, "stages": OK_STAGES})["passing_count"] is None
+    # 기록에 다른 조건 위반이 있으면 그대로 남는다
+    other = {**base, "constraints_passed": False, "constraint_problems": ["예산 초과"]}
+    assert rescore_record(other)["constraint_problems"] == [
+        "예산 초과",
+        "통과 후보가 14개인데 추천이 0개다",
+    ]
+
+
+def test_rescore_recomputes_answer_format():
     two = "조건에 맞는 게임이 없습니다. 모든 후보가 예산을 넘었습니다."
     base = {
         "id": "E1",

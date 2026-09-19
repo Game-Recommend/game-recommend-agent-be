@@ -113,8 +113,10 @@ LangSmith에는 `agent-e2e` 데이터셋으로 올라간다. 파서 평가와 �
 전체 통과율·심판 평균·지연이 함께 좋아 보이므로 두 수치를 나란히 읽는다.
 
 채점 규칙이 바뀌면 다시 돌리지 않고 저장된 기록을 재채점한다. [rescore.py](rescore.py)는 외부 API를
-부르지 않고 `results.jsonl`의 답변·추천 이름으로 **답변 형식 축만** 다시 계산해, 같은 디렉터리에
-`summary.rescored.json`을 쓴다. 원본 `results.jsonl`·`summary.json`은 그대로 둔다.
+부르지 않고 기록에 남은 것만으로 다시 계산할 수 있는 두 가지를 다시 본다. **답변 형식 축**(답변 원문과
+추천 이름)과, 조건 축의 **"통과 후보가 있는데 추천이 0개"**(단계 타임라인의 `조건 판정` detail)다.
+조건 축의 나머지와 궤적 축은 응답 전체가 필요해 기록된 판정을 그대로 쓴다. 결과는 같은 디렉터리의
+`summary.rescored.json`에 쓰고, 원본 `results.jsonl`·`summary.json`은 그대로 둔다.
 
 ```bash
 .venv/bin/python -m evals.agent_e2e.rescore evals/agent_e2e/runs/<UTC timestamp>

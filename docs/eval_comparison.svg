@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1204" height="368" viewBox="56 172 1204 368" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
-<rect x="56" y="172" width="1204" height="368" rx="14" fill="white"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1204" height="432" viewBox="56 172 1204 432" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
+<rect x="56" y="172" width="1204" height="432" rx="14" fill="white"/>
 <path d="M56 228 V186 Q56 172 70 172 H1246 Q1260 172 1260 186 V228 Z" fill="#EEF0F6"/>
 <text x="80" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">항목</text>
 <circle cx="528" cy="201" r="8" fill="#0E9F9F"/>
@@ -8,17 +8,17 @@
 <text x="834" y="209" font-size="22" fill="#111827" font-weight="600" text-anchor="start">에이전트 · LangGraph</text>
 <text x="1096" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">차이</text>
 <text x="80" y="264" font-size="27" fill="#111827" font-weight="600" text-anchor="start">최종 게임후보 필수 조건 만족</text>
-<text x="80" y="290" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">가격 · 개수 · 제외 장르 · 사양</text>
+<text x="80" y="290" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">가격 · 개수 · 제외 장르 · 사양 · 통과 후보 누락</text>
 <text x="520" y="264" font-size="30" fill="#111827" font-weight="500" text-anchor="start">98/100</text>
 <text x="643.5" y="264" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">98%</text>
 <path d="M520 278 H756 Q760 278 760 282 V284 Q760 288 756 288 H520 Z" fill="#D4EEEE"/>
 <path d="M520 278 H751.2 Q755.2 278 755.2 282 V284 Q755.2 288 751.2 288 H520 Z" fill="#0E9F9F"/>
-<text x="808" y="264" font-size="30" fill="#111827" font-weight="500" text-anchor="start">98/100</text>
-<text x="931.5" y="264" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">98%</text>
+<text x="808" y="264" font-size="30" fill="#111827" font-weight="500" text-anchor="start">99/100</text>
+<text x="931.5" y="264" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">99%</text>
 <path d="M808 278 H1044 Q1048 278 1048 282 V284 Q1048 288 1044 288 H808 Z" fill="#E5E2FD"/>
-<path d="M808 278 H1039.2 Q1043.2 278 1043.2 282 V284 Q1043.2 288 1039.2 288 H808 Z" fill="#6D5DF6"/>
-<text x="1096" y="264" font-size="28" fill="#111827" font-weight="700" text-anchor="start">0%p</text>
-<text x="1096" y="291" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동률</text>
+<path d="M808 278 H1041.6 Q1045.6 278 1045.6 282 V284 Q1045.6 288 1041.6 288 H808 Z" fill="#6D5DF6"/>
+<text x="1096" y="264" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+1%p</text>
+<text x="1096" y="291" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동률 수준</text>
 <line x1="56" y1="306" x2="1260" y2="306" stroke="#E5E7EB"/>
 <text x="80" y="342" font-size="27" fill="#111827" font-weight="600" text-anchor="start">답변 형식</text>
 <text x="80" y="368" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">마크다운 없음 · 문장 수 · 게임 이름 언급</text>
@@ -26,32 +26,36 @@
 <text x="643.5" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">50%</text>
 <path d="M520 356 H756 Q760 356 760 360 V362 Q760 366 756 366 H520 Z" fill="#D4EEEE"/>
 <path d="M520 356 H636.0 Q640.0 356 640.0 360 V362 Q640.0 366 636.0 366 H520 Z" fill="#0E9F9F"/>
-<text x="808" y="342" font-size="30" fill="#111827" font-weight="700" text-anchor="start">83/100</text>
-<text x="931.5" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">83%</text>
+<text x="808" y="342" font-size="30" fill="#111827" font-weight="700" text-anchor="start">94/100</text>
+<text x="931.5" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">94%</text>
 <path d="M808 356 H1044 Q1048 356 1048 360 V362 Q1048 366 1044 366 H808 Z" fill="#E5E2FD"/>
-<path d="M808 356 H1003.2 Q1007.2 356 1007.2 360 V362 Q1007.2 366 1003.2 366 H808 Z" fill="#6D5DF6"/>
-<text x="1096" y="342" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+33%p</text>
+<path d="M808 356 H1029.6 Q1033.6 356 1033.6 360 V362 Q1033.6 366 1029.6 366 H808 Z" fill="#6D5DF6"/>
+<text x="1096" y="342" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+44%p</text>
 <text x="1096" y="369" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
 <line x1="56" y1="384" x2="1260" y2="384" stroke="#E5E7EB"/>
 <text x="80" y="420" font-size="27" fill="#111827" font-weight="600" text-anchor="start">추천 0개로 끝난 문항</text>
 <text x="80" y="446" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">낮을수록 좋다</text>
-<text x="520" y="420" font-size="30" fill="#111827" font-weight="700" text-anchor="start">19/100</text>
+<text x="520" y="420" font-size="30" fill="#111827" font-weight="500" text-anchor="start">19/100</text>
 <text x="643.5" y="420" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">19%</text>
 <path d="M520 434 H756 Q760 434 760 438 V440 Q760 444 756 444 H520 Z" fill="#D4EEEE"/>
 <path d="M520 434 H561.6 Q565.6 434 565.6 438 V440 Q565.6 444 561.6 444 H520 Z" fill="#0E9F9F"/>
-<text x="808" y="420" font-size="30" fill="#111827" font-weight="500" text-anchor="start">47/100</text>
-<text x="931.5" y="420" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">47%</text>
+<text x="808" y="420" font-size="30" fill="#111827" font-weight="500" text-anchor="start">17/100</text>
+<text x="931.5" y="420" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">17%</text>
 <path d="M808 434 H1044 Q1048 434 1048 438 V440 Q1048 444 1044 444 H808 Z" fill="#E5E2FD"/>
-<path d="M808 434 H916.8 Q920.8 434 920.8 438 V440 Q920.8 444 916.8 444 H808 Z" fill="#6D5DF6"/>
-<text x="1096" y="420" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+28%p</text>
+<path d="M808 434 H844.8 Q848.8 434 848.8 438 V440 Q848.8 444 844.8 444 H808 Z" fill="#6D5DF6"/>
+<text x="1096" y="420" font-size="28" fill="#111827" font-weight="700" text-anchor="start">−2%p</text>
+<text x="1096" y="447" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동률 수준</text>
 <line x1="56" y1="462" x2="1260" y2="462" stroke="#E5E7EB"/>
 <text x="80" y="498" font-size="27" fill="#111827" font-weight="600" text-anchor="start">지연 중앙값</text>
-<text x="80" y="524" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동시성 2</text>
+<text x="80" y="524" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동시성 원본 2 · 에이전트 4</text>
 <text x="520" y="510" font-size="30" fill="#111827" font-weight="500" text-anchor="start">11.6초</text>
 <text x="625.8" y="510" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">최대 41.7초</text>
-<text x="808" y="510" font-size="30" fill="#111827" font-weight="700" text-anchor="start">10.4초</text>
-<text x="913.8" y="510" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">최대 19.2초</text>
-<text x="1096" y="498" font-size="28" fill="#111827" font-weight="700" text-anchor="start">−1.2초</text>
+<text x="808" y="510" font-size="30" fill="#111827" font-weight="700" text-anchor="start">10.6초</text>
+<text x="913.8" y="510" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">최대 48.5초</text>
+<text x="1096" y="498" font-size="28" fill="#111827" font-weight="700" text-anchor="start">−1.0초</text>
 <text x="1096" y="525" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 우세</text>
-<rect x="56.5" y="172.5" width="1203" height="367" rx="13.5" fill="none" stroke="#D1D5DB"/>
+<line x1="56" y1="540" x2="1260" y2="540" stroke="#E5E7EB"/>
+<text x="80" y="567" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">원본 2026-09-17 측정 · 에이전트 2026-09-20 측정. 같은 100문항을 같은 채점기로 채점했다.</text>
+<text x="80" y="591" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">에이전트 열에는 구조 전환과 별개로 이 저장소에서만 한 수정(검색 후보 풀 · 질문 분해 · 리뷰 요약 병렬화)이 함께 들어 있다.</text>
+<rect x="56.5" y="172.5" width="1203" height="431" rx="13.5" fill="none" stroke="#D1D5DB"/>
 </svg>
