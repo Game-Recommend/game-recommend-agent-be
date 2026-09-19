@@ -86,8 +86,9 @@
   `keywords.name ~ *"story"*`는 Skyrim, God of War, Mass Effect 2 등을 돌려준다(확인함).
   `*"competiti"*`도 Counter-Strike, Overwatch, StarCraft II를 돌려준다.
 
-둘 다 `app/clients/igdb.py`의 `build_filters`에서 고칠 수 있고 LLM 없이 `evals/search_pool`로 잴 수
-있다. 이 평가의 비교(같은 후보 풀의 두 목록)에는 영향을 주지 않는다. 비교할 문항 수만 줄었다.
+둘 다 고쳤다(2026-09-20, `evals/search_pool/REPORT.md`의 같은 날짜 절). 분류·게임 모드는 id로 걸고,
+지어낸 분류는 키워드 이름을 조회해 단어의 시작이 맞는 것만 id로 건다. 빈손이던 네 문항이 후보 30개를
+받는다. 이 평가의 비교(같은 후보 풀의 두 목록)에는 영향을 주지 않는다. 비교할 문항 수만 줄었다.
 
 ## 읽을 때 주의
 

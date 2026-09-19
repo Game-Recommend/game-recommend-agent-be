@@ -96,3 +96,65 @@ id=4  2014  Thief                          id=9  1999  Jagged Alliance 2
 Steam 상세 API는 앱 하나에 한 번 호출이고 IP당 5분에 약 200회 제한이다. 요청 하나가 후보 30개를
 조회하므로 후보를 늘려 가격으로 거르는 방식은 쓰기 어렵다. 인기순에서는 같은 게임이 여러 요청에
 반복되어 10분 캐시(`SteamStoreClient`)가 더 잘 맞는다.
+
+## 분류 조건을 id로 걸고, 지어낸 분류는 키워드로 찾는다 (2026-09-20)
+
+선택 관련성 평가(`evals/relevance`)의 빈 추천 8건이 모두 검색 후보 0개였다. 원인은 둘이다.
+
+### 1. 같은 배열에 이름 조건을 둘 걸면 0건이다
+
+검색은 분류마다 `(genres.name ~ "x" | themes.name ~ "x")`를 만들어 `&`로 이었다. IGDB는 같은 배열의
+하위 필드 조건 둘을 **한 원소가 동시에 만족**해야 한다고 읽는다.
+
+```
+"판타지 배경의 액션 RPG" → genres=["Fantasy", "Action", "Role-playing (RPG)"]
+  Fantasy + RPG     (테마 + 장르)  → 후보 있음
+  Fantasy + Action  (테마 + 테마)  → 0건   ← 한 테마가 Fantasy이면서 Action일 수는 없다
+  themes = [17,1]   (id, 모두 포함) → The Witcher 3, Skyrim, God of War, ...
+```
+
+게임 모드도 같은 배열이라 `genres=["Multiplayer"]` + `play_mode="cooperative"`가 0건이었다. 정렬을
+바꾸기 전부터 있던 문제다. 분류·게임 모드를 이름이 아니라 **id로** 걸고(`genres = [12]`,
+`themes = [17,1]`, `game_modes = [2,3]`), 장르·테마·게임 모드의 id 표를 코드에 둔다.
+
+### 2. 질문 분해가 지어낸 분류는 정확히 일치하는 키워드가 없다
+
+"스토리 게임" → `genres=["Story"]`, "경쟁 게임" → `genres=["Competition"]`. IGDB에 그런 장르·테마는
+없고, `keywords.name ~ "story"`(정확 일치)도 0건이다. 부분 일치(`~ *"story"*`)는 28개를 돌려주지만
+"alternate history"가 딸려 온다.
+
+키워드 이름을 먼저 조회해 **어떤 단어가 그 말로 시작하는 것만** id로 남긴다. "story rich"·"emotional
+story"·"branching storyline"은 남고 "history"는 빠진다. 긴 말은 끝을 잘라 찾는다(`competition` →
+`competit`로 `competitive`도 찾는다). 분류어가 여럿이면 키워드는 하나만 맞아도 된다(뜻이 넓은 말을 푼
+것이라서). 맞는 키워드가 하나도 없으면 전처럼 후보가 없다. 조건을 버리고 아무 게임이나 돌려주지 않는다.
+IGDB 호출은 그런 분류어가 있을 때만 한 번 늘어난다.
+
+### 결과
+
+입력을 엔드투엔드 100문항 + 관련성 평가 40문항의 조건(140문항)으로 넓혀 전후를 쟀다
+([runs/before-category-fix](runs/before-category-fix), [runs/after-category-fix](runs/after-category-fix),
+Steam 조회 생략).
+
+| | 수정 전 | 수정 후 |
+| --- | --- | --- |
+| 후보 0개 문항 | 5 (E056, R033, R037, R038, R040) | 1 (E056) |
+| 후보 목록이 달라진 문항 | | 4 (위의 R 문항 넷) |
+| 나머지 136문항의 후보 목록 | | **수정 전과 같다** |
+
+```
+SF 세계관의 스토리 게임 {genres: [Science fiction, Story]}
+  후: Mass Effect 2, BioShock Infinite, Fallout: New Vegas, Life Is Strange, Fallout 3, Cyberpunk 2077
+엔딩까지 10시간 이하인 스토리 게임 {genres: [Story], max_playtime_hours: 10}
+  후: Undertale, Call of Duty: Black Ops II, Bastion, Little Nightmares, Stray, Papers, Please
+판타지 배경의 액션 RPG {genres: [Fantasy, Action, Role-playing (RPG)]}
+  후: The Witcher 3, Skyrim, God of War, Elden Ring, Dark Souls III, Hades
+한 판이 짧은 경쟁 게임 {genres: [Competition], play_mode: competitive}
+  후: Counter-Strike: Global Offensive, Overwatch, StarCraft II, Counter-Strike, Halo 3: ODST
+```
+
+- 분류가 하나인 질문은 id로 바꿔도 결과가 같다. 136문항이 그대로인 것이 그 확인이다.
+- E056은 기록된 조건이 `genres=["Horror"]` + `excluded_genres=["Horror"]`로 모순이라 0개가 옳다. 지금의
+  질문 분해는 이 모순을 내지 않는다(같은 분류가 양쪽에 있으면 제외가 이긴다).
+- 빈손이던 관련성 문항 다섯 개를 에이전트로 다시 돌리면 넷이 추천을 냈다(R037은 Undertale, Little
+  Nightmares, Papers, Please, Stray). R033은 에이전트 루프 실패로 끝났는데, 같은 질문을 두 번 더 돌리면
+  추천을 낸다. 검색과 무관한 도구 반복 호출 문제다(`evals/agent_e2e/REPORT.md`의 E095).

@@ -9,7 +9,15 @@ import types
 import httpx2
 
 from app.clients import igdb
-from app.clients.igdb import IgdbCatalogClient, TwitchAppToken, build_filters, to_candidate
+from app.clients.igdb import (
+    IgdbCatalogClient,
+    TwitchAppToken,
+    build_filters,
+    classify,
+    keyword_stem,
+    matching_keyword_ids,
+    to_candidate,
+)
 from app.config import Settings
 from app.pipeline.query_processing.conditions import GameConditions
 
@@ -73,31 +81,64 @@ def test_filters_default_to_pc_main_games():
     assert len(where) == 3
 
 
-def test_known_category_matches_genre_or_theme():
+def test_categories_are_filtered_by_id_not_by_name():
     where = build_filters({"genres": ["RPG", "Horror"]})
 
-    assert '(genres.name ~ "role-playing (rpg)" | themes.name ~ "role-playing (rpg)")' in where
-    assert '(genres.name ~ "horror" | themes.name ~ "horror")' in where
+    # RPG는 장르(12), Horror는 테마(19)다
+    assert "genres = [12]" in where and "themes = [19]" in where
+    assert not any(".name ~" in clause and "platforms" not in clause for clause in where)
+
+
+def test_two_categories_of_the_same_kind_use_contains_all():
+    # Fantasy와 Action은 둘 다 테마다. 이름 조건을 둘 걸면 IGDB는 한 원소가 두 이름을 동시에
+    # 만족해야 한다고 읽어 0건을 돌려준다("판타지 액션 RPG"의 후보가 0개였다)
+    where = build_filters({"genres": ["Fantasy", "Action", "Role-playing (RPG)", "fantasy"]})
+
+    assert "themes = [17,1]" in where
+    assert "genres = [12]" in where
 
 
 def test_play_mode_words_in_genres_become_game_modes():
     # 파서가 협동을 genres=["Cooperative"]로도 낸다. IGDB에 그런 장르·테마는 없고 게임 모드다
     where = build_filters({"genres": ["Cooperative"], "play_mode": "cooperative", "players": 2})
 
-    assert where.count('game_modes.name = "Co-operative"') == 1
-    assert not any("cooperative" in clause and "genres.name" in clause for clause in where)
+    assert "game_modes = [3]" in where
+    assert not any(clause.startswith(("genres", "themes")) for clause in where)
 
 
-def test_play_mode_and_single_player_map_to_game_modes():
-    assert 'game_modes.name = "Multiplayer"' in build_filters({"play_mode": "competitive"})
-    single = build_filters({"play_mode": "singleplayer", "players": 1})
-    assert single.count('game_modes.name = "Single player"') == 1
+def test_play_modes_combine_into_one_contains_all_clause():
+    assert "game_modes = [2]" in build_filters({"play_mode": "competitive"})
+    assert "game_modes = [1]" in build_filters({"play_mode": "singleplayer", "players": 1})
+    # 게임 모드도 같은 배열이라 이름 조건 둘은 0건이었다
+    both = build_filters({"genres": ["Multiplayer"], "play_mode": "cooperative"})
+    assert "game_modes = [2,3]" in both
 
 
-def test_unknown_category_falls_back_to_keywords_instead_of_being_dropped():
-    where = build_filters({"genres": ["Story-rich"]})
+def test_unknown_categories_are_returned_for_keyword_lookup():
+    genres, themes, modes, others = classify({"genres": ["Story-rich", "Puzzle", "Competition"]})
 
-    assert '(keywords.name ~ "story-rich" | keywords.name ~ "story rich")' in where
+    assert (genres, themes, modes) == ([9], [], [])
+    assert others == ["story-rich", "competition"]
+    # 키워드는 뜻이 넓은 말을 푼 것이라 하나만 맞아도 된다
+    assert "keywords = (7,8)" in build_filters({"genres": ["Story"]}, keyword_ids=[7, 8])
+    assert not any(c.startswith("keywords") for c in build_filters({"genres": ["Story"]}))
+
+
+def test_keyword_stem_and_word_start_matching():
+    assert keyword_stem("story") == "story"
+    assert keyword_stem("competition") == "competit"  # competitive도 찾는다
+    assert keyword_stem("Story-rich".lower()) == "story rich"
+    rows = [
+        {"id": 1, "name": "story rich"},
+        {"id": 2, "name": "emotional story"},
+        {"id": 3, "name": "alternate history"},  # 부분 일치로는 딸려 온다
+        {"id": 4, "name": "branching storyline"},
+        {"id": 5, "name": "competitive multiplayer"},
+    ]
+
+    assert matching_keyword_ids(rows, ["story"]) == [1, 2, 4]
+    assert matching_keyword_ids(rows, ["story rich"]) == [1]
+    assert matching_keyword_ids(rows, ["story", "competit"]) == [1, 2, 4, 5]
 
 
 def test_platform_aliases_and_explicit_platform_replace_the_pc_default():
@@ -117,7 +158,35 @@ def test_search_sorts_by_rating_count_not_by_id(monkeypatch):
     body = next(c for c in calls if c.url.path.endswith("/games")).content.decode()
     assert "sort total_rating_count desc; limit 500;" in body
     assert "sort id" not in body
-    assert "where game_type = (0,8,9,10) & total_rating_count >= 5 & (genres.name ~" in body
+    assert "where game_type = (0,8,9,10) & total_rating_count >= 5 & genres = [9] &" in body
+
+
+def test_unknown_category_is_resolved_to_keyword_ids_before_searching(monkeypatch):
+    keywords = [{"id": 11, "name": "story rich"}, {"id": 12, "name": "alternate history"}]
+    calls = igdb_http(monkeypatch, keywords=keywords)
+
+    rows = asyncio.run(igdb.search({"genres": ["Story"]}))
+
+    assert [row["name"] for row in rows] == ["The Witcher 3"]
+    lookup = next(c for c in calls if c.url.path.endswith("/keywords")).content.decode()
+    assert 'name ~ *"story"*' in lookup
+    games = next(c for c in calls if c.url.path.endswith("/games")).content.decode()
+    assert "keywords = (11)" in games  # history는 단어의 시작이 아니라 빠진다
+
+
+def test_category_without_any_keyword_yields_no_candidates(monkeypatch):
+    # 조건을 버리고 아무 게임이나 돌려주지 않는다
+    calls = igdb_http(monkeypatch, keywords=[])
+
+    assert asyncio.run(igdb.search({"genres": ["Zzzz"]})) == []
+    assert not any(c.url.path.endswith("/games") for c in calls)
+
+
+def test_known_categories_do_not_call_the_keyword_endpoint(monkeypatch):
+    calls = igdb_http(monkeypatch)
+    asyncio.run(igdb.search({"genres": ["Puzzle"], "play_mode": "cooperative"}))
+
+    assert not any(c.url.path.endswith("/keywords") for c in calls)
 
 
 def _game(igdb_id, genres=("Adventure",), themes=("Fantasy",), modes=()):
@@ -171,6 +240,7 @@ def igdb_http(
     reject: frozenset[str] = frozenset(),
     expires_in: int = 5_000_000,
     games: list[dict] | None = None,
+    keywords: list[dict] | None = None,
 ):
     """Twitch 토큰 발급과 IGDB 두 엔드포인트를 흉내 낸다. reject에 든 토큰은 401로 거부한다."""
     games = games if games is not None else [{"id": 1942, "name": "The Witcher 3"}]
@@ -189,6 +259,8 @@ def igdb_http(
             return httpx2.Response(401)
         if request.url.path.endswith("/games"):
             return httpx2.Response(200, json=games)
+        if request.url.path.endswith("/keywords"):
+            return httpx2.Response(200, json=keywords or [])
         return httpx2.Response(200, json=[])
 
     def make_client(**kwargs):
