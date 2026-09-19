@@ -37,6 +37,7 @@ AgentRecommender (app/agent/runner.py, LangChain create_agent)
   ├─ assess_hardware   app/agent/tools/hardware.py  → HardwareTool.run      (가격·하드웨어 담당. 검색된 후보 전체를 조회)
   ├─ get_review_scores app/agent/tools/review_score.py → ReviewScoreTool.run (리뷰 담당)
   └─ summarize_reviews app/agent/tools/reviews.py   → ReviewSummaryTool.run (리뷰 담당)
+  Tool별 호출 상한 app/agent/limits.py: 요청 하나에 검색·가격·사양 1회, 리뷰 점수·리뷰 요약 2회 (통합 담당)
   ↓
 러너 후검증: 후보에 있는 id · 가격/사양 판정 통과 · 요청 개수 이하 → 위반 시 거부 사유를 붙여 1회 재호출
 되묻기(각 1회, 다시 같으면 그대로 받는다): 통과 후보가 있는데 추천이 0개 / 추천한 게임 이름이 답변에 없음
@@ -147,6 +148,7 @@ id를 그대로 씁니다.
 - 기준값은 `ctx.conditions`에서 읽는다. LLM에게 다시 넘기게 하지 않는다.
 - 실패는 `run_stage`가 처리한다. Tool 안에서 예외를 삼키지 않는다.
 - `build_tools()`에 등록하고 `tests/agent/test_tools.py::test_tool_schemas_hide_runtime_and_server_criteria`가 통과하는지 본다.
+- `app/agent/limits.py`의 `TOOL_CALL_LIMITS`에 요청 하나에서 부를 수 있는 횟수를 적는다. 다시 불러도 결과가 같으면 1회, 모델이 id를 넘겨 고쳐 부를 일이 있으면 2회다. 빠뜨리면 `tests/agent/test_limits.py::test_limits_cover_every_agent_tool`이 실패한다.
 
 ## 연결 계약
 
@@ -158,6 +160,7 @@ id를 그대로 씁니다.
 | `AgentContext` | 요청 컨텍스트. `conditions`, `store`, `tools`, `progress`, `run_stage()`, `optional()` | `app/agent/context.py` |
 | `CandidateStore` | `add_candidates()`, `resolve(ids)`, `prices/hardware/reviews/media` dict, `warn()`, `validate_draft()`, `build_evidence()` | `app/agent/context.py` |
 | Tool 반환 | 성공: 압축 dict → JSON 문자열. 실패: `{"error": "..."}` (+ warnings). 모르는 id: `{"error": "후보 목록에 없는 igdb_id: [...]"}` | `run_stage()` |
+| Tool 호출 상한 | `TOOL_CALL_LIMITS`(Tool 이름 → 요청 하나의 횟수)와 `ToolCallLimiter`. 넘긴 호출은 실행하지 않고 `{"error": "...는 요청 하나에서 N회까지만 실행합니다..."}`를 돌려주며, 거부된 Tool은 다음 모델 호출에서 뺀다. LLM이 부른 호출만 센다(`AgentContext.tool_calls`) | `app/agent/limits.py` |
 | `RecommendationDraft` | `recommended_igdb_ids`, `answer`. 러너가 검증한다 | `app/agent/schemas.py` |
 | SSE 단계명 | 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 점수, 리뷰 요약, 조건 판정, 미디어 | `runner.py`, 각 Tool의 `STAGE` |
 | 리뷰 점수 저장 | `get_review_scores` 결과는 `CandidateStore`에 담지 않는다. 에이전트 판단 전용이라 응답 본문·안전망에 없다 | `app/agent/tools/review_score.py` |

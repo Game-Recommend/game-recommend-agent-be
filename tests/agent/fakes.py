@@ -4,6 +4,7 @@ import itertools
 
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
+from pydantic import Field
 
 from app.agent.runner import DRAFT_TOOL_NAME
 
@@ -13,10 +14,14 @@ _ids = itertools.count(1)
 class ScriptedChatModel(GenericFakeChatModel):
     """`messages` 순서대로 AIMessage를 돌려준다.
 
-    create_agent가 부르는 bind_tools는 자기 자신을 돌려준다.
+    create_agent가 모델을 부를 때마다 거치는 bind_tools는 자기 자신을 돌려주고, 그때 받은 Tool
+    이름을 `offered`에 남긴다.
     """
 
+    offered: list[list[str]] = Field(default_factory=list)
+
     def bind_tools(self, tools, **kwargs):
+        self.offered.append([tool.name for tool in tools])
         return self
 
 

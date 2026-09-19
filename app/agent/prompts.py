@@ -561,6 +561,19 @@ def build_name_challenge(missing: list[GameCandidate], recommended: list[GameCan
     )
 
 
+def build_call_limit_notice(tool_name: str, limit: int) -> str:
+    """호출 상한을 넘겨 실행하지 않은 Tool 호출에 돌려주는 문장(app/agent/limits.py).
+
+    상한에 닿은 Tool은 다음 모델 호출부터 목록에서 빠지므로, 이 문장은 한 턴에 같은 Tool을 여러 번
+    부른 경우처럼 목록에서 빼는 것으로 막지 못한 호출에만 나간다.
+    """
+    return (
+        f"{tool_name}는 요청 하나에서 {limit}회까지만 실행합니다. 이 호출은 실행하지 않았습니다. "
+        f"{tool_name}를 다시 호출하지 말고, 이미 받은 Tool 결과만으로 RecommendationDraft를 "
+        "제출하세요."
+    )
+
+
 def requires_review_selection(conditions: GameConditions) -> bool:
     keywords = (
         "steam 평가",
