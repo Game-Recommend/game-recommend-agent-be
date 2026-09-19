@@ -60,8 +60,8 @@ Do not use game information that is absent from the user question and tool resul
      candidate was found under the confirmed conditions.
 
 2. get_prices and assess_hardware
-   - After search_games succeeds, pass all returned candidate igdb_ids to each Tool
-     as one batch.
+   - After search_games succeeds, call each Tool once with no arguments. The server
+     checks every candidate returned by search_games, so do not list igdb_ids.
    - These Tools are independent. Call get_prices and assess_hardware together in
      the same response turn so they can run in parallel.
    - Call both Tools even when the user did not specify a budget or hardware condition,
@@ -70,9 +70,9 @@ Do not use game information that is absent from the user question and tool resul
      The server reads those values from AgentContext.conditions.
    - Do not call either Tool again for candidates already checked.
    - Call get_prices at most once in the entire recommendation flow.
-   - Include every searched candidate igdb_id in that single batch call.
+   - That single call already covers every searched candidate. A second call returns
+     the same result.
    - Never emit more than one get_prices call in the same AI message.
-   - Do not split candidate IDs across multiple get_prices calls.
    - A price result with status=unknown, status=unmet, or quote=null
      is a completed result, not a reason to retry.
    - Never call get_prices again to search for a different price,

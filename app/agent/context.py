@@ -99,6 +99,15 @@ class CandidateStore:
             )
         return [self.candidates[igdb_id] for igdb_id in unique(igdb_ids)]
 
+    def all_ids(self) -> list[int]:
+        """검색된 후보 전체. 가격·사양 Tool은 LLM이 넘긴 id 목록 대신 이것을 조회한다.
+
+        프롬프트는 후보 전체를 한 번에 넘기라고 하지만, id가 1~30이 아니라 25076·119133처럼 길어지자
+        모델이 30개 중 10~26개만 넘기거나 없는 id를 섞었다(evals/agent_e2e/REPORT.md). 조회하지 않은
+        후보는 추천될 수 없으므로, 옮겨 적기 실수가 그대로 추천 범위를 줄였다.
+        """
+        return list(self.candidates)
+
     def checked(self, igdb_id: int) -> bool:
         """가격이나 사양을 한 번이라도 조회한 후보인가.
 

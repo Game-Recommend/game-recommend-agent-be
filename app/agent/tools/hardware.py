@@ -63,10 +63,13 @@ async def assess(ctx: AgentContext, igdb_ids: list[int]) -> dict:
 
 
 @tool("assess_hardware")
-async def assess_hardware(igdb_ids: list[int], runtime: ToolRuntime[AgentContext]) -> str:
+async def assess_hardware(
+    runtime: ToolRuntime[AgentContext], igdb_ids: list[int] | None = None
+) -> str:
     """후보 게임의 최소 요구 사양을 조회하고, 사용자가 말한 PC 사양으로 실행 가능한지 판정한다.
 
-    - search_games가 돌려준 igdb_id만 넘긴다. 후보 전체를 한 번에 넘기면 한 번의 호출로 끝난다.
+    - 서버가 search_games가 돌려준 후보 전체를 조회한다. igdb_ids는 비워도 되고, 넘겨도 결과는
+      후보 전체다. 한 번만 부르면 된다.
     - 사용자 PC 사양은 서버가 알고 있으므로 인자로 넘기지 않는다.
     - status: met=사양 충족, unmet=미달, unknown=비교 근거 없음,
       skipped=사용자가 사양을 말하지 않음.
@@ -74,4 +77,4 @@ async def assess_hardware(igdb_ids: list[int], runtime: ToolRuntime[AgentContext
     - 사양 조건이 없어도 답변과 카드에 최소 사양이 쓰이므로 추천 후보를 정하기 전에 호출한다.
     """
     ctx = runtime.context
-    return await ctx.run_stage(STAGE, assess(ctx, igdb_ids))
+    return await ctx.run_stage(STAGE, assess(ctx, ctx.store.all_ids()))

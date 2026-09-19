@@ -217,13 +217,27 @@ def test_runner_fetches_skipped_checks_and_reviews_before_finalizing(make_recomm
 
 def test_unknown_id_error_goes_back_to_model_without_warning(make_recommender, services):
     recommender = make_recommender(
-        search(**SEARCH), checks([99]), checks([1, 2, 3]), reviews([3]), draft([3])
+        search(**SEARCH), checks([1, 2, 3]), reviews([99]), reviews([3]), draft([3])
     )
 
     response = run(recommender)
 
     assert response.warnings == []
-    assert services.calls.count("price") == 1  # 99번 호출은 팀원 도구에 닿지 않았다
+    assert services.calls.count("reviews") == 1  # 99번 호출은 팀원 도구에 닿지 않았다
+
+
+def test_price_and_hardware_check_every_candidate_whatever_ids_the_model_passes(make_recommender):
+    # 모델이 id를 옮겨 적다 빠뜨리거나(1·2번 누락) 틀려도(99번) 서버는 후보 전체를 조회한다
+    script = (search(**SEARCH), checks([99, 3]), draft([3]))
+
+    response = run(make_recommender(*script))
+    events = asyncio.run(_collect(make_recommender(*script).stream("q")))
+
+    assert [g.game.igdb_id for g in response.games] == [3]
+    # 1·2번도 조회됐으므로 제외 근거가 남는다
+    assert {g.game.igdb_id for g in response.excluded_games} == {1, 2}
+    failed = [e.stage for e in events if isinstance(e, StageEvent) and e.status == "failed"]
+    assert failed == []
 
 
 def test_tool_failure_becomes_warning_and_agent_continues(make_recommender, services, monkeypatch):
