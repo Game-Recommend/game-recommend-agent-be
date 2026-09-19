@@ -1,0 +1,110 @@
+{
+  "cases": 100,
+  "errors": 0,
+  "zero_candidates": [
+    "E056"
+  ],
+  "candidates_median": 30,
+  "on_steam": 0.7626,
+  "release_year_median": 2011,
+  "release_year_median_head5": 2011,
+  "distinct_games": 274,
+  "distinct_games_head5": 48,
+  "most_common_head5": [
+    {
+      "name": "Portal 2",
+      "questions": 75,
+      "share": 0.7576
+    },
+    {
+      "name": "The Witcher 3: Wild Hunt",
+      "questions": 74,
+      "share": 0.7475
+    },
+    {
+      "name": "The Elder Scrolls V: Skyrim",
+      "questions": 74,
+      "share": 0.7475
+    },
+    {
+      "name": "Grand Theft Auto V",
+      "questions": 67,
+      "share": 0.6768
+    },
+    {
+      "name": "Grand Theft Auto: San Andreas",
+      "questions": 66,
+      "share": 0.6667
+    }
+  ],
+  "steam_top10": {
+    "candidates": 990,
+    "on_steam": 0.7919,
+    "lookup_errors": 0,
+    "kr_available": 0.9987,
+    "priced": 0.8878,
+    "price_le_10000": 0.0625,
+    "price_le_30000": 0.5599,
+    "free": 0.0051,
+    "has_requirements": 0.9821,
+    "price_median_krw": 21000
+  },
+  "by_family": {
+    "budget": {
+      "cases": 20,
+      "zero_candidates": 0,
+      "priced": 0.8924,
+      "price_le_10000": 0.057,
+      "price_le_30000": 0.557,
+      "free": 0.0063
+    },
+    "combined": {
+      "cases": 20,
+      "zero_candidates": 0,
+      "priced": 0.8931,
+      "price_le_10000": 0.0943,
+      "price_le_30000": 0.6038,
+      "free": 0.0063
+    },
+    "count": {
+      "cases": 15,
+      "zero_candidates": 0,
+      "priced": 0.8992,
+      "price_le_10000": 0.0588,
+      "price_le_30000": 0.5798,
+      "free": 0.0084
+    },
+    "exclude": {
+      "cases": 15,
+      "zero_candidates": 1,
+      "priced": 0.8684,
+      "price_le_10000": 0.0965,
+      "price_le_30000": 0.5526,
+      "free": 0.0
+    },
+    "free": {
+      "cases": 10,
+      "zero_candidates": 0,
+      "priced": 0.8947,
+      "price_le_10000": 0.0789,
+      "price_le_30000": 0.5789,
+      "free": 0.0132
+    },
+    "hardware": {
+      "cases": 15,
+      "zero_candidates": 0,
+      "priced": 0.875,
+      "price_le_10000": 0.0,
+      "price_le_30000": 0.5,
+      "free": 0.0
+    },
+    "tight": {
+      "cases": 5,
+      "zero_candidates": 0,
+      "priced": 0.8947,
+      "price_le_10000": 0.0263,
+      "price_le_30000": 0.5,
+      "free": 0.0
+    }
+  }
+}

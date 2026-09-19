@@ -33,13 +33,13 @@ AgentRecommender (app/agent/runner.py, LangChain create_agent)
   │  시스템 프롬프트: app/agent/prompts.py
   │  루프: LLM → tool_calls(같은 턴 병렬) → ToolNode → LLM … → RecommendationDraft
   ├─ search_games      app/agent/tools/search.py    → GameSearchTool.run    (IGDB 담당)
-  ├─ get_prices        app/agent/tools/price.py     → PriceTool.run         (가격·하드웨어 담당, 참조 예시)
-  ├─ assess_hardware   app/agent/tools/hardware.py  → HardwareTool.run      (가격·하드웨어 담당)
+  ├─ get_prices        app/agent/tools/price.py     → PriceTool.run         (가격·하드웨어 담당, 참조 예시. 검색된 후보 전체를 조회)
+  ├─ assess_hardware   app/agent/tools/hardware.py  → HardwareTool.run      (가격·하드웨어 담당. 검색된 후보 전체를 조회)
   ├─ get_review_scores app/agent/tools/review_score.py → ReviewScoreTool.run (리뷰 담당)
   └─ summarize_reviews app/agent/tools/reviews.py   → ReviewSummaryTool.run (리뷰 담당)
   ↓
 러너 후검증: 후보에 있는 id · 가격/사양 판정 통과 · 요청 개수 이하 → 위반 시 거부 사유를 붙여 1회 재호출
-빈 초안 되묻기: 판정을 통과한 후보가 있는데 추천이 0개 → 통과 후보 목록을 붙여 1회 되묻기 (다시 비면 그대로 받는다)
+되묻기(각 1회, 다시 같으면 그대로 받는다): 통과 후보가 있는데 추천이 0개 / 추천한 게임 이름이 답변에 없음
 안전망: 추천 후보 중 가격·사양·리뷰를 조회하지 않은 게임은 러너가 직접 조회
   ↓
 MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같은 형태)
@@ -128,11 +128,16 @@ async def fetch_prices(ctx: AgentContext, igdb_ids: list[int]) -> dict:   # 실�
     return {"budget_krw": ..., "prices": [compact_price(r) for r in ...]}       # LLM용 압축본
 
 @tool("get_prices")
-async def get_prices(igdb_ids: list[int], runtime: ToolRuntime[AgentContext]) -> str:
+async def get_prices(runtime: ToolRuntime[AgentContext], igdb_ids: list[int] | None = None) -> str:
     """LLM이 읽는 설명. 언제 부르는지, 인자 규칙, status 뜻, 부르지 말아야 할 때."""
     ctx = runtime.context
-    return await ctx.run_stage(STAGE, fetch_prices(ctx, igdb_ids))
+    return await ctx.run_stage(STAGE, fetch_prices(ctx, ctx.store.all_ids()))   # 후보 전체를 조회한다
 ```
+
+가격·사양처럼 **후보 전체를 한 번에 보는 Tool**은 LLM이 넘긴 `igdb_ids`에 기대지 않고
+`ctx.store.all_ids()`를 조회합니다. 후보 id가 길어지자 모델이 30개 중 일부만 넘기거나 없는 id를 섞었고,
+조회하지 않은 후보는 추천될 수 없기 때문입니다. 최종 후보만 보는 Tool(리뷰 점수·리뷰 요약)은 LLM이 넘긴
+id를 그대로 씁니다.
 
 체크리스트
 

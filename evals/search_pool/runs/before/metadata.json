@@ -1,0 +1,8 @@
+{
+  "started_at": "20260919T140202Z",
+  "label": "before",
+  "source_run": "20260919T114056Z",
+  "cases": 100,
+  "top_k": 10,
+  "steam": true
+}

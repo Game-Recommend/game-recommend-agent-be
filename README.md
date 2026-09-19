@@ -69,6 +69,13 @@ QR을 찍으면 배포된 프론트엔드
 - **제외 목록은 에이전트가 얇습니다.** 복합 조건 질문에서 원본은 20개를 제외 근거로 남겼지만 에이전트는
   1개입니다. LLM이 고른 후보만 조회하고, 조회하지 않은 후보는 판단한 적이 없어 제외에 넣지 않습니다.
 
+> **2026-09-19 이후 달라진 점.** 위 표와 설명은 2026-09-17의 측정이고, 그 뒤 두 가지가 바뀌었습니다.
+> 하드웨어 질문에서 원본이 빈손이던 것은 LLM이 검색 인자를 정해서가 아니라 질문 분해가 플랫폼을
+> `노트북`으로 뽑아 IGDB 검색이 0건이었기 때문이고, 이제 검색이 `노트북`을 PC로 읽습니다. 가격·사양
+> Tool은 LLM이 고른 후보가 아니라 검색된 후보 전체를 조회하므로 제외 목록도 원본만큼 채워집니다.
+> 근거는 [evals/search_pool/REPORT.md](evals/search_pool/REPORT.md)와
+> [evals/agent_e2e/REPORT.md](evals/agent_e2e/REPORT.md)에 있습니다.
+
 ## 에이전트 흐름
 
 ![게임 추천 에이전트 서비스 처리 흐름](docs/game_recommend_flow.png)
@@ -83,16 +90,17 @@ QR을 찍으면 배포된 프론트엔드
   ↓
 에이전트 루프 (LangChain create_agent, app/agent/runner.py)
   LLM이 고른 Tool을 호출하고 결과를 읽어 다음 행동을 정한다. 같은 턴의 여러 호출은 병렬이다.
-  ├─ search_games      조건으로 IGDB 후보 검색 (최대 30개)
-  ├─ get_prices        후보 igdb_id 목록 → 원화 가격·예산 판정
-  ├─ assess_hardware   후보 igdb_id 목록 → 최소 사양·호환 판정
+  ├─ search_games      조건으로 IGDB 후보 검색 (많이 평가된 순, 최대 30개)
+  ├─ get_prices        검색된 후보 전체 → 원화 가격·예산 판정 (LLM이 id를 넘기지 않아도 된다)
+  ├─ assess_hardware   검색된 후보 전체 → 최소 사양·호환 판정
   ├─ get_review_scores 후보 igdb_id 목록 → Steam 리뷰 통계 (추천 비율·Wilson 하한·평가 문구)
   └─ summarize_reviews 최종 후보 igdb_id 목록 → Steam 리뷰 한줄평
   ↓
 RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화된 최종 출력
   ↓
 러너 후검증: 후보에 있는 id · 가격/사양 판정 통과 · 요청 개수 이하. 위반하면 거부 사유를 붙여 한 번 더 호출
-빈 초안 되묻기: 판정을 통과한 후보가 있는데 추천이 0개면 통과 후보 목록을 붙여 한 번만 되묻는다 (다시 비면 그대로 받는다)
+되묻기(각 한 번, 다시 같으면 그대로 받는다): 통과 후보가 있는데 추천이 0개 → 통과 후보 목록을 붙여 되묻기
+                                          추천한 게임 이름이 답변에 없음 → 빠진 이름과 추천 목록을 붙여 되묻기
 안전망: 추천 후보 중 가격·사양·리뷰를 조회하지 않은 게임은 러너가 직접 조회
   ↓
 미디어(로고·배너·트레일러) 후처리 → RecommendationResponse (원본 저장소와 같은 응답 형태)
@@ -100,6 +108,8 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 
 - Tool 하나는 기능 하나이고 인자는 `igdb_id` 목록(배치)입니다. 기준값(예산·사양)은 LLM이 넘기지 않고
   러너가 질문 분해 결과에서 주입하므로, 판정은 항상 코드(`app/tools/*`)가 합니다.
+- 가격·사양 Tool은 LLM이 넘긴 id와 무관하게 **검색된 후보 전체**를 조회합니다. 후보 id가 길어지자 모델이
+  30개 중 일부만 넘기거나 없는 id를 섞었고, 조회하지 않은 후보는 추천될 수 없기 때문입니다.
 - Tool은 LLM에 압축 JSON만 돌려주고 응답용 전체 모델은 요청 단위 `CandidateStore`에 쌓습니다.
 - Tool 실패는 예외로 올리지 않고 `{"error": ...}`로 LLM에 돌려주며 `warnings`에 남깁니다. 502는 질문 분해 실패,
   에이전트 루프 실패(모델 오류·반복 상한·전체 120초 초과), 재시도 후에도 후검증 실패일 때만 납니다.
@@ -125,6 +135,7 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 | 리뷰 한줄평 | Steam 리뷰 도움순 상위 20개를 100자 한 문장으로 | [app/clients/steam_reviews.py](app/clients/steam_reviews.py) | 자유 문장 |
 | `build_rejection` | 후검증 실패 사유와 재제출 규칙 | [app/agent/prompts.py](app/agent/prompts.py) | 사용자 메시지 |
 | `build_empty_challenge` | 빈 초안인데 통과 후보가 남았을 때 그 목록과 `skipped`의 뜻을 붙여 한 번 되묻기 | [app/agent/prompts.py](app/agent/prompts.py) | 사용자 메시지 |
+| `build_name_challenge` | 추천 목록의 게임 이름이 답변에 없을 때 빠진 이름과 추천 목록을 붙여 한 번 되묻기 | [app/agent/prompts.py](app/agent/prompts.py) | 사용자 메시지 |
 | `JUDGE_SYSTEM` | 답변 문단의 `grounded`·`linked` 채점 (오프라인) | [evals/agent_e2e/judge.py](evals/agent_e2e/judge.py) | `JudgeVerdict` |
 
 - **집행은 프롬프트 밖에 둡니다.** 추천 개수와 판정 통과는 `CandidateStore.validate_draft`가, 조건 중복
@@ -163,7 +174,10 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
   환율을 받지 못하면 USD 가격을 원화로 내지 않습니다. 폴백 실패는 Steam 결과를 지우지 않습니다.
 - 질문 조건은 온라인/로컬, 싱글/협동/경쟁, 전체 완료 시간/세션 시간, CPU·GPU·RAM,
   추천 개수를 구분합니다. 없는 조건은 추측하지 않습니다.
-- 검색 어댑터는 명시된 필수 검색 조건을 검증한 후보를 우선순위순 반환해야 합니다.
+- 검색 어댑터는 명시된 필수 검색 조건을 검증한 후보를 우선순위순 반환해야 합니다. IGDB 어댑터의
+  우선순위는 **많이 평가된 순**(`total_rating_count`)이고, 본편·리메이크·리마스터만 보며, 플랫폼을 말하지
+  않으면 PC로 봅니다. 분류어가 IGDB 장르·테마에 없으면 게임 모드(협동 등)나 키워드로 찾습니다.
+  통과 후보 중 무엇을 추천할지는 에이전트가 질문과 취향에 맞춰 고릅니다(검색 순서는 동점일 때만).
   IGDB의 완료 시간을 세션 시간으로 대체하지 않습니다. 검색 단계에서 필수 조건을
   검증할 수 없는 게임은 충족 후보로 반환하지 않습니다.
 - 가격·사양은 `met`(충족), `unmet`(미충족), `unknown`(확인 불가)로 구분합니다.
@@ -504,5 +518,6 @@ tests/
 evals/
 ├─ agent_questions/         예상 질문 5개의 고정 파이프라인·에이전트 전후 비교 (실제 API, CI 제외)
 ├─ non_steam/               비Steam 폴백 실측 평가
+├─ search_pool/             IGDB 검색 후보 풀 평가 (LLM 미사용: 연도·다양성·구매 가능성·후보 0개)
 └─ price_hardware/          가격·사양 평가셋
 ```
