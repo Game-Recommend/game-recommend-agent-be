@@ -18,10 +18,19 @@ def run(recommender, question="어드벤처 게임 2개"):
     return asyncio.run(recommender.run(question))
 
 
+def checks_first(calls):
+    """가격·사양은 같은 턴에 병렬로 돌아 둘 사이의 순서가 정해져 있지 않다. 비교용으로 맞춘다."""
+    calls = list(calls)
+    for i in range(len(calls) - 1):
+        if calls[i : i + 2] == ["hardware", "price"]:
+            calls[i : i + 2] = ["price", "hardware"]
+    return calls
+
+
 def assert_calls(services, *agent_calls):
     """에이전트 구간은 순서대로, 그 뒤 리뷰·미디어는 병렬 노드라 순서를 묻지 않는다."""
     head, tail = services.calls[: len(agent_calls)], services.calls[len(agent_calls) :]
-    assert head == list(agent_calls)
+    assert checks_first(head) == list(agent_calls)
     assert sorted(tail) == ["media", "reviews"]
 
 
@@ -32,7 +41,9 @@ def test_agent_flow_builds_full_response(make_recommender, services):
 
     response = run(recommender)
 
-    assert services.calls == ["parse", "search", "price", "hardware", "reviews", "media"]
+    assert checks_first(services.calls) == [
+        "parse", "search", "price", "hardware", "reviews", "media",
+    ]
     assert response.answer == "Game 3 답변"
     assert response.conditions == services.parser.conditions
     assert [g.game.igdb_id for g in response.games] == [3]

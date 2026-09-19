@@ -9,6 +9,7 @@
 2. agent: 에이전트 루프. LLM이 search_games → get_prices·assess_hardware(같은 턴 병렬) →
    summarize_reviews를 골라 부르고 RecommendationDraft를 제출한다.
    반복 상한은 recursion_limit, 한 번의 루프 시간은 total_timeout(노드 timeout)이다.
+   같은 Tool을 되풀이해 부르는 일은 Tool별 호출 상한(app/agent/limits.py)이 먼저 끊는다.
 3. safety_net: 안전망. 추천 후보 중 가격·사양을 조회하지 않은 게임은 러너가 직접 조회한다. README의
    "실패나 누락은 필수 조건 통과로 처리하지 않는다"를 모델의 성실함에 맡기지 않는다.
 4. validate: 후검증. 후보에 있는 id인지, 판정을 통과했는지, 개수 이하인지 검사한다. 위반하면
@@ -30,7 +31,7 @@
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from typing import Annotated, Literal, NotRequired, TypedDict
 
 from langchain.agents import create_agent
@@ -43,6 +44,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import Runtime
 
 from app.agent.context import AgentContext, ToolSet, unique
+from app.agent.limits import TOOL_CALL_LIMITS, ToolCallLimiter
 from app.agent.progress import PipelineStageError, Progress, silent, stream_progress
 from app.agent.prompts import (
     AGENT_SYSTEM,
@@ -108,6 +110,7 @@ class AgentRecommender:
         total_timeout_seconds: float = 120,
         recursion_limit: int = 20,
         max_validation_retries: int = 1,
+        tool_call_limits: Mapping[str, int] = TOOL_CALL_LIMITS,
     ):
         if stage_timeout_seconds <= 0 or total_timeout_seconds <= 0:
             raise ValueError("timeouts must be positive")
@@ -122,6 +125,8 @@ class AgentRecommender:
             build_tools(),
             system_prompt=system_prompt,
             context_schema=AgentContext,
+            # 요청 하나에서 Tool마다 부를 수 있는 횟수. 프롬프트의 "at most once"를 코드로 집행한다
+            middleware=[ToolCallLimiter(tool_call_limits)],
             # 최종 출력을 도구 호출로 받는다. 어떤 tool-calling 모델과도 같은 경로로 동작하고,
             # 모델이 자유 텍스트로 끝내지 못하게 한다.
             response_format=ToolStrategy(RecommendationDraft),

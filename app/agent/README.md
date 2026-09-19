@@ -29,6 +29,7 @@ flowchart TD
 | `app/agent/schemas.py` | Agent 구조화 출력인 `RecommendationDraft` |
 | `app/agent/prompts.py` | Agent 시스템 프롬프트, 사용자 입력, 거부 메시지 구성 |
 | `app/agent/progress.py` | 실행 단계와 SSE 진행 이벤트 |
+| `app/agent/limits.py` | Tool별 호출 상한(`TOOL_CALL_LIMITS`)과 이를 집행하는 미들웨어 `ToolCallLimiter` |
 | `app/agent/tools/` | 기존 서비스 Tool을 LangChain Tool로 감싸는 어댑터 |
 | `app/agent/tools/__init__.py` | Agent가 사용할 Tool 등록 |
 
@@ -240,6 +241,10 @@ platforms
 - 본문을 Tool 결과의 이름 그대로 고치게 하고, 본문이 말한 게임이 판정을 통과했다면 목록을 그 게임으로 바꾸는 길도 열어 둔다.
 - 다시 어긋나면 러너는 그대로 받는다. 표현 문제로 502를 내지 않는다.
 
+### `build_call_limit_notice()`
+
+Tool별 호출 상한을 넘겨 실행하지 않은 호출에 Tool 결과로 돌려주는 안내다(`{"error": ...}`). 어떤 Tool이 몇 회까지인지, 이 호출은 실행하지 않았다는 것, 이미 받은 결과로 `RecommendationDraft`를 제출하라는 것을 적는다. 상한과 집행은 [Tool 호출 상한](#tool-호출-상한)에 있다.
+
 ## Hard Constraint와 Soft Preference
 
 Agent는 필수 조건과 선호 조건을 구분한다.
@@ -412,27 +417,30 @@ LLM 호출은 네 이름으로 구분된다. 에이전트 루프(Tool 선택·�
 
 LangSmith의 평면 목록에서 Tool이 순서대로 보이더라도 같은 AIMessage의 `tool_calls`에 포함돼 있으면 병렬 호출이다.
 
-## 알려진 개선 사항
+## Tool 호출 상한
 
-실제 모델 실행에서는 다음과 같은 중복 호출이 드물게 발생할 수 있다.
+프롬프트에는 완료된 Tool 재호출 금지와 배치 호출 규칙이 정의돼 있지만 모델은 가끔 어긴다.
 
 ```text
 search_games
 → get_prices + assess_hardware
-→ get_prices + assess_hardware
-→ RecommendationDraft
+→ summarize_reviews([72]) → summarize_reviews([472]) → summarize_reviews([71]) → … (8회)
+→ GraphRecursionError → 502
 ```
 
-프롬프트에는 완료된 Tool 재호출 금지와 배치 호출 규칙이 정의돼 있다. 중복 호출이 발생해도 러너 후검증이 잘못된 후보 추천을 차단하므로 결과 정확성은 유지된다.
+"스토리 중심 게임 1개만"이라는 질문에서 통과 후보의 리뷰를 한 게임씩 읽어 나가다 반복 상한(`recursion_limit=20`)에 걸린 실제 기록이다. 호출마다 `igdb_ids`가 달라 인자 중복 검사로는 잡히지 않는다. 그래서 `app/agent/limits.py`가 요청 하나에서 LLM이 각 Tool을 부를 수 있는 횟수를 센다.
 
-다만 API 비용과 지연이 증가할 수 있으므로, 추후 다음 계층에서 구조적으로 보완할 수 있다.
+| Tool | 상한 | 이유 |
+|---|---|---|
+| `search_games` | 1 | 조건을 바꿔 다시 검색하지 않는다 |
+| `get_prices`, `assess_hardware` | 1 | 서버가 후보 전체를 조회하므로 다시 불러도 결과가 같다 |
+| `get_review_scores`, `summarize_reviews` | 2 | 모델이 id를 넘긴다. 후보에 없는 id로 거부되면 고쳐서 다시 부를 수 있어야 한다 |
 
-- Tool 결과 캐시
-- `CandidateStore` 기반 조회 완료 ID 필터링
-- Runner의 중복 `tool_call` 차단
-- 동일 Tool의 단일 AIMessage 중복 호출 병합
-
-이 문제는 질문 가공이나 `LLMQueryParser`가 아니라 Agent runner 또는 Tool 실행 계층의 개선 사항이다.
+- 상한을 넘긴 호출은 Tool을 실행하지 않고 `build_call_limit_notice()`의 안내만 돌려준다. 한 턴에 같은 Tool을 여러 번 부른 경우도 여기서 걸린다.
+- 한 번 거부된 Tool은 다음 모델 호출부터 Tool 목록에서 빠진다. 모델이 안내를 무시해도 같은 Tool을 더 부를 수 없다. 상한에 닿기만 한 Tool은 빼지 않으므로 정상 흐름에서는 모델이 받는 입력이 달라지지 않는다.
+- 횟수는 요청 단위다. 후검증 재시도·되묻기로 루프에 다시 들어가도 이어서 센다.
+- 인자 검증에서 걸려 Tool 본문이 돌지 않은 호출은 세지 않는다. 러너가 직접 부르는 안전망·리뷰 요약도 세지 않는다.
+- 새 Tool을 등록하면 `TOOL_CALL_LIMITS`에도 적는다(`tests/agent/test_limits.py`가 빠뜨린 Tool을 잡는다).
 
 ## 테스트
 

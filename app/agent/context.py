@@ -11,6 +11,7 @@ Tool 파일(app/agent/tools/*.py)은 여기 정의된 규약만 쓴다.
 import asyncio
 import json
 import logging
+from collections import Counter
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
@@ -232,6 +233,9 @@ class AgentContext:
     progress: Progress = silent
     stage_timeout_seconds: float = 30
     stages: list[str] = field(default_factory=list)  # run_stage로 실행한 단계 이름 (테스트·진단용)
+    # LLM이 부른 Tool별 호출 수(상한을 넘겨 거부한 호출 포함). 요청 하나 동안 재시도·되묻기 루프를
+    # 건너 이어 센다. 러너가 직접 부르는 안전망·리뷰 요약은 세지 않는다 (app/agent/limits.py)
+    tool_calls: Counter[str] = field(default_factory=Counter)
 
     @classmethod
     def pending(

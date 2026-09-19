@@ -95,6 +95,7 @@ QR을 찍으면 배포된 프론트엔드
   ├─ assess_hardware   검색된 후보 전체 → 최소 사양·호환 판정
   ├─ get_review_scores 후보 igdb_id 목록 → Steam 리뷰 통계 (추천 비율·Wilson 하한·평가 문구)
   └─ summarize_reviews 최종 후보 igdb_id 목록 → Steam 리뷰 한줄평
+  Tool별 호출 상한(요청 하나): 검색·가격·사양 1회, 리뷰 점수·리뷰 요약 2회. 넘긴 호출은 실행하지 않는다
   ↓
 RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화된 최종 출력
   ↓
@@ -110,6 +111,11 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
   러너가 질문 분해 결과에서 주입하므로, 판정은 항상 코드(`app/tools/*`)가 합니다.
 - 가격·사양 Tool은 LLM이 넘긴 id와 무관하게 **검색된 후보 전체**를 조회합니다. 후보 id가 길어지자 모델이
   30개 중 일부만 넘기거나 없는 id를 섞었고, 조회하지 않은 후보는 추천될 수 없기 때문입니다.
+- LLM이 같은 Tool을 부를 수 있는 횟수는 요청 하나에 정해져 있습니다([app/agent/limits.py](app/agent/limits.py):
+  검색·가격·사양 1회, 리뷰 점수·리뷰 요약 2회). 넘긴 호출은 Tool을 실행하지 않고 안내만 돌려주며, 한 번
+  거부된 Tool은 다음 모델 호출부터 목록에서 빠집니다. 통과 후보의 리뷰를 한 게임씩 여덟 번 읽다가 반복
+  상한에 걸려 502로 끝나던 질문이 있었습니다. 후검증 재시도·되묻기로 루프에 다시 들어가도 이어서 세고,
+  러너가 직접 부르는 안전망·리뷰 요약은 세지 않습니다.
 - Tool은 LLM에 압축 JSON만 돌려주고 응답용 전체 모델은 요청 단위 `CandidateStore`에 쌓습니다.
 - Tool 실패는 예외로 올리지 않고 `{"error": ...}`로 LLM에 돌려주며 `warnings`에 남깁니다. 502는 질문 분해 실패,
   에이전트 루프 실패(모델 오류·반복 상한·전체 120초 초과), 재시도 후에도 후검증 실패일 때만 납니다.
@@ -136,11 +142,12 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 | `build_rejection` | 후검증 실패 사유와 재제출 규칙 | [app/agent/prompts.py](app/agent/prompts.py) | 사용자 메시지 |
 | `build_empty_challenge` | 빈 초안인데 통과 후보가 남았을 때 그 목록과 `skipped`의 뜻을 붙여 한 번 되묻기 | [app/agent/prompts.py](app/agent/prompts.py) | 사용자 메시지 |
 | `build_name_challenge` | 추천 목록의 게임 이름이 답변에 없을 때 빠진 이름과 추천 목록을 붙여 한 번 되묻기 | [app/agent/prompts.py](app/agent/prompts.py) | 사용자 메시지 |
+| `build_call_limit_notice` | 호출 상한을 넘겨 실행하지 않은 Tool 호출에 돌려주는 안내 | [app/agent/prompts.py](app/agent/prompts.py) | Tool 결과(`{"error": ...}`) |
 | `JUDGE_SYSTEM` | 답변 문단의 `grounded`·`linked` 채점 (오프라인) | [evals/agent_e2e/judge.py](evals/agent_e2e/judge.py) | `JudgeVerdict` |
 
 - **집행은 프롬프트 밖에 둡니다.** 추천 개수와 판정 통과는 `CandidateStore.validate_draft`가, 조건 중복
-  제거는 `conditions.py`의 validator가, 사양 최종 판정과 이유 문장은 `compose_assessment`가 집행합니다.
-  프롬프트는 요청하고, 거부는 코드가 합니다.
+  제거는 `conditions.py`의 validator가, 사양 최종 판정과 이유 문장은 `compose_assessment`가, 같은 Tool을
+  다시 부르지 말라는 규칙은 `ToolCallLimiter`가 집행합니다. 프롬프트는 요청하고, 거부는 코드가 합니다.
 - **문구를 고치기 전에 잽니다.** 예시까지 적어 둔 규칙이 실측에서 깨진 자리는 [evals/](evals/)의 REPORT에
   있습니다(`친구 N명이서`를 N+1로 세는 실패 18/18, `내장그래픽`을 GPU 모델명 자리에, 판단 불가를 미달로
   단정 16/26).
