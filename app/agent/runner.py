@@ -13,6 +13,9 @@
    "실패나 누락은 필수 조건 통과로 처리하지 않는다"를 모델의 성실함에 맡기지 않는다.
 4. validate: 후검증. 후보에 있는 id인지, 판정을 통과했는지, 개수 이하인지 검사한다. 위반하면
    retry가 거부 사유를 메시지로 붙여 agent로 돌려보내고, 그래도 안 되면 502다.
+   빈 초안은 위반이 아니지만, 판정을 통과한 후보가 남아 있으면 retry가 그 목록을 붙여 한 번만
+   되묻는다. 모델이 status=skipped를 "확인 못 함"으로 읽고 빈손으로 끝내는 일을 막는다. 되묻기는
+   재시도 횟수를 쓰지 않고, 다시 비어 있으면 에이전트의 판단으로 받는다.
 5. judge → reviews·media(병렬) → respond: 확정 후보의 리뷰 요약(미조회분)과 미디어를 붙이고
    RecommendationResponse를 만든다.
 
@@ -39,7 +42,12 @@ from langgraph.runtime import Runtime
 
 from app.agent.context import AgentContext, ToolSet, unique
 from app.agent.progress import PipelineStageError, Progress, silent, stream_progress
-from app.agent.prompts import AGENT_SYSTEM, build_rejection, build_user_input
+from app.agent.prompts import (
+    AGENT_SYSTEM,
+    build_empty_challenge,
+    build_rejection,
+    build_user_input,
+)
 from app.agent.schemas import RecommendationDraft
 from app.agent.tools import build_tools
 from app.agent.tools import hardware as hardware_tool
@@ -63,6 +71,9 @@ class PipelineState(TypedDict):
     structured_response: NotRequired[RecommendationDraft | None]
     attempts: NotRequired[int]  # 후검증에서 거부된 횟수
     problems: NotRequired[list[str]]  # 마지막 후검증의 거부 사유
+    overlooked: NotRequired[list[int]]  # 빈 초안인데 판정을 통과한 후보 (되물을 대상)
+    # 되묻기 전의 빈 초안. 있으면 이미 되물었다
+    empty_draft: NotRequired[RecommendationDraft | None]
     recommended_ids: NotRequired[list[int]]
     response: NotRequired[RecommendationResponse]
 
@@ -149,7 +160,8 @@ class AgentRecommender:
     async def run(self, question: str, progress: Progress = silent) -> RecommendationResponse:
         ctx = AgentContext.pending(self.tools, progress, self.stage_timeout_seconds)
         # 서브그래프는 같은 상한을 자기 카운터로 센다. 부모 노드 수가 상한에 걸리지 않게만 한다.
-        pipeline_steps = 4 * (self.max_validation_retries + 1) + 4
+        # 루프는 첫 시도 + 거부 재시도 + 빈 초안 되묻기 한 번이다.
+        pipeline_steps = 4 * (self.max_validation_retries + 2) + 4
         try:
             result = await self.graph.ainvoke(
                 {"question": question, "messages": []},
@@ -204,34 +216,64 @@ class AgentRecommender:
         return {}
 
     async def _validate(self, state: PipelineState, runtime: Runtime[AgentContext]) -> dict:
-        """후검증. 거부 사유가 남고 재시도도 다 썼으면 필수 단계 실패다."""
+        """후검증. 거부 사유가 남고 재시도도 다 썼으면 필수 단계 실패다.
+
+        빈 초안은 거부 사유가 아니다. 다만 판정을 통과한 후보가 남아 있으면 한 번만 되묻는다.
+        """
         ctx = runtime.context
-        problems = ctx.store.validate_draft(state["structured_response"])
+        draft = state["structured_response"]
+        problems = ctx.store.validate_draft(draft)
         if problems and state["attempts"] >= self.max_validation_retries:
+            if (empty_draft := state.get("empty_draft")) is not None:
+                # 되물은 뒤의 초안이 끝내 검증을 통과하지 못했다. 되묻기가 200이던 응답을 502로
+                # 바꾸지 않도록, 되묻기 전의 빈 초안으로 돌아간다.
+                logger.warning("Draft after empty challenge rejected, keeping empty: %s", problems)
+                return {"structured_response": empty_draft, "problems": [], "overlooked": []}
             logger.warning("Agent draft rejected after retries: %s", problems)
             ctx.progress(AGENT_STAGE, "failed", None)
             raise PipelineStageError("에이전트가 조건에 맞는 추천을 확정하지 못했습니다.")
-        return {"problems": problems}
+        overlooked: list[int] = []
+        if not problems and not draft.recommended_igdb_ids and state.get("empty_draft") is None:
+            overlooked = ctx.store.passing_ids()
+        return {"problems": problems, "overlooked": overlooked}
 
     @staticmethod
     def _route(state: PipelineState) -> Literal["retry", "judge"]:
-        return "retry" if state["problems"] else "judge"
+        return "retry" if state["problems"] or state["overlooked"] else "judge"
 
-    async def _retry(self, state: PipelineState) -> dict:
-        """거부 사유를 메시지로 붙여 agent로 돌려보낸다. 지난 초안은 지운다."""
-        logger.info("Agent draft rejected, retrying: %s", state["problems"])
+    async def _retry(self, state: PipelineState, runtime: Runtime[AgentContext]) -> dict:
+        """메시지를 붙여 agent로 돌려보낸다. 지난 초안은 지운다.
+
+        거부면 사유를 붙이고 재시도 횟수를 센다. 빈 초안 되묻기면 통과 후보 목록을 붙이고, 횟수를
+        세지 않는 대신 빈 초안을 남겨 둔다(다시 되묻지 않는 표시이자 검증 실패 시 돌아갈 자리).
+        """
+        if state["problems"]:
+            logger.info("Agent draft rejected, retrying: %s", state["problems"])
+            return {
+                "messages": [HumanMessage(content=build_rejection(state["problems"]))],
+                "structured_response": None,
+                "attempts": state["attempts"] + 1,
+            }
+        ctx = runtime.context
+        games = ctx.store.resolve(state["overlooked"])
+        logger.info("Empty draft with %d passing candidates, asking once more", len(games))
+        challenge = build_empty_challenge(games, ctx.conditions.recommendation_count)
         return {
-            "messages": [HumanMessage(content=build_rejection(state["problems"]))],
+            "messages": [HumanMessage(content=challenge)],
             "structured_response": None,
-            "attempts": state["attempts"] + 1,
+            "empty_draft": state["structured_response"],
         }
 
     async def _judge(self, state: PipelineState, runtime: Runtime[AgentContext]) -> dict:
         ctx = runtime.context
         ctx.progress(AGENT_STAGE, "completed", f"도구 호출 {count_tool_calls(state['messages'])}회")
         ids = unique(state["structured_response"].recommended_igdb_ids)
+        # 추천은 후검증을 통과했으므로 조회에 실패해 checked가 아니어도 통과로 센다
+        passing = len(set(ctx.store.passing_ids()) | set(ids))
         excluded = len(ctx.store.excluded_ids(ids))
-        ctx.progress("조건 판정", "completed", f"추천 {len(ids)}개, 제외 {excluded}개")
+        ctx.progress(
+            "조건 판정", "completed", f"통과 {passing}개 중 {len(ids)}개 추천, 제외 {excluded}개"
+        )
         return {"recommended_ids": ids}
 
     async def _reviews(self, state: PipelineState, runtime: Runtime[AgentContext]) -> dict:

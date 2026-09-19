@@ -7,6 +7,7 @@ from langchain_core.messages import HumanMessage
 
 from app.agent.context import AgentContext
 from app.agent.progress import PipelineStageError
+from app.schemas.price import PriceQuote
 from app.schemas.recommendation import ErrorEvent, ResultEvent, StageEvent
 from tests.agent.fakes import checks, draft, reviews, search
 
@@ -67,7 +68,7 @@ def test_stream_emits_tool_stages_and_matches_run(make_recommender):
     )
     assert detail == "도구 호출 4회"
     judged = next(e for e in events if isinstance(e, StageEvent) and e.stage == "조건 판정")
-    assert judged.detail == "추천 1개, 제외 2개"
+    assert judged.detail == "통과 1개 중 1개 추천, 제외 2개"
     assert stages[-1] == ("미디어", "completed")
 
 
@@ -115,6 +116,91 @@ def test_draft_rejected_twice_fails_like_required_stage(make_recommender):
     events = asyncio.run(_collect(again.stream("q")))
     assert isinstance(events[-1], ErrorEvent)
     assert ("에이전트 추론", "failed") in [(e.stage, e.status) for e in events[:-1]]
+
+
+def _challenges(recommender) -> list[str]:
+    """그래프를 끝까지 돌려 러너가 붙인 빈 초안 되묻기 메시지를 모은다."""
+    state = asyncio.run(
+        recommender.graph.ainvoke(
+            {"question": "q", "messages": []}, context=AgentContext.pending(recommender.tools)
+        )
+    )
+    return [
+        message.content
+        for message in state["messages"]
+        if isinstance(message, HumanMessage) and "재확인" in message.content
+    ]
+
+
+def test_empty_draft_with_passing_candidates_is_asked_once_more(make_recommender, services):
+    # 3번이 가격·사양을 통과했는데 빈손으로 제출했다 → 통과 후보를 붙여 되묻는다 → 3번으로 제출
+    script = (search(**SEARCH), checks([1, 2, 3]), draft([], "없음"), draft([3], "다시"))
+
+    response = run(make_recommender(*script))
+
+    assert [g.game.igdb_id for g in response.games] == [3]
+    assert response.answer == "다시"
+    assert "모든 필수 조건을 충족한다고 확인된 후보가 없습니다." not in response.warnings
+    assert_calls(services, "parse", "search", "price", "hardware")
+
+    challenges = _challenges(make_recommender(*script))
+    assert len(challenges) == 1
+    assert "Game 3(igdb_id 3)" in challenges[0]
+    # 조건에 걸린 후보는 되묻기 목록에 없다
+    assert "Game 1" not in challenges[0] and "Game 2" not in challenges[0]
+
+
+def test_second_empty_draft_is_accepted_as_the_agents_judgment(make_recommender):
+    # 되물어도 비어 있으면 에이전트의 판단으로 받는다. 502가 아니다
+    script = (search(**SEARCH), checks([1, 2, 3]), draft([], "없음"), draft([], "정말 없음"))
+
+    response = run(make_recommender(*script))
+
+    assert response.games == []
+    assert response.answer == "정말 없음"
+    assert "모든 필수 조건을 충족한다고 확인된 후보가 없습니다." in response.warnings
+    assert len(_challenges(make_recommender(*script))) == 1
+
+    events = asyncio.run(_collect(make_recommender(*script).stream("q")))
+    judged = next(e for e in events if isinstance(e, StageEvent) and e.stage == "조건 판정")
+    assert judged.detail == "통과 1개 중 0개 추천, 제외 2개"
+
+
+def test_empty_challenge_does_not_spend_the_rejection_retry(make_recommender):
+    # 되물은 뒤의 초안이 거부돼도 거부 재시도 한 번은 그대로 남아 있다
+    recommender = make_recommender(
+        search(**SEARCH), checks([1, 2, 3]), draft([]), draft([1]), draft([3], "수정")
+    )
+
+    response = run(recommender)
+
+    assert [g.game.igdb_id for g in response.games] == [3]
+    assert response.answer == "수정"
+
+
+def test_rejections_after_challenge_fall_back_to_the_empty_draft(make_recommender):
+    # 되묻기가 200이던 응답을 502로 바꾸지 않는다: 끝내 검증에 실패하면 처음의 빈 초안으로 돌아간다
+    recommender = make_recommender(
+        search(**SEARCH), checks([1, 2, 3]), draft([], "없음"), draft([1]), draft([1])
+    )
+
+    response = run(recommender)
+
+    assert response.games == []
+    assert response.answer == "없음"
+    assert "모든 필수 조건을 충족한다고 확인된 후보가 없습니다." in response.warnings
+
+
+def test_empty_draft_without_passing_candidates_is_not_challenged(make_recommender, services):
+    # 3번도 예산을 넘겨 통과 후보가 없다 → 빈 추천이 옳고, 되묻지 않는다
+    services.price_hardware.quotes = [PriceQuote(igdb_id=i, amount_krw=150) for i in (1, 2, 3)]
+    script = (search(**SEARCH), checks([1, 2, 3]), draft([], "없음"))
+
+    response = run(make_recommender(*script))
+
+    assert response.games == [] and response.answer == "없음"
+    assert {g.game.igdb_id for g in response.excluded_games} == {1, 2, 3}
+    assert _challenges(make_recommender(*script)) == []
 
 
 def test_runner_fetches_skipped_checks_and_reviews_before_finalizing(make_recommender, services):

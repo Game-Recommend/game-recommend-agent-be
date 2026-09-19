@@ -92,6 +92,7 @@ QR을 찍으면 배포된 프론트엔드
 RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화된 최종 출력
   ↓
 러너 후검증: 후보에 있는 id · 가격/사양 판정 통과 · 요청 개수 이하. 위반하면 거부 사유를 붙여 한 번 더 호출
+빈 초안 되묻기: 판정을 통과한 후보가 있는데 추천이 0개면 통과 후보 목록을 붙여 한 번만 되묻는다 (다시 비면 그대로 받는다)
 안전망: 추천 후보 중 가격·사양·리뷰를 조회하지 않은 게임은 러너가 직접 조회
   ↓
 미디어(로고·배너·트레일러) 후처리 → RecommendationResponse (원본 저장소와 같은 응답 형태)
@@ -123,6 +124,7 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 | `SYSTEM_PROMPT` (사양 판정) | 부품별 `met`·`unmet`·`unknown`과 30자 근거 | [app/clients/hardware_judge.py](app/clients/hardware_judge.py) | `_JudgeOutput` |
 | 리뷰 한줄평 | Steam 리뷰 도움순 상위 20개를 100자 한 문장으로 | [app/clients/steam_reviews.py](app/clients/steam_reviews.py) | 자유 문장 |
 | `build_rejection` | 후검증 실패 사유와 재제출 규칙 | [app/agent/prompts.py](app/agent/prompts.py) | 사용자 메시지 |
+| `build_empty_challenge` | 빈 초안인데 통과 후보가 남았을 때 그 목록과 `skipped`의 뜻을 붙여 한 번 되묻기 | [app/agent/prompts.py](app/agent/prompts.py) | 사용자 메시지 |
 | `JUDGE_SYSTEM` | 답변 문단의 `grounded`·`linked` 채점 (오프라인) | [evals/agent_e2e/judge.py](evals/agent_e2e/judge.py) | `JudgeVerdict` |
 
 - **집행은 프롬프트 밖에 둡니다.** 추천 개수와 판정 통과는 `CandidateStore.validate_draft`가, 조건 중복
@@ -338,7 +340,7 @@ event: stage
 data: {"event":"stage","stage":"게임 검색","status":"completed","detail":"후보 30개"}
 
 event: stage
-data: {"event":"stage","stage":"조건 판정","status":"completed","detail":"통과 5개 중 3개 선택, 제외 20개"}
+data: {"event":"stage","stage":"조건 판정","status":"completed","detail":"통과 5개 중 3개 추천, 제외 20개"}
 
 event: result
 data: {"event":"result","result":{ ...JSON 응답과 같은 본문... }}

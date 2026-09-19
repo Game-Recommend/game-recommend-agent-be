@@ -58,7 +58,7 @@ def test_stream_emits_stages_then_result(client, services):
     details = {(d["stage"], d["status"]): d["detail"] for e, d in events if e == "stage"}
     assert details[("게임 검색", "completed")] == "후보 3개"
     assert details[("에이전트 추론", "completed")] == "도구 호출 4회"
-    assert details[("조건 판정", "completed")] == "추천 1개, 제외 2개"
+    assert details[("조건 판정", "completed")] == "통과 1개 중 1개 추천, 제외 2개"
     result = events[-1][1]["result"]
     assert result["games"][0]["game"]["igdb_id"] == 3
     assert result["answer"] == "테스트 답변"

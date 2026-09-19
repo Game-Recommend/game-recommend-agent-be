@@ -137,6 +137,15 @@ class CandidateStore:
     def passes(self, igdb_id: int) -> bool:
         return not self.failing_reasons(igdb_id)
 
+    def passing_ids(self) -> list[int]:
+        """조회했고 필수 조건을 모두 통과한 후보. 검색 순서를 유지한다.
+
+        조회하지 않은 후보는 조건이 없으면 `passes()`가 참이지만, 판단한 적이 없으므로 넣지 않는다.
+        """
+        return [
+            igdb_id for igdb_id in self.candidates if self.checked(igdb_id) and self.passes(igdb_id)
+        ]
+
     def failing_reasons(self, igdb_id: int) -> list[str]:
         """추천할 수 없는 이유. 비어 있으면 통과다."""
         evaluated = self.evaluate(igdb_id)
