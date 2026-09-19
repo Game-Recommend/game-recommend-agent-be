@@ -209,6 +209,27 @@ def summarize(records: list[dict]) -> dict:
     recommended = [
         record["recommended_count"] for record in scored_records if "recommended_count" in record
     ]
+
+    # 빈 추천은 세 축을 거의 자동으로 통과하고, 심판 점수가 만점이며, 빨리 끝난다. 빈 추천이
+    # 많을수록 전체 수치가 좋아 보이므로 추천을 낸 문항만의 수치를 따로 낸다
+    # (REPORT의 2026-09-19 절).
+    with_games = [record for record in scored_records if record.get("recommended_count")]
+    with_games_seconds = sorted(record["seconds"] for record in with_games)
+    verdicts = [record["judge"] for record in with_games if record.get("judge")]
+
+    def mean(key: str) -> float | None:
+        if not verdicts:
+            return None
+        return round(sum(verdict[key] for verdict in verdicts) / len(verdicts), 2)
+
+    with_recommendations = {
+        "scored": len(with_games),
+        "passed": sum(1 for record in with_games if record.get("passed")),
+        # 전체 지연과 같은 방식(위쪽 중앙값)으로 센다
+        "latency_median": with_games_seconds[len(with_games_seconds) // 2] if with_games else None,
+        "grounded_mean": mean("grounded_score"),
+        "linked_mean": mean("linked_score"),
+    }
     return {
         "attempted": attempted,
         "scored": scored,
@@ -225,6 +246,13 @@ def summarize(records: list[dict]) -> dict:
             "answer_format": axes["answer_format_passed"],
         },
         "empty_recommendations": sum(1 for count in recommended if count == 0),
+        # 빈 추천 중 판정을 통과한 후보가 있었던 문항. 통과 후보 수를 남기지 않은 기록은 세지 않는다
+        "overlooked_empty": sum(
+            1
+            for record in scored_records
+            if record.get("recommended_count") == 0 and record.get("passing_count")
+        ),
+        "with_recommendations": with_recommendations,
         "latency_seconds": {
             "median": seconds[len(seconds) // 2] if seconds else None,
             "max": seconds[-1] if seconds else None,
@@ -347,8 +375,15 @@ async def main() -> None:
         f"답변 형식 {summary['axes']['answer_format']} (각 /{summary['scored']})"
     )
     print(
-        f"  추천 0개 {summary['empty_recommendations']}건, "
+        f"  추천 0개 {summary['empty_recommendations']}건"
+        f"(통과 후보가 있었던 것 {summary['overlooked_empty']}건), "
         f"지연 중앙값 {summary['latency_seconds']['median']}초"
+    )
+    with_games = summary["with_recommendations"]
+    print(
+        f"  추천을 낸 {with_games['scored']}문항: 통과 {with_games['passed']}건, "
+        f"지연 중앙값 {with_games['latency_median']}초, "
+        f"심판 근거 {with_games['grounded_mean']}/5 · 조건 연결 {with_games['linked_mean']}/5"
     )
     if summary["judge"]:
         judge_summary = summary["judge"]

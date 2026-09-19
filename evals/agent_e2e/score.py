@@ -3,6 +3,7 @@
 세 축을 따로 낸다.
 
 1. `constraints` — 사용자가 말한 필수 조건을 추천 결과가 지켰는가. 코드로만 본다.
+   판정을 통과한 후보가 있는데 추천을 비운 경우도 여기서 잡는다.
 2. `trajectory` — 필요한 단계가 실제로 실행됐는가. 진행 이벤트로 본다.
 3. `answer` — 답변 문단의 형식. 코드로 본다. 내용 품질은 judge.py의 LLM 심판이 본다.
 
@@ -26,6 +27,11 @@ HANGUL = re.compile(r"[가-힣]")
 # 추천에 들어갈 수 있는 판정 상태. 루트 README의
 # "실패나 누락은 필수 조건 통과로 처리하지 않는다"가 unmet·unknown을 막는다.
 PASSING = {"met", "skipped"}
+
+# `조건 판정` 단계가 detail에 남기는 통과 후보 수. 두 저장소의 문구가 다르지만 앞부분은 같다.
+#   agent    = "통과 25개 중 2개 추천, 제외 5개"
+#   baseline = "통과 25개 중 2개 선택, 제외 5개"
+PASSING_COUNT = re.compile(r"통과 (\d+)개")
 
 # 전 문항 공통으로 실행돼야 하는 단계. 두 저장소의 구조가 달라 프로필로 가른다.
 #   agent    = 이 저장소. LLM이 Tool을 골라 부른다(에이전트 추론).
@@ -129,6 +135,32 @@ def check_constraints(item: dict, response: RecommendationResponse) -> list[str]
     return problems
 
 
+def passing_count(stages: list[dict]) -> int | None:
+    """`조건 판정` 단계가 남긴 통과 후보 수. 남기지 않은 기록이면 None.
+
+    에이전트 저장소는 2026-09-19 전의 실행 기록에 이 수가 없다("추천 0개, 제외 5개").
+    """
+    for event in stages:
+        if event["stage"] == "조건 판정" and event["status"] == "completed":
+            if match := PASSING_COUNT.search(event.get("detail") or ""):
+                return int(match.group(1))
+    return None
+
+
+def check_overlooked_candidates(response: RecommendationResponse, stages: list[dict]) -> list[str]:
+    """판정을 통과한 후보가 있는데 추천이 비었는지 본다. `constraints` 축에 넣는다.
+
+    빈 추천은 가격·제외·형식 검사를 거의 자동으로 통과하므로, 이 검사가 없으면 아무것도 추천하지
+    않는 쪽이 통과율에서 유리해진다(REPORT의 2026-09-19 절). 통과 후보는 검색이 질문의 조건으로
+    이미 거른 후보라 추천할 수 있는 게임이다. 에이전트가 되물음 뒤에도 비운 경우까지 위반으로
+    세므로, 정당한 빈 추천인지는 기록의 answer를 사람이 읽고 판단한다.
+    """
+    passing = passing_count(stages)
+    if not response.games and passing:
+        return [f"통과 후보가 {passing}개인데 추천이 0개다"]
+    return []
+
+
 def check_trajectory(item: dict, stages: list[dict], profile: str = "agent") -> list[str]:
     """필요한 단계가 실행됐는지, 순서가 맞는지 본다."""
     problems: list[str] = []
@@ -186,7 +218,7 @@ def answer_format_problems(answer: str, game_names: list[str]) -> list[str]:
 def score_case(
     item: dict, response: RecommendationResponse, stages: list[dict], profile: str = "agent"
 ) -> dict:
-    constraints = check_constraints(item, response)
+    constraints = check_constraints(item, response) + check_overlooked_candidates(response, stages)
     trajectory = check_trajectory(item, stages, profile)
     answer = check_answer_format(response)
     return {
@@ -201,6 +233,7 @@ def score_case(
         "answer_format_problems": answer,
         "recommended": [game.game.name for game in response.games],
         "recommended_count": len(response.games),
+        "passing_count": passing_count(stages),
         "excluded_count": len(response.excluded_games),
         "warnings": response.warnings,
     }
