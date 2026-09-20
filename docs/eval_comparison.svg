@@ -21,7 +21,7 @@
 <text x="1096" y="291" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">동률 수준</text>
 <line x1="56" y1="306" x2="1260" y2="306" stroke="#E5E7EB"/>
 <text x="80" y="342" font-size="27" fill="#111827" font-weight="600" text-anchor="start">선택 관련성</text>
-<text x="80" y="368" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">같은 통과 후보 · 인기순 선택과 쌍대 비교 · 비김 35</text>
+<text x="80" y="368" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">같은 통과 후보 · 인기순 선택과 1:1 비교 · 비김 35</text>
 <text x="520" y="342" font-size="30" fill="#111827" font-weight="500" text-anchor="start">2승</text>
 <text x="586" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">판정 67번 중</text>
 <path d="M520 356 H756 Q760 356 760 360 V362 Q760 366 756 366 H520 Z" fill="#D4EEEE"/>
@@ -42,6 +42,6 @@
 <text x="1096" y="420" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+2.8초</text>
 <text x="1096" y="447" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">원본 우세</text>
 <line x1="56" y1="462" x2="1260" y2="462" stroke="#E5E7EB"/>
-<text x="80" y="489" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">필수 조건 · LLM 왕복: 같은 100문항(원본 2026-09-17, 에이전트 2026-09-20). 선택 관련성: 취향·상황 질문 40문항 × 2회의 쌍대 심판.</text>
+<text x="80" y="489" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">필수 조건 · LLM 왕복: 같은 100문항(원본 2026-09-17, 에이전트 2026-09-20). 선택 관련성: 취향·상황 질문 40문항 × 2회의 1:1 판정.</text>
 <rect x="56.5" y="172.5" width="1203" height="329" rx="13.5" fill="none" stroke="#D1D5DB"/>
 </svg>
