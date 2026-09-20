@@ -553,7 +553,7 @@ evals/
 ├─ agent_questions/         예상 질문 5개의 고정 파이프라인·에이전트 전후 비교 (실제 API, CI 제외)
 ├─ agent_e2e/               엔드투엔드 100문항 평가 (조건·궤적·답변 형식 + LLM 심판, 원본 저장소와 같은 코드)
 ├─ parser_conditions/       질문 분해 평가 (조건 추출 210문항)
-├─ relevance/               선택 관련성 평가 (에이전트의 선택 대 인기순 선택, 쌍대 비교)
+├─ relevance/               선택 관련성 평가 (에이전트의 선택 대 인기순 선택, 1:1 비교)
 ├─ non_steam/               비Steam 폴백 실측 평가
 ├─ search_pool/             IGDB 검색 후보 풀 평가 (LLM 미사용: 연도·다양성·구매 가능성·후보 0개)
 └─ price_hardware/          가격·사양 평가셋
