@@ -333,16 +333,21 @@ make run                # http://127.0.0.1:8000/health
 | `make test-media` | 미디어 도구 테스트 |
 | `make test-integration` | HTTP API·SSE·조립 테스트 (대본 모델로 에이전트를 돌린다) |
 | `make test-agent` | 에이전트 계층 테스트 (대본 모델로 OpenAI 없이 루프·후검증·안전망 검증) |
+| `make test-evals` | 평가 채점기·실행기의 오프라인 검사 (실제 API를 부르지 않는다) |
 | `make graph` | 추천 파이프라인 그래프(에이전트 서브그래프 포함)를 Mermaid로 출력 |
 
 테스트 옵션은 `make test ARGS="-q"`처럼 전달합니다. `make test-llm`은
 `make test-query-processing`의 호환용 별칭입니다. 테스트는 역할별 가짜 연동을
 사용하며 실제 외부 API 호출이나 LLM 출력 품질은 검증하지 않습니다.
 
+`pytest`의 `testpaths`는 `tests`와 `evals`입니다. [evals/](evals/)의 `test_*.py`는 모의 응답과 저장된
+데이터만 쓰는 오프라인 검사라 본 테스트와 함께 돌고, 실제 API와 LLM을 부르는 `run_eval.py`·`judge.py`는
+테스트가 아니라 스크립트라 수집되지 않습니다. 평가 쪽에 느리거나 돈이 드는 테스트를 새로 만들면
+마커로 분리합니다.
+
 `.env`에 `LANGSMITH_TRACING=true`를 두면 테스트에서도 추적이 켜지고, LangSmith가 실행 입력을 직렬화하며
 대본 모델(`ScriptedChatModel`)의 메시지 iterator를 모델 호출 전에 소진해 에이전트·통합 테스트가
 실패합니다. 로컬에서는 `LANGSMITH_TRACING=false make test`로 돌립니다(CI는 `.env`가 없어 영향이 없습니다).
-`pytest`의 `testpaths`는 `tests`라 [evals/](evals/)의 테스트는 `make test`와 CI에서 실행되지 않습니다.
 
 ## HTTP API
 

@@ -37,7 +37,10 @@ packages = ["app"]
 entrypoint = "app.main:app"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+# evals/*/test_*.py는 모의 응답과 저장된 데이터만 쓰는 오프라인 검사라 본 테스트와 함께 돈다.
+# 실제 API와 LLM을 부르는 쪽(run_eval.py·judge.py·build_dataset.py)은 테스트가 아니라 스크립트라
+# 수집되지 않는다. 평가 쪽에 느리거나 돈이 드는 테스트를 새로 만들면 마커로 분리한다.
+testpaths = ["tests", "evals"]
 
 [tool.ruff]
 line-length = 100
