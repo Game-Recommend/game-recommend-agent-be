@@ -3,7 +3,8 @@
 경로는 저장소 루트 기준입니다. 이 저장소는 [game-recommend-be](https://github.com/Game-Recommend/game-recommend-be)를
 복사해, 고정 파이프라인을 **LangChain 에이전트가 Tool을 골라 호출하고 최종 답변까지 쓰는 구조**로 바꾸는
 작업 공간입니다. 프론트는 [game-recommend-agent-fe](https://github.com/Game-Recommend/game-recommend-agent-fe)입니다.
-발표는 2026-09-18(금)입니다.
+발표는 2026-09-18(금)에 했습니다. 그 뒤의 개선(검색 후보 풀 교체, 되묻기 두 종류, Tool별 호출 상한)은
+PR 이력과 [evals/](evals/)의 REPORT에 있습니다.
 
 ## 전환 원칙
 
@@ -47,7 +48,7 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 ```
 
 `app/agent/context.py`의 `AgentContext`(요청 컨텍스트), `CandidateStore`(후보·판정 저장소), `ToolSet`(서비스
-도구 묶음)이 공통 계약입니다. `app/assembly.py`가 `.env`로 `ToolSet`을 만들고 모드에 따라 추천기를 고릅니다.
+도구 묶음)이 공통 계약입니다. `app/assembly.py`가 `.env`로 `ToolSet`을 만들고 `AgentRecommender`를 조립합니다.
 
 ## 담당 파일과 할 일
 
@@ -84,7 +85,7 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 | `tests/agent/test_prompts.py` (신규) | 입력 구성에 조건·검색 인자가 빠지지 않는지, 거부 문구에 문제 목록이 들어가는지 |
 | 평가 표 (Notion/README) | 질문 유형별(복합 조건, 가격만, 사양만, 특정 게임, 조건 없음) 실제 Tool 호출 순서·횟수와 답변 품질을 표로 기록. LangSmith 추적을 켜면 호출 기록이 그대로 남는다 |
 
-주의: Tool 이름(`search_games`, `get_prices`, `assess_hardware`, `summarize_reviews`)과 최종 출력 이름
+주의: Tool 이름(`search_games`, `get_prices`, `assess_hardware`, `get_review_scores`, `summarize_reviews`)과 최종 출력 이름
 (`RecommendationDraft`)은 코드와 같아야 합니다. 프롬프트를 바꾸면 `make test-agent`로 확인합니다.
 
 ### IGDB 담당
@@ -102,7 +103,7 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 | --- | --- |
 | `app/agent/tools/price.py` | 완료. 다른 Tool 파일의 참조 예시 |
 | `app/agent/tools/hardware.py` | 완료. `compact_spec()` 표현 다듬기 |
-| 미디어 | 변경 없음. 에이전트 밖 후처리(`runner._finalize`) |
+| 미디어 | 변경 없음. 에이전트 밖 후처리(`runner`의 `media`·`respond` 노드) |
 | 최종 답변 | 원본의 `final_answer/`는 제거. 답변 규칙은 `app/agent/prompts.py`(질문 가공 담당)로 이관 |
 
 ### 리뷰 담당
@@ -111,8 +112,8 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 | --- | --- |
 | `app/agent/tools/review_score.py` | 완료. `get_review_scores`(Steam 리뷰 통계)는 후보 선별용 수치, `summarize_reviews`는 카드용 문장으로 쓰임을 나눴다. 결과는 `CandidateStore`에 담지 않아 응답 본문에 나오지 않는다 |
 | `app/agent/tools/reviews.py` | `summarize_reviews` docstring 다듬기. "최종 추천 후보에만" 원칙과 비용 안내 유지 |
-| `app/agent/tools/reviews.py` | 에이전트가 "평가 좋은 게임" 조건에 쓸 수 있는 압축 필드 검토(긍정 비율, `review_score_desc`). `ReviewSummary` 모델 확장은 리뷰 담당 결정이며, 바꾸면 `schemas/review.py` 소비자(FE 카드)와 조율 |
-| `app/clients/steam_reviews.py` | 게임을 순차 처리해 3개면 3배 느리다. `asyncio.gather`로 게임별 병렬 처리 검토(리뷰 담당 모듈이므로 리뷰 담당이 결정) |
+| `app/agent/tools/review_score.py` | 완료. "평가 좋은 게임" 조건은 `ReviewSummary`를 넓히는 대신 별도 Tool로 나눴다(긍정 비율·Wilson 하한·`review_score_desc`) |
+| `app/clients/steam_reviews.py` | 완료. `asyncio.gather`와 동시성 8로 게임별 병렬 처리한다. 리뷰 요약이 5.8~13.7초에서 1.8~2.4초가 됐다 |
 | `tests/reviews/test_reviews_tool.py` (신규) | `FakeReviews`로 압축 출력, `steam_app_id` 없는 게임의 `summary: null`, 실패 시 오류 JSON 검증 |
 
 ## Tool 정의 규약
@@ -165,7 +166,7 @@ id를 그대로 씁니다.
 | SSE 단계명 | 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 점수, 리뷰 요약, 조건 판정, 미디어 | `runner.py`, 각 Tool의 `STAGE` |
 | 리뷰 점수 저장 | `get_review_scores` 결과는 `CandidateStore`에 담지 않는다. 에이전트 판단 전용이라 응답 본문·안전망에 없다 | `app/agent/tools/review_score.py` |
 
-## 작업 순서 (9/16 ~ 9/18)
+## 작업 순서 (9/16 ~ 9/18, 완료)
 
 1. **9/16 오전 (통합)** 이 뼈대 PR을 머지한다. 나머지 셋은 `.venv`를 새로 만들고(`pip install -e ".[dev]"`)
    `make test-agent`가 통과하는지, `make graph`가 그래프를 내는지 확인한다.

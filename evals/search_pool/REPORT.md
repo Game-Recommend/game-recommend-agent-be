@@ -149,7 +149,7 @@ SF 세계관의 스토리 게임 {genres: [Science fiction, Story]}
 판타지 배경의 액션 RPG {genres: [Fantasy, Action, Role-playing (RPG)]}
   후: The Witcher 3, Skyrim, God of War, Elden Ring, Dark Souls III, Hades
 한 판이 짧은 경쟁 게임 {genres: [Competition], play_mode: competitive}
-  후: Counter-Strike: Global Offensive, Overwatch, StarCraft II, Counter-Strike, Halo 3: ODST
+  후: Counter-Strike: Global Offensive, Overwatch, StarCraft II: Wings of Liberty, Call of Duty: World at War, Counter-Strike, Halo 3: ODST
 ```
 
 - 분류가 하나인 질문은 id로 바꿔도 결과가 같다. 136문항이 그대로인 것이 그 확인이다.

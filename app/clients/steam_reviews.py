@@ -1,7 +1,7 @@
-"""리뷰 담당: steam 리뷰 수집 + web fallback + llm 요약
+"""리뷰 담당: steam 리뷰 수집 + llm 요약
 
-GameCandidate.steam_app_id로 리뷰를 조회한다. 
-steam review가 충분하지 않을 경우 tavily 웹검색으로 보충
+GameCandidate.steam_app_id로 리뷰를 조회한다.
+한국어 리뷰가 모자라면 영어로 보충한다. 웹검색 보충은 쓰지 않는다.
 - 리뷰: `GET https://store.steampowered.com/appreviews/<appid>?json=1`
   - `query_summary`에 `review_score_desc`(예: "Overwhelmingly Positive"),
     `total_positive`, `total_negative`가 있다.

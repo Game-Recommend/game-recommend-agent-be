@@ -46,9 +46,13 @@ API 사용 토큰과 청구 비용은 현재 기록하지 않으며 모델 alias
 # 데이터 재생성: 평가 버전 변경 시 기존 baseline과 해시를 반드시 구분한다.
 .venv/bin/python evals/price_hardware/build_dataset.py
 # API를 호출하지 않는 평가 실행기 검사 + 기존 전체 테스트
-.venv/bin/python -m pytest -q tests evals/price_hardware/test_eval.py
+LANGSMITH_TRACING=false .venv/bin/python -m pytest -q tests evals/price_hardware/test_eval.py
 make lint
 ```
+
+`test_eval.py`의 검사 3건은 현재 실패한다. v2의 라벨 변경(H08이 LLM 호출 전에 `skipped`로 빠진다)과
+`JudgeRequest`에 추가된 `components` 필드를 반영하지 않은 검사들이다. `pytest`의 `testpaths`가
+`tests`라 `make test`와 CI는 이 파일을 돌리지 않아 드러나지 않았다.
 
 설계 참고: [OpenAI Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices).
 경계 사례와 작업별 평가, 반복 평가를 적용했다. 본 평가셋의 하드웨어 성능 라벨을 보증하는 출처는 아니다.

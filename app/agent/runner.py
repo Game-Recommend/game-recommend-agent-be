@@ -7,7 +7,7 @@
 1. parse: 질문 분해. 파서(팀원 모듈)로 GameConditions를 만든다. 기준값은 여기서 나와 Tool에
    주입된다.
 2. agent: 에이전트 루프. LLM이 search_games → get_prices·assess_hardware(같은 턴 병렬) →
-   summarize_reviews를 골라 부르고 RecommendationDraft를 제출한다.
+   get_review_scores·summarize_reviews를 골라 부르고 RecommendationDraft를 제출한다.
    반복 상한은 recursion_limit, 한 번의 루프 시간은 total_timeout(노드 timeout)이다.
    같은 Tool을 되풀이해 부르는 일은 Tool별 호출 상한(app/agent/limits.py)이 먼저 끊는다.
 3. safety_net: 안전망. 추천 후보 중 가격·사양을 조회하지 않은 게임은 러너가 직접 조회한다. README의
@@ -26,7 +26,8 @@
 받기 때문이다. state에는 메시지·초안·재시도 횟수처럼 노드 사이를 오가는 값만 둔다.
 
 진행 이벤트는 노드와 Tool 안(`AgentContext.run_stage`)에서 나와 `stream_progress`가 SSE로 흘린다.
-단계 이름: 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 요약, 조건 판정, 미디어.
+단계 이름: 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 점수, 리뷰 요약, 조건 판정,
+미디어.
 """
 
 import asyncio

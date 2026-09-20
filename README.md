@@ -8,8 +8,8 @@
 
 하드웨어·취향·인원 수·예산·플레이타임·플랫폼 조건을 자연어로 받아, 조건에 맞는 게임을 추천하는 FastAPI 서버입니다.
 
-현재는 **에이전트 계층([app/agent/](app/agent/))이 IGDB 검색·가격·사양·리뷰 Tool 4개를 골라 호출하고
-최종 답변까지 쓰는 단계**입니다. 원본의 고정 파이프라인(오케스트레이터·최종 답변 LLM)은 이 저장소에서 제거했으며
+현재는 **에이전트 계층([app/agent/](app/agent/))이 IGDB 검색·가격·사양·리뷰 점수·리뷰 요약 Tool 5개를
+골라 호출하고 최종 답변까지 쓰는 단계**입니다. 원본의 고정 파이프라인(오케스트레이터·최종 답변 LLM)은 이 저장소에서 제거했으며
 전후 비교는 원본 저장소로 합니다. 서버 시작 시 `.env` 설정으로 자동 조립하며([app/assembly.py](app/assembly.py)),
 테스트에서는 가짜 연동과 대본 모델을 주입해 흐름을 검증합니다. 필수 키(`OPENAI_API_KEY`, `IGDB_CLIENT_ID`,
 `IGDB_CLIENT_SECRET`)가 비어 있으면 `POST /recommend`는 503을 반환합니다.
@@ -34,10 +34,14 @@ QR을 찍으면 배포된 프론트엔드
 | LLM | OpenAI SDK (질문 가공·사양 판정·리뷰 한줄평), `langchain-openai` `ChatOpenAI` (에이전트) |
 | 에이전트 | LangGraph `StateGraph`(질문 분해 → 에이전트 → 안전망 → 후검증·재시도 → 후처리) 안에 LangChain 1.x `create_agent`를 서브그래프로: Tool 호출 루프, 같은 턴 병렬 호출, 구조화된 최종 출력 |
 | 개발 도구 | pytest, Ruff, Makefile |
-| CI | GitHub Actions: PR 및 `main` 푸시 시 린트·테스트 |
+| CI | GitHub Actions: PR 및 `main` 푸시 시 린트·테스트·gitleaks 시크릿 검사 |
 
 의존성과 도구 설정은 [pyproject.toml](pyproject.toml), 실행 명령은
 [Makefile](Makefile), 역할별 개발 범위는 [TEAM.md](TEAM.md)에서 관리합니다.
+
+![게임 추천 에이전트 기술 구성](docs/tech_stack.png)
+
+프론트까지 함께 본 기술 구성입니다. 고칠 때는 [SVG](docs/tech_stack.svg)를 씁니다.
 
 ## 예상 질문
 
@@ -68,7 +72,9 @@ QR을 찍으면 배포된 프론트엔드
   질문에서 리뷰 Tool이 두 번씩인 것은 후보에 없는 id를 넘겨 거부된 뒤 고쳐 부른 것이고, Tool별 호출
   상한(리뷰 Tool 2회)이 허용하는 범위입니다.
 - **하드웨어 질문의 차이는 구조에서 온 것이 아닙니다.** 원본이 4.9초 만에 빈손으로 끝난 것은 질문 분해가
-  플랫폼을 `노트북`으로 뽑아 IGDB 검색이 0건이었기 때문이고, 이 저장소는 검색이 `노트북`을 PC로 읽습니다.
+  플랫폼을 `노트북`으로 뽑아 IGDB 검색이 0건이었기 때문입니다. 이 저장소는 같은 질문에서 질문 분해가
+  `PC`를 냈습니다. 두 저장소의 질문 분해 프롬프트가 갈라져 있고, 이 저장소에는 "노트북 게임"을 플랫폼으로
+  읽으라는 규칙이 있습니다([prompts.py](app/pipeline/query_processing/prompts.py)).
 - **지연도 구조만의 차이가 아닙니다.** 에이전트는 11.0~19.5초로, 추천을 낸 네 질문의 원본(16.1~24.8초)보다
   빠릅니다. 원본은 리뷰 요약에 5.8~13.7초를 쓰는데, 이 저장소는 리뷰 요약을 게임별로 병렬 호출해
   1.8~2.4초에 끝냅니다. 에이전트 쪽에는 도구를 고르는 LLM 왕복이 더해져 있습니다.
@@ -183,7 +189,8 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 | --- | --- | --- |
 | `GameSearchTool` | 조건에 맞는 후보 조회·중복 제거 | `GameCatalogClient` / IGDB (`IgdbCatalogClient`) |
 | `PriceTool` | 정규화된 원화 가격과 예산 비교 | `PriceClient` / Steam (`SteamStoreClient`); Steam에 없는 후보는 무료 게임 표 → CheapShark + Frankfurter 환율 (`CheapSharkClient`) |
-| `HardwareTool` | 사양 평가 결과 정리, 사양 조건 없으면 생략 | `HardwareClient` / Steam (`SteamStoreClient`), Steam에 없는 후보는 PCGamingWiki (`PcGamingWikiClient`); 공통 메모리 규칙 + GPU·CPU LLM 판정 (`hardware_assessor.py`, `OpenAISpecJudge`) |
+| `HardwareTool` | 사양 평가 결과 정리, 사양 조건이 없으면 판정만 `skipped` | `HardwareClient` / Steam (`SteamStoreClient`), Steam에 없는 후보는 PCGamingWiki (`PcGamingWikiClient`); 공통 메모리 규칙 + GPU·CPU LLM 판정 (`hardware_assessor.py`, `OpenAISpecJudge`) |
+| `ReviewScoreTool` | 후보 선별에 쓰는 Steam 리뷰 통계 | `ReviewScoreClient` / Steam 리뷰 (`SteamReviewScoreClient`) |
 | `ReviewSummaryTool` | 선택된 후보의 리뷰 요약 요청 | `ReviewSummaryClient` / Steam 리뷰 + LLM 한줄평 (`SteamReviewSummaryClient`, `steam_reviews.py`) |
 | `MediaTool` | 추천 카드의 로고·배너·트레일러 | `MediaClient` / SteamGridDB → Steam CDN → IGDB (`MediaResolver`) |
 
@@ -205,7 +212,7 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 - 질문 조건은 온라인/로컬, 싱글/협동/경쟁, 전체 완료 시간/세션 시간, CPU·GPU·RAM,
   추천 개수를 구분합니다. 없는 조건은 추측하지 않습니다.
 - 검색 어댑터는 명시된 필수 검색 조건을 검증한 후보를 우선순위순 반환해야 합니다. IGDB 어댑터의
-  우선순위는 **많이 평가된 순**(`total_rating_count`)이고, 본편·리메이크·리마스터만 보며, 플랫폼을 말하지
+  우선순위는 **많이 평가된 순**(`total_rating_count`)이고, 본편·리메이크·리마스터·확장판만 보며, 플랫폼을 말하지
   않으면 PC로 봅니다. 분류와 게임 모드는 이름이 아니라 IGDB id로 겁니다(같은 배열에 이름 조건을 둘 걸면
   0건이 됩니다). 분류어가 IGDB 장르·테마에 없으면 게임 모드(협동 등)로, 그것도 아니면 키워드 이름을 조회해
   단어의 시작이 맞는 키워드 id로 찾습니다.
@@ -213,7 +220,9 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
   IGDB의 완료 시간을 세션 시간으로 대체하지 않습니다. 검색 단계에서 필수 조건을
   검증할 수 없는 게임은 충족 후보로 반환하지 않습니다.
 - 가격·사양은 `met`(충족), `unmet`(미충족), `unknown`(확인 불가)로 구분합니다.
-  사용자가 조건을 지정하지 않았을 때만 `skipped`(검사 생략)를 사용합니다.
+  사용자가 조건을 지정하지 않았으면 `skipped`(검사 생략)입니다. 사양은 조건이 있어도 사용자 부품을
+  비교할 수 없으면(`i5`·`GeForce`처럼 모델명이 없거나 Apple Silicon) 후보를 제외하지 않고 `skipped`로
+  두고 요구 사양만 보여 줍니다(`hardware_assessor.py`의 `user_spec_issue`).
 - 예산이 없더라도 답변용 가격은 조회합니다. `0원` 예산은 무료 게임 조건입니다.
   USD를 그대로 원화 가격으로 취급하지 않으며 `PriceQuote`에는 검증한 원화 정수만 넣습니다.
 - 하드웨어 어댑터는 요구 사양 수집과 사용자 PC 비교를 수행해야 합니다.
@@ -225,11 +234,14 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 - 후보가 없으면 후속 도구를 생략하고 답변 생성 단계에 빈 후보와 이유를 전달합니다.
   조건은 임의로 완화하지 않습니다. 리뷰 실패 시 요약 없이 후보와 경고를 전달합니다.
 - 각 단계의 제한 시간은 기본 30초이며 생성자에서 변경할 수 있습니다.
-  질문 분해·검색·최종 답변 실패는 HTTP 502, 연동 미설정은 503입니다.
+  질문 분해 실패와 에이전트 루프 실패는 HTTP 502, 연동 미설정은 503입니다. 검색 실패는 502가 아니라
+  오류를 에이전트에 돌려주고 빈 추천으로 끝납니다.
 
-현재 순위는 검색 어댑터가 반환한 순서를 유지합니다. 리뷰 점수는 `get_review_scores`로 조회해
-에이전트가 후보 선별에 쓰지만, 러너가 목록을 다시 정렬하지는 않습니다.
-자동 재시도, 호출 제한, 캐시, 대화 메모리는 아직 구현하지 않았습니다.
+추천 목록의 순서는 에이전트가 낸 `recommended_igdb_ids` 순서입니다. 검색 순서를 그대로 유지하는 것은
+`excluded_games`입니다. 리뷰 점수는 `get_review_scores`로 조회해 에이전트가 후보 선별에 쓰지만,
+러너가 목록을 다시 정렬하지는 않습니다.
+대화 메모리는 아직 구현하지 않았습니다. 자동 재시도(OpenAI 호출 3회, 후검증 재시도 1회), Tool별 호출
+상한([app/agent/limits.py](app/agent/limits.py)), 환율·PCGamingWiki 1시간 캐시는 구현돼 있습니다.
 
 ## 리뷰 요약
 
@@ -297,7 +309,7 @@ make run                # http://127.0.0.1:8000/health
 | `IGDB_CLIENT_SECRET` | Twitch 개발자 앱 클라이언트 시크릿 |
 | `STEAMGRIDDB_API_KEY` | SteamGridDB API 키. 추천 카드의 로고·가로 배너에 쓴다 |
 | `OPENAI_API_KEY` | OpenAI API 키. 질문 가공, GPU·CPU 사양 판정, 리뷰 한줄평, 최종 답변에 쓴다 |
-| `OPENAI_MODEL` | 사양 판정·최종 답변 모델. 기본값 `gpt-4o-mini`. 질문 가공·리뷰 한줄평은 담당 모듈에서 `gpt-4o-mini` 고정 |
+| `OPENAI_MODEL` | 사양 판정·최종 답변 모델. 기본값 `gpt-4o-mini`. 질문 가공·리뷰 한줄평은 담당 모듈에서 `gpt-4o-mini` 고정. **기본값을 쓰려면 `.env`에서 줄째로 지운다.** `OPENAI_MODEL=`처럼 빈 값을 두면 기본값을 덮어써 모델명 없이 호출된다 |
 | `OPENAI_AGENT_MODEL` | 에이전트(도구 선택·최종 답변) 모델. 비어 있으면 `OPENAI_MODEL` |
 | `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` | 선택. LangSmith 추적을 켜면 Tool 호출·프롬프트·토큰이 기록된다. 에이전트 루프뿐 아니라 질문 분해·사양 판정·리뷰 한줄평의 LLM 호출도 한 트레이스에 모인다([app/agent/README.md](app/agent/README.md)) |
 
@@ -317,7 +329,8 @@ make run                # http://127.0.0.1:8000/health
 | `make test-query-processing` | 질문 조건 모델 테스트 |
 | `make test-igdb` | 후보 검색 도구 테스트 |
 | `make test-price-hardware` | 가격·사양 테스트 |
-| `make test-reviews` | 리뷰 요약 도구 테스트 |
+| `make test-reviews` | 리뷰 요약·리뷰 점수 도구 테스트 |
+| `make test-media` | 미디어 도구 테스트 |
 | `make test-integration` | HTTP API·SSE·조립 테스트 (대본 모델로 에이전트를 돌린다) |
 | `make test-agent` | 에이전트 계층 테스트 (대본 모델로 OpenAI 없이 루프·후검증·안전망 검증) |
 | `make graph` | 추천 파이프라인 그래프(에이전트 서브그래프 포함)를 Mermaid로 출력 |
@@ -325,6 +338,11 @@ make run                # http://127.0.0.1:8000/health
 테스트 옵션은 `make test ARGS="-q"`처럼 전달합니다. `make test-llm`은
 `make test-query-processing`의 호환용 별칭입니다. 테스트는 역할별 가짜 연동을
 사용하며 실제 외부 API 호출이나 LLM 출력 품질은 검증하지 않습니다.
+
+`.env`에 `LANGSMITH_TRACING=true`를 두면 테스트에서도 추적이 켜지고, LangSmith가 실행 입력을 직렬화하며
+대본 모델(`ScriptedChatModel`)의 메시지 iterator를 모델 호출 전에 소진해 에이전트·통합 테스트가
+실패합니다. 로컬에서는 `LANGSMITH_TRACING=false make test`로 돌립니다(CI는 `.env`가 없어 영향이 없습니다).
+`pytest`의 `testpaths`는 `tests`라 [evals/](evals/)의 테스트는 `make test`와 CI에서 실행되지 않습니다.
 
 ## HTTP API
 
@@ -424,7 +442,7 @@ Steam에 없는 게임(LoL 등)은 Steam CDN 단계를 건너뛰고, SteamGridDB
 | `200` | 추천 흐름 완료. 충족 후보가 없더라도 답변 생성이 성공하면 반환. SSE는 스트림이 열리면 항상 200 |
 | `401` | `X-API-Key` 헤더가 없거나 `API_KEY`와 다름 |
 | `422` | 요청 검증 실패 (연동이 주입된 상태에서 검증 가능) |
-| `502` | 질문 분해·게임 검색·최종 답변 생성의 실패 또는 시간 초과 |
+| `502` | 질문 분해 실패, 에이전트 루프 실패(모델 오류·반복 상한·전체 120초 초과), 재시도 후에도 후검증 실패 |
 | `503` | `API_KEY` 미설정, 또는 필수 키가 비어 추천기가 조립되지 않음 (`app.state.recommender` 없음) |
 
 필수 키 없이 띄운 서버에 위 추천 요청을 보내면 다음 오류를 반환합니다.
@@ -445,7 +463,7 @@ lifespan을 실행하지 않는 환경(Vercel 서버리스 등)에서는 첫 `/r
 `app/main.py`에는 CORS 미들웨어가 없습니다. 브라우저가 BE를 직접 부르지 않고 프론트 서버가
 `X-API-Key`를 붙여 호출하는 구성을 전제로 하므로 CORS 허용이 필요 없습니다. BE 배포 주소는
 저장소·문서에 적지 않고 프론트 서버 환경 변수로만 전달합니다.
-[GitHub Actions](.github/workflows/ci.yml)는 린트·테스트만 실행하며 배포 단계는 없습니다.
+[GitHub Actions](.github/workflows/ci.yml)는 린트·테스트와 gitleaks 시크릿 검사를 실행하며 배포 단계는 없습니다.
 CI 성공을 머지 조건으로 사용하려면 GitHub 브랜치 규칙을 설정합니다.
 
 ## 실제 연동 조립
@@ -488,6 +506,9 @@ Makefile                   개발 서버·검증 명령
 TEAM.md                    역할별 담당 파일·연결 계약
 docs/game_recommend_flow.*  서비스 처리 흐름 다이어그램 (PNG 문서용 · SVG 수정용)
 docs/eval_comparison.*     구조에서 나온 차이 세 행: 조건 만족·선택 관련성·LLM 왕복 (rsvg-convert -z 2로 PNG를 만든다)
+docs/prompt_engineering_architecture.*  프롬프트 지도: 운영 경로와 평가·집행
+docs/tech_stack.*          백엔드·프론트 기술 구성 한 장
+docs/service_qr.*          배포된 프론트로 가는 QR
 app/
 ├─ main.py                  FastAPI 앱. 시작 시 조립, 종료 시 클라이언트 정리
 ├─ assembly.py              .env 설정으로 ToolSet을 만들고 에이전트 추천기를 조립
@@ -511,13 +532,14 @@ app/
 ├─ pipeline/
 │  └─ query_processing/     질문 가공 담당: 조건 모델 · 파서 계약 · LLM 구현 · 프롬프트
 ├─ tools/
-│  ├─ game_search.py        Tool 1
-│  ├─ price.py              Tool 2
-│  ├─ hardware.py           Tool 3
-│  ├─ review_summary.py     Tool 4
-│  └─ media.py              Tool 5 (선택)
+│  ├─ game_search.py        후보 검색
+│  ├─ price.py              원화 가격·예산 판정
+│  ├─ hardware.py           요구 사양·호환 판정
+│  ├─ review_score.py       Steam 리뷰 통계 (후보 선별용)
+│  ├─ review_summary.py     Steam 리뷰 한줄평
+│  └─ media.py              카드 미디어 (선택)
 ├─ clients/
-│  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py · media.py
+│  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py · review_score.py · media.py
 │  ├─ igdb.py               IGDB 담당: 후보 검색 `search()`와 어댑터 `IgdbCatalogClient` (Twitch 앱 토큰 재사용)
 │  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API 클라이언트 (가격·사양)
 │  ├─ hardware_assessor.py  가격·하드웨어 담당: Steam·폴백 공통 사양 판정 규칙

@@ -50,7 +50,7 @@ v3에서 사양 출처를 RAWG에서 PCGamingWiki로 바꾸며 W축(구 R축)의
 | P07 | Alan Wake 2 | quoted | 20,000~150,000 | CheapShark 정확 일치 |
 | P08 | Kingdom Hearts III | omitted | | v2 정정: CheapShark에 이 제목의 단독 항목 없음 |
 | P09 | Alan Wake | quoted | 1,000~60,000 | 'Alan Wake 2'와 섞이면 안 됨 |
-| P10 | Alan Wake 2 Deluxe Edition | quoted | 10,000~150,000 | v2 정정: 같은 이름의 에디션 항목이 있어 정확 일치. 본편과 섞이면 안 됨 |
+| P10 | Alan Wake 2 Deluxe Edition | quoted | 10,000~150,000 | v2 정정: CheapShark에 같은 이름의 에디션 항목이 있어 정확 일치. 본편과 섞이면 안 됨 |
 | P11 | Alan Wake 2: Night Springs | omitted | | DLC 이름은 정확 일치 실패 |
 | P12 | Escape from Tarkov | quoted | 20,000~100,000 | v2 정정: CheapShark 취급 |
 | P13 | World of Warcraft | omitted | | 구독제, 무료 표에도 없음 |
