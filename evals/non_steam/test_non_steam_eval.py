@@ -51,7 +51,10 @@ def test_dataset_ids_are_unique_and_kinds_balanced():
     assert (len(WIKI_CASES), len(PRICE_CASES), len(CONS_CASES)) == (20, 15, 5)
 
 
-MISSING = {"error": {"code": "missingtitle"}}
+# 제목 묶음 조회(action=query)에서 없는 문서는 최상위 error가 아니라 pages 항목으로 온다.
+# 최상위 error는 진짜 API 실패라 클라이언트가 예외를 올린다
+# (그 경우는 test_wiki_error_fails_every_case가 본다).
+MISSING = {"query": {"pages": []}}
 
 
 def test_wiki_scoring_only_checks_cases_with_expected_match():

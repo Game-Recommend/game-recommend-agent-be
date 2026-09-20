@@ -50,9 +50,10 @@ LANGSMITH_TRACING=false .venv/bin/python -m pytest -q tests evals/price_hardware
 make lint
 ```
 
-`test_eval.py`의 검사 3건은 현재 실패한다. v2의 라벨 변경(H08이 LLM 호출 전에 `skipped`로 빠진다)과
-`JudgeRequest`에 추가된 `components` 필드를 반영하지 않은 검사들이다. `pytest`의 `testpaths`가
-`tests`라 `make test`와 CI는 이 파일을 돌리지 않아 드러나지 않았다.
+이 파일은 `make test`와 CI에도 포함된다(`testpaths = ["tests", "evals"]`). 2026-09-21까지는 빠져 있어
+검사 3건이 깨진 채로 남아 있었다. v2의 라벨 변경(H08이 LLM 호출 전에 `skipped`로 빠진다)과
+`JudgeRequest`에 추가된 `components` 필드를 반영하지 않은 것이었고, 지금은 고쳤다. 정답이 `unknown`이면서
+판정기를 타는 문항은 `H13`이라 그쪽을 쓴다. 문항은 인덱스가 아니라 id로 집는다.
 
 설계 참고: [OpenAI Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices).
 경계 사례와 작업별 평가, 반복 평가를 적용했다. 본 평가셋의 하드웨어 성능 라벨을 보증하는 출처는 아니다.

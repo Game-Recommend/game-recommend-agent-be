@@ -62,3 +62,6 @@ Deluxe 28,185원 / Tarkov 46,984원), 생략 5건, `unavailable` 0건.
 - Windows 템플릿만 쓴다. macOS·Linux 사양은 Steam 폴백과 같은 이유로 판정하지 않는다.
 - `evals/price_hardware/test_eval.py`의 검사 3건은 이번 변경과 무관하게 실패한다(v2 라벨 변경 이후 갱신되지 않음).
   기존 담당자가 정리해야 한다.
+  → 2026-09-21에 고쳤다. 이 파일의 `test_wiki_scoring_only_checks_cases_with_expected_match`도 같이
+  깨져 있었다(제목 묶음 조회로 바뀐 뒤 `MISSING` 픽스처가 옛 응답 모양이었다). `evals`를 `testpaths`에
+  넣어 앞으로는 CI가 잡는다.
