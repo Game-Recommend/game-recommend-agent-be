@@ -3,8 +3,8 @@
 느리고 비용이 드는 도구라 description에서 "최종 추천 후보에만" 부르도록 안내한다.
 실제 수집·요약은 팀원 모듈 `app/tools/review_summary.py`(→ `SteamReviewSummaryClient`)가 한다.
 
-TODO(리뷰 담당): description을 다듬고, 에이전트가 "평가 좋은 게임" 조건에 쓸 수 있는 긍정 비율 같은
-압축 필드를 검토한다(ReviewSummary 모델 확장은 리뷰 담당 결정).
+"평가 좋은 게임" 조건은 이 Tool이 아니라 get_review_scores(review_score.py)가 맡는다. 여기는 고른
+뒤 카드에 쓰는 문장이고, 그쪽은 고르는 데 쓰는 수치다.
 """
 
 from langchain.tools import ToolRuntime, tool

@@ -2,7 +2,7 @@
 
 `app/config.py`의 Settings는 `.env`를 직접 읽지만, 환경 변수를 그대로 보는 쪽도 있다.
 
-- `app/clients/steam_reviews.py`가 `OPENAI_API_KEY`·`TAVILY_API_KEY`를 os.environ에서 읽는다
+- `app/clients/steam_reviews.py`가 `OPENAI_API_KEY`를 os.environ에서 읽는다
 - LangSmith 추적(`LANGSMITH_*`)은 LangChain·langsmith가 환경 변수만 보고 켠다
 
 여기 두면 `app.` 아래 무엇을 먼저 import하든 순서와 무관하게 키가 올라간다.

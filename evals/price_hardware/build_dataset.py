@@ -113,40 +113,48 @@ hardware(
     "CPU가 그냥 i5라고만 나오는데 i5-12400 이상인가요?",
     {"cpu": "i5"},
     {"cpu": "Intel Core i5-12400"},
-    "unknown",
-    "세대 식별 불가",
+    "skipped",
+    "세대 식별 불가 / 정책 v2: 모델명 없는 사용자 부품은 판정하지 않고 통과, 요구 사양만 표시",
+    llm=False,
 )
 hardware(
     "불명 GPU",
     "그래픽카드가 GeForce인데 RTX 3060 조건을 충족하나요?",
     {"gpu": "GeForce"},
     {"gpu": "RTX 3060"},
-    "unknown",
-    "모델 식별 불가",
+    "skipped",
+    "모델 식별 불가 / 정책 v2: 모델명 없는 사용자 부품은 판정하지 않고 통과, 요구 사양만 표시",
+    llm=False,
 )
 hardware(
     "불명 내장",
     "내장그래픽이라고만 알고 있어요. GTX 960 게임이 가능한가요?",
     {"gpu": "내장그래픽"},
     {"gpu": "GTX 960"},
-    "unknown",
-    "내장 GPU 모델 식별 불가",
+    "skipped",
+    "내장 GPU 모델 식별 불가 / 정책 v2: 모델명 없는 내장그래픽은 "
+    "판정하지 않고 통과, 요구 사양만 표시",
+    llm=False,
 )
 hardware(
     "가상 GPU",
     "처음 듣는 ZetaPixel Q999 GPU로 RTX 3060 게임이 되나요?",
     {"gpu": "ZetaPixel Q999 (가상 부품)"},
     {"gpu": "RTX 3060"},
-    "unknown",
-    "가상 모델 성능 추측 금지",
+    "skipped",
+    "가상 모델 성능 추측 금지 / 정책 v2: 알려진 제품 계열이 아닌 부품명은 "
+    "판정 보류(skipped), LLM 호출 없음",
+    llm=False,
 )
 hardware(
     "가상 CPU",
     "FictionCore X123 CPU로 i5-12400 조건을 만족하나요?",
     {"cpu": "FictionCore X123 (가상 부품)"},
     {"cpu": "Intel Core i5-12400"},
-    "unknown",
-    "가상 모델 성능 추측 금지",
+    "skipped",
+    "가상 모델 성능 추측 금지 / 정책 v2: 알려진 제품 계열이 아닌 부품명은 "
+    "판정 보류(skipped), LLM 호출 없음",
+    llm=False,
 )
 hardware(
     "모호한 최소 GPU",
@@ -169,16 +177,19 @@ hardware(
     "RTX 3060에 i5인데, RTX 3060과 i5-12400을 요구하는 게임을 할 수 있나요?",
     {"gpu": "RTX 3060", "cpu": "i5"},
     {"gpu": "RTX 3060", "cpu": "Intel Core i5-12400"},
-    "unknown",
-    "GPU가 같아도 제공된 CPU 조건은 불명",
+    "skipped",
+    "GPU가 같아도 제공된 CPU 조건은 불명 / 정책 v2: CPU 모델명 없음 → "
+    "전체 판정 보류(GPU만 보고 통과시키지 않음)",
+    llm=False,
 )
 hardware(
     "GPU 불명 CPU 충족",
     "Ryzen 5 5600에 GeForce인데 최소 Ryzen 5 5600, RTX 3060 게임이 되나요?",
     {"cpu": "AMD Ryzen 5 5600", "gpu": "GeForce"},
     {"cpu": "AMD Ryzen 5 5600", "gpu": "RTX 3060"},
-    "unknown",
-    "CPU가 같아도 GPU 모델은 불명",
+    "skipped",
+    "CPU가 같아도 GPU 모델은 불명 / 정책 v2: GPU 모델명 없음 → 전체 판정 보류",
+    llm=False,
 )
 hardware(
     "CPU 요구 누락",
@@ -186,7 +197,9 @@ hardware(
     {"cpu": "Intel Core i5-12400"},
     {"gpu": "RTX 3060"},
     "unknown",
-    "사용자와 요구 사양에 공통 비교 항목 없음",
+    "사용자와 요구 사양에 공통 비교 항목 없음 / 정책 v2: 공통 비교 항목 없음은 "
+    "코드가 unknown 처리, LLM 호출 없음",
+    llm=False,
 )
 hardware(
     "GPU 요구 누락",
@@ -194,7 +207,8 @@ hardware(
     {"gpu": "RTX 3060"},
     {"cpu": "Intel Core i5-12400"},
     "unknown",
-    "공통 비교 항목 없음",
+    "공통 비교 항목 없음 / 정책 v2: 공통 비교 항목 없음은 코드가 unknown 처리, LLM 호출 없음",
+    llm=False,
 )
 hardware(
     "GPU OR 왼쪽",
@@ -512,6 +526,8 @@ lines = [
     "질문 파서·검색·최종 답변은 평가하지 않는다. "
     "합성 게임 요구 사양은 실제 게임의 사양으로 인용하면 안 된다.",
     "정답은 실행 전에 작성한 잠정 라벨이다. "
+    "v2에서 H08·H09·H10·H11·H12·H15·H16은 팀 방침(모델명 없는 사용자 부품은 판정 보류·통과)에 "
+    "따라 skipped로 바꿨다. "
     "identity/numeric/contract와 성능 추정·제안 정책을 분리해 보고한다.",
     "",
     "| ID | 범주 | 질문 | 기대 판정 | 근거 유형 |",

@@ -1,7 +1,7 @@
 """질문 가공 담당: 자연어 질문을 `GameConditions`(conditions.py)로 바꾸는 계약.
 
-실제 LLM 연동·질문 분해 프롬프트는 이 패키지에 추가한다.
-LLM 공급자는 아직 정하지 않았다. 정하면 키를 `app/config.py`와 `.env.example`에 추가한다.
+구현은 같은 패키지의 `llm_parser.py`(OpenAI `gpt-4o-mini`)이고 프롬프트는 `prompts.py`에 있다.
+키는 `app/config.py`의 `OPENAI_API_KEY`다.
 """
 
 from typing import Protocol
