@@ -1,7 +1,8 @@
 # game-recommend-agent-be 백엔드
 
 경로와 명령은 저장소 루트를 기준으로 합니다.
-프론트엔드는 [game-recommend-agent-fe](https://github.com/Game-Recommend/game-recommend-agent-fe)에서 개발합니다.
+프론트엔드는 [game-recommend-agent-fe](https://github.com/Game-Recommend/game-recommend-agent-fe)에서 개발하고,
+배포된 화면은 [game-recommend-agent-fe.vercel.app](https://game-recommend-agent-fe.vercel.app/)입니다.
 이 저장소는 [game-recommend-be](https://github.com/Game-Recommend/game-recommend-be)를 복사해
 고정 파이프라인을 **LangChain 에이전트가 Tool을 골라 호출하는 구조**로 바꾸는 전환판입니다.
 역할별 할 일은 [TEAM.md](TEAM.md)에 있습니다.
@@ -13,15 +14,6 @@
 전후 비교는 원본 저장소로 합니다. 서버 시작 시 `.env` 설정으로 자동 조립하며([app/assembly.py](app/assembly.py)),
 테스트에서는 가짜 연동과 대본 모델을 주입해 흐름을 검증합니다. 필수 키(`OPENAI_API_KEY`, `IGDB_CLIENT_ID`,
 `IGDB_CLIENT_SECRET`)가 비어 있으면 `POST /recommend`는 503을 반환합니다.
-
-## 서비스 바로가기
-
-![게임 추천 에이전트 서비스 QR 코드](docs/service_qr.png)
-
-QR을 찍으면 배포된 프론트엔드
-[game-recommend-agent-fe.vercel.app](https://game-recommend-agent-fe.vercel.app/)으로 갑니다.
-발표·시연 때는 이 이미지를 띄워 바로 열게 합니다. 슬라이드에 크게 넣거나 인쇄할 때는
-[SVG](docs/service_qr.svg)를 씁니다.
 
 ## 기술 구성
 
@@ -513,7 +505,6 @@ docs/game_recommend_flow.*  서비스 처리 흐름 다이어그램 (PNG 문서�
 docs/eval_comparison.*     구조에서 나온 차이 세 행: 조건 만족·선택 관련성·LLM 왕복 (rsvg-convert -z 2로 PNG를 만든다)
 docs/prompt_engineering_architecture.*  프롬프트 지도: 운영 경로와 평가·집행
 docs/tech_stack.*          백엔드·프론트 기술 구성 한 장
-docs/service_qr.*          배포된 프론트로 가는 QR
 app/
 ├─ main.py                  FastAPI 앱. 시작 시 조립, 종료 시 클라이언트 정리
 ├─ assembly.py              .env 설정으로 ToolSet을 만들고 에이전트 추천기를 조립
