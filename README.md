@@ -1,5 +1,7 @@
 # game-recommend-agent-be 백엔드
 
+**한국어** · [English](README.en.md)
+
 경로와 명령은 저장소 루트를 기준으로 합니다.
 프론트엔드는 [game-recommend-agent-fe](https://github.com/Game-Recommend/game-recommend-agent-fe)에서 개발하고,
 배포된 화면은 [game-recommend-agent-fe.vercel.app](https://game-recommend-agent-fe.vercel.app/)입니다.
@@ -505,6 +507,7 @@ docs/game_recommend_flow.*  서비스 처리 흐름 다이어그램 (PNG 문서�
 docs/eval_comparison.*     구조에서 나온 차이 세 행: 조건 만족·취향 적합도·LLM 왕복 (rsvg-convert -z 2로 PNG를 만든다)
 docs/prompt_engineering_architecture.*  프롬프트 지도: 운영 경로와 평가·집행
 docs/tech_stack.*          백엔드·프론트 기술 구성 한 장
+docs/*.en.*                위 네 그림의 영문판. 그림을 고치면 한국어·영문을 함께 고친다
 app/
 ├─ main.py                  FastAPI 앱. 시작 시 조립, 종료 시 클라이언트 정리
 ├─ assembly.py              .env 설정으로 ToolSet을 만들고 에이전트 추천기를 조립
