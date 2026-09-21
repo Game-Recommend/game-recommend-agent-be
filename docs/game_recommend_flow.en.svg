@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1120" viewBox="0 0 2560 1120" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
+<defs>
+<filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0F172A" flood-opacity="0.08"/></filter>
+<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#94A3B8"/></marker>
+<marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#D97706"/></marker>
+</defs>
+<rect width="2560" height="1120" fill="#F5F6FA"/>
+<text x="56" y="118" font-size="56" fill="#111827" font-weight="700">Game recommendation agent service flow</text>
+<text x="56" y="170" font-size="26" fill="#6B7280">FastAPI &#183; LangChain agent backend &#183; how one user query becomes a recommendation</text>
+<rect x="2338" y="128" width="166" height="40" rx="20" fill="white" stroke="#D1D5DB"/>
+<circle cx="2360" cy="148" r="8" fill="#0E9F9F"/>
+<text x="2378" y="156" font-size="22" fill="#111827">External data</text>
+<rect x="2178" y="128" width="146" height="40" rx="20" fill="white" stroke="#D1D5DB"/>
+<circle cx="2200" cy="148" r="8" fill="#D97706"/>
+<text x="2218" y="156" font-size="22" fill="#111827">Agent</text>
+<rect x="2046" y="128" width="118" height="40" rx="20" fill="white" stroke="#D1D5DB"/>
+<circle cx="2068" cy="148" r="8" fill="#6D5DF6"/>
+<text x="2086" y="156" font-size="22" fill="#111827">LLM</text>
+<rect x="1914" y="128" width="118" height="40" rx="20" fill="white" stroke="#D1D5DB"/>
+<circle cx="1936" cy="148" r="8" fill="#334155"/>
+<text x="1954" y="156" font-size="22" fill="#111827">I/O</text>
+<line x1="360" y1="420" x2="410" y2="420" stroke="#94A3B8" stroke-width="3.5" marker-end="url(#arr)"/>
+<line x1="718" y1="420" x2="768" y2="420" stroke="#94A3B8" stroke-width="3.5" marker-end="url(#arr)"/>
+<line x1="1434" y1="420" x2="1484" y2="420" stroke="#94A3B8" stroke-width="3.5" marker-end="url(#arr)"/>
+<line x1="1792" y1="420" x2="1842" y2="420" stroke="#94A3B8" stroke-width="3.5" marker-end="url(#arr)"/>
+<line x1="2150" y1="420" x2="2200" y2="420" stroke="#94A3B8" stroke-width="3.5" marker-end="url(#arr)"/>
+<path d="M1638 264 V240 Q1638 228 1626 228 H1113 Q1101 228 1101 240 V258" fill="none" stroke="#D97706" stroke-width="3" stroke-dasharray="10 8" marker-end="url(#arrA)"/>
+<text x="1370" y="214" font-size="18" fill="#D97706" font-weight="600" text-anchor="middle">post-validation violation &#8594; re-ask with the rejection reason</text>
+<rect x="56" y="270" width="300" height="640" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="56" y="270" width="300" height="10" rx="5" fill="#334155"/>
+<circle cx="102" cy="332" r="24" fill="#334155"/>
+<text x="102" y="341" font-size="24" fill="white" font-weight="700" text-anchor="middle">1</text>
+<rect x="234" y="314" width="94" height="36" rx="18" fill="#334155" fill-opacity="0.12"/>
+<text x="281.17" y="339" font-size="20" fill="#334155" font-weight="600" text-anchor="middle">I/O</text>
+<circle cx="206.0" cy="420" r="44" fill="#334155" fill-opacity="0.10"/>
+<rect x="184.0" y="404" width="44" height="32" rx="6" fill="none" stroke="#334155" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M196.0 416 l6 4 -6 4 M208.0 424 h8" fill="none" stroke="#334155" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="206.0" y="515" font-size="30" fill="#111827" font-weight="700" text-anchor="middle">User query</text>
+<text x="84" y="570" font-size="21" fill="#111827" font-weight="600">HTTP POST /recommend</text>
+<text x="84" y="602" font-size="17" fill="#6B7280">X-API-Key auth &#183; question string</text>
+<text x="84" y="654" font-size="21" fill="#111827" font-weight="600">Response format</text>
+<text x="84" y="686" font-size="17" fill="#6B7280">SSE or JSON via Accept header</text>
+<text x="84" y="738" font-size="21" fill="#111827" font-weight="600">OpenAI &#183; IGDB keys</text>
+<text x="84" y="770" font-size="17" fill="#6B7280">503 when keys are empty</text>
+<rect x="414" y="270" width="300" height="640" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="414" y="270" width="300" height="10" rx="5" fill="#6D5DF6"/>
+<circle cx="460" cy="332" r="24" fill="#6D5DF6"/>
+<text x="460" y="341" font-size="24" fill="white" font-weight="700" text-anchor="middle">2</text>
+<rect x="592" y="314" width="94" height="36" rx="18" fill="#6D5DF6" fill-opacity="0.12"/>
+<text x="639.1700000000001" y="339" font-size="20" fill="#6D5DF6" font-weight="600" text-anchor="middle">LLM</text>
+<circle cx="564.0" cy="420" r="44" fill="#6D5DF6" fill-opacity="0.10"/>
+<path d="M564.0 396 l7 15 15 2 -11 10 3 15 -14 -8 -14 8 3 -15 -11 -10 15 -2z" fill="none" stroke="#6D5DF6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="564.0" y="515" font-size="30" fill="#111827" font-weight="700" text-anchor="middle">Query parser LLM</text>
+<text x="442" y="570" font-size="21" fill="#111827" font-weight="600">QueryParser</text>
+<text x="442" y="602" font-size="17" fill="#6B7280">free text &#8594; GameConditions</text>
+<text x="442" y="654" font-size="21" fill="#111827" font-weight="600">Extracted conditions</text>
+<text x="442" y="686" font-size="17" fill="#6B7280">genre &#183; players &#183; mode &#183; playtime</text>
+<text x="442" y="738" font-size="21" fill="#111827" font-weight="600">Server-side thresholds</text>
+<text x="442" y="770" font-size="17" fill="#6B7280">budget &#183; specs &#183; count</text>
+<line x1="442" y1="806" x2="686" y2="806" stroke="#D1D5DB" stroke-width="2"/>
+<text x="442" y="842" font-size="17" fill="#6D5DF6" font-weight="600">&#8594; runner injects them into tools</text>
+<text x="442" y="872" font-size="17" fill="#6B7280">code always makes the verdict</text>
+<rect x="772" y="270" width="658" height="640" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="772" y="270" width="658" height="10" rx="5" fill="#D97706"/>
+<circle cx="818" cy="332" r="24" fill="#D97706"/>
+<text x="818" y="341" font-size="24" fill="white" font-weight="700" text-anchor="middle">3</text>
+<rect x="1260" y="314" width="142" height="36" rx="18" fill="#D97706" fill-opacity="0.12"/>
+<text x="1331.2" y="339" font-size="20" fill="#D97706" font-weight="600" text-anchor="middle">Agent</text>
+<circle cx="1101.0" cy="420" r="44" fill="#D97706" fill-opacity="0.10"/>
+<path d="M1081.0 420 a20 20 0 0 1 34 -14" fill="none" stroke="#D97706" stroke-width="3.5" stroke-linecap="round"/><path d="M1121.0 420 a20 20 0 0 1 -34 14" fill="none" stroke="#D97706" stroke-width="3.5" stroke-linecap="round"/>
+<path d="M1121.4 412.4 L1107.2 407.4 L1116.4 398.2 z" fill="#D97706"/>
+<path d="M1080.6 427.6 L1094.8 432.6 L1085.6 441.8 z" fill="#D97706"/>
+<text x="1101.0" y="515" font-size="30" fill="#111827" font-weight="700" text-anchor="middle">Agent loop</text>
+<text x="1101.0" y="553" font-size="20" fill="#6B7280" text-anchor="middle">LangChain create_agent &#183; LangGraph</text>
+<rect x="832" y="580" width="570" height="260" rx="16" fill="#F8FAFC" stroke="#E5E7EB"/>
+<circle cx="852" cy="605" r="5" fill="#0E9F9F"/>
+<text x="870" y="612" font-size="20" fill="#111827" font-weight="600">search_games</text>
+<text x="1090" y="612" font-size="18" fill="#6B7280">IGDB candidate search (max 30)</text>
+<circle cx="852" cy="655" r="5" fill="#0E9F9F"/>
+<text x="870" y="662" font-size="20" fill="#111827" font-weight="600">get_prices</text>
+<text x="1090" y="662" font-size="18" fill="#6B7280">KRW price &#183; budget verdict</text>
+<circle cx="852" cy="705" r="5" fill="#0E9F9F"/>
+<text x="870" y="712" font-size="20" fill="#111827" font-weight="600">assess_hardware</text>
+<text x="1090" y="712" font-size="18" fill="#6B7280">min specs &#183; compatibility verdict</text>
+<circle cx="852" cy="755" r="5" fill="#0E9F9F"/>
+<text x="870" y="762" font-size="20" fill="#111827" font-weight="600">get_review_scores</text>
+<text x="1090" y="762" font-size="18" fill="#6B7280">Steam review stats &#183; wording</text>
+<circle cx="852" cy="805" r="5" fill="#0E9F9F"/>
+<text x="870" y="812" font-size="20" fill="#111827" font-weight="600">summarize_reviews</text>
+<text x="1090" y="812" font-size="18" fill="#6B7280">Steam reviews &#8594; LLM blurb</text>
+<path d="M860 850 H818 Q806 850 806 838 V586 Q806 574 818 574 H852" fill="none" stroke="#D97706" stroke-width="3" marker-end="url(#arrA)"/>
+<text x="832" y="886" font-size="18" fill="#6B7280">&#8594; tool order and count vary per question &#183; same-turn calls run in parallel</text>
+<rect x="1488" y="270" width="300" height="640" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="1488" y="270" width="300" height="10" rx="5" fill="#D97706"/>
+<circle cx="1534" cy="332" r="24" fill="#D97706"/>
+<text x="1534" y="341" font-size="24" fill="white" font-weight="700" text-anchor="middle">4</text>
+<rect x="1618" y="314" width="142" height="36" rx="18" fill="#D97706" fill-opacity="0.12"/>
+<text x="1689.2" y="339" font-size="20" fill="#D97706" font-weight="600" text-anchor="middle">Agent</text>
+<circle cx="1638.0" cy="420" r="44" fill="#D97706" fill-opacity="0.10"/>
+<path d="M1638.0 399 L1655.0 406 L1655.0 419 C1655.0 430 1648.0 437 1638.0 441 C1628.0 437 1621.0 430 1621.0 419 L1621.0 406 Z" fill="none" stroke="#D97706" stroke-width="3.5" stroke-linejoin="round"/><path d="M1630.0 419 l6 6 11 -12" fill="none" stroke="#D97706" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1638.0" y="515" font-size="28" fill="#111827" font-weight="700" text-anchor="middle">Safety net &#183; checks</text>
+<text x="1516" y="570" font-size="21" fill="#111827" font-weight="600">RecommendationDraft</text>
+<text x="1516" y="602" font-size="17" fill="#6B7280">recommended ids + summary</text>
+<text x="1516" y="654" font-size="21" fill="#111827" font-weight="600">Safety net</text>
+<text x="1516" y="686" font-size="17" fill="#6B7280">fetches missing price/specs</text>
+<text x="1516" y="738" font-size="21" fill="#111827" font-weight="600">Post-validation</text>
+<text x="1516" y="770" font-size="17" fill="#6B7280">candidate ids &#183; verdicts &#183; count</text>
+<line x1="1516" y1="806" x2="1760" y2="806" stroke="#D1D5DB" stroke-width="2"/>
+<text x="1516" y="842" font-size="17" fill="#D97706" font-weight="600">&#8594; re-ask on violation</text>
+<text x="1516" y="872" font-size="17" fill="#6B7280">once more, with the reason</text>
+<rect x="1846" y="270" width="300" height="640" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="1846" y="270" width="300" height="10" rx="5" fill="#0E9F9F"/>
+<circle cx="1892" cy="332" r="24" fill="#0E9F9F"/>
+<text x="1892" y="341" font-size="24" fill="white" font-weight="700" text-anchor="middle">5</text>
+<rect x="1950" y="314" width="168" height="36" rx="18" fill="#0E9F9F" fill-opacity="0.12"/>
+<text x="2033.94" y="339" font-size="20" fill="#0E9F9F" font-weight="600" text-anchor="middle">External data</text>
+<circle cx="1996.0" cy="420" r="44" fill="#0E9F9F" fill-opacity="0.10"/>
+<ellipse cx="1996.0" cy="406" rx="22" ry="8" fill="none" stroke="#0E9F9F" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M1974.0 406 v28 a22 8 0 0 0 44 0 v-28 M1974.0 420 a22 8 0 0 0 44 0" fill="none" stroke="#0E9F9F" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1996.0" y="515" font-size="30" fill="#111827" font-weight="700" text-anchor="middle">Reviews &#183; media</text>
+<text x="1874" y="570" font-size="21" fill="#111827" font-weight="600">ReviewSummaryTool</text>
+<text x="1874" y="602" font-size="17" fill="#6B7280">Steam reviews &#8594; LLM blurb</text>
+<text x="1874" y="654" font-size="21" fill="#111827" font-weight="600">MediaTool</text>
+<text x="1874" y="686" font-size="17" fill="#6B7280">SteamGridDB &#183; Steam &#183; IGDB</text>
+<text x="1874" y="738" font-size="21" fill="#111827" font-weight="600">When it runs</text>
+<text x="1874" y="770" font-size="17" fill="#6B7280">post-processing after picks</text>
+<line x1="1874" y1="806" x2="2118" y2="806" stroke="#D1D5DB" stroke-width="2"/>
+<text x="1874" y="842" font-size="17" fill="#0E9F9F" font-weight="600">&#8646; run in parallel</text>
+<text x="1874" y="872" font-size="17" fill="#6B7280">&#8594; attaches logo, banner, trailer</text>
+<rect x="2204" y="270" width="300" height="640" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="2204" y="270" width="300" height="10" rx="5" fill="#334155"/>
+<circle cx="2250" cy="332" r="24" fill="#334155"/>
+<text x="2250" y="341" font-size="24" fill="white" font-weight="700" text-anchor="middle">6</text>
+<rect x="2382" y="314" width="94" height="36" rx="18" fill="#334155" fill-opacity="0.12"/>
+<text x="2429.17" y="339" font-size="20" fill="#334155" font-weight="600" text-anchor="middle">I/O</text>
+<circle cx="2354.0" cy="420" r="44" fill="#334155" fill-opacity="0.10"/>
+<rect x="2332.0" y="404" width="44" height="32" rx="6" fill="none" stroke="#334155" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2344.0 416 l6 4 -6 4 M2356.0 424 h8" fill="none" stroke="#334155" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="2354.0" y="515" font-size="30" fill="#111827" font-weight="700" text-anchor="middle">Send answer</text>
+<text x="2232" y="570" font-size="21" fill="#111827" font-weight="600">SSE streaming</text>
+<text x="2232" y="602" font-size="17" fill="#6B7280">stage events &#8594; result</text>
+<text x="2232" y="654" font-size="21" fill="#111827" font-weight="600">JSON response</text>
+<text x="2232" y="686" font-size="17" fill="#6B7280">one shot when not SSE</text>
+<text x="2232" y="738" font-size="21" fill="#111827" font-weight="600">RecommendationResponse</text>
+<text x="2232" y="770" font-size="17" fill="#6B7280">picks &#183; exclusions &#183; warnings</text>
+<line x1="2232" y1="806" x2="2476" y2="806" stroke="#D1D5DB" stroke-width="2"/>
+<text x="2232" y="842" font-size="17" fill="#334155" font-weight="600">SSE failure &#8594; error event</text>
+<text x="2232" y="872" font-size="17" fill="#6B7280">JSON failure &#8594; 502</text>
+<rect x="56" y="934" width="2448" height="130" rx="20" fill="white" stroke="#D1D5DB"/>
+<text x="92" y="976" font-size="23" fill="#111827" font-weight="700">Failure handling</text>
+<text x="92" y="1012" font-size="19" fill="#6B7280">query parsing &#183; agent loop &#183; post-validation are required stages &#8212; a failure there is a 502  &#183;  a tool failure is returned to the LLM as error instead of raising, recorded in warnings, and the run continues</text>
+<text x="92" y="1042" font-size="19" fill="#6B7280">30 s per stage &#183; 120 s overall &#183; stops past 20 iterations  &#183;  SSE reports the start, completion and failure of each stage as stage events</text>
+</svg>

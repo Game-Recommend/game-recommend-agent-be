@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1204" height="330" viewBox="56 172 1204 330" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
+<rect x="56" y="172" width="1204" height="330" rx="14" fill="white"/>
+<path d="M56 228 V186 Q56 172 70 172 H1246 Q1260 172 1260 186 V228 Z" fill="#EEF0F6"/>
+<text x="80" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">Metric</text>
+<circle cx="528" cy="201" r="8" fill="#0E9F9F"/>
+<text x="546" y="209" font-size="22" fill="#111827" font-weight="600" text-anchor="start">Original &#183; fixed pipeline</text>
+<circle cx="816" cy="201" r="8" fill="#6D5DF6"/>
+<text x="834" y="209" font-size="22" fill="#111827" font-weight="600" text-anchor="start">Agent &#183; LangGraph</text>
+<text x="1096" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">Diff</text>
+<text x="80" y="264" font-size="27" fill="#111827" font-weight="600" text-anchor="start">Hard constraints met</text>
+<text x="80" y="290" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">price &#183; count &#183; excluded genres &#183; specs &#183; omissions</text>
+<text x="520" y="264" font-size="30" fill="#111827" font-weight="500" text-anchor="start">98/100</text>
+<text x="643.5" y="264" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">98%</text>
+<path d="M520 278 H756 Q760 278 760 282 V284 Q760 288 756 288 H520 Z" fill="#D4EEEE"/>
+<path d="M520 278 H751.2 Q755.2 278 755.2 282 V284 Q755.2 288 751.2 288 H520 Z" fill="#0E9F9F"/>
+<text x="808" y="264" font-size="30" fill="#111827" font-weight="500" text-anchor="start">99/100</text>
+<text x="931.5" y="264" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">99%</text>
+<path d="M808 278 H1044 Q1048 278 1048 282 V284 Q1048 288 1044 288 H808 Z" fill="#E5E2FD"/>
+<path d="M808 278 H1041.6 Q1045.6 278 1045.6 282 V284 Q1045.6 288 1041.6 288 H808 Z" fill="#6D5DF6"/>
+<text x="1096" y="264" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+1%p</text>
+<text x="1096" y="291" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">About even</text>
+<line x1="56" y1="306" x2="1260" y2="306" stroke="#E5E7EB"/>
+<text x="80" y="342" font-size="27" fill="#111827" font-weight="600" text-anchor="start">Taste fit</text>
+<text x="80" y="368" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">same passing set &#183; head-to-head vs popularity &#183; 35 ties</text>
+<text x="520" y="342" font-size="30" fill="#111827" font-weight="500" text-anchor="start">2 wins</text>
+<text x="612" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">of 67 judgements</text>
+<path d="M520 356 H756 Q760 356 760 360 V362 Q760 366 756 366 H520 Z" fill="#D4EEEE"/>
+<path d="M520 356 H523.2 Q527.2 356 527.2 360 V362 Q527.2 366 523.2 366 H520 Z" fill="#0E9F9F"/>
+<text x="808" y="342" font-size="30" fill="#111827" font-weight="700" text-anchor="start">30 wins</text>
+<text x="920" y="342" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">of 67 judgements</text>
+<path d="M808 356 H1044 Q1048 356 1048 360 V362 Q1048 366 1044 366 H808 Z" fill="#E5E2FD"/>
+<path d="M808 356 H911.5 Q915.5 356 915.5 360 V362 Q915.5 366 911.5 366 H808 Z" fill="#6D5DF6"/>
+<text x="1096" y="342" font-size="28" fill="#111827" font-weight="700" text-anchor="start">30 : 2</text>
+<text x="1096" y="369" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">Agent ahead</text>
+<line x1="56" y1="384" x2="1260" y2="384" stroke="#E5E7EB"/>
+<text x="80" y="420" font-size="27" fill="#111827" font-weight="600" text-anchor="start">LLM round-trip time</text>
+<text x="80" y="446" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">median with recommendations &#183; tool time excluded</text>
+<text x="520" y="432" font-size="30" fill="#111827" font-weight="700" text-anchor="start">3.4 s</text>
+<text x="612" y="432" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">parse + answer</text>
+<text x="808" y="432" font-size="30" fill="#111827" font-weight="500" text-anchor="start">6.1 s</text>
+<text x="900" y="432" font-size="21" fill="#6B7280" font-weight="400" text-anchor="start">parse + tool choice</text>
+<text x="1096" y="420" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+2.8 s</text>
+<text x="1096" y="447" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">Original ahead</text>
+<line x1="56" y1="462" x2="1260" y2="462" stroke="#E5E7EB"/>
+<text x="80" y="489" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">Hard constraints &#183; LLM round trip: same 100 items (original 2026-09-17, agent 2026-09-20). Taste fit: 40 items (taste, situation) &#215; 2 head-to-head judgements.</text>
+<rect x="56.5" y="172.5" width="1203" height="329" rx="13.5" fill="none" stroke="#D1D5DB"/>
+</svg>

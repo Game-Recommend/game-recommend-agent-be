@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1176" viewBox="0 0 1200 1176" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
+<defs>
+<filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0F172A" flood-opacity="0.08"/></filter>
+</defs>
+<rect width="1200" height="1176" fill="#F5F6FA"/>
+
+<!-- ===== Backend ===== -->
+<rect x="64" y="48" width="1072" height="520" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="64" y="48" width="1072" height="10" rx="5" fill="#6D5DF6"/>
+<rect x="104" y="92" width="132" height="36" rx="18" fill="#6D5DF6" fill-opacity="0.12"/>
+<text x="170" y="117" font-size="18" fill="#6D5DF6" font-weight="700" text-anchor="middle" letter-spacing="1">BACKEND</text>
+<text x="256" y="119" font-size="26" fill="#111827" font-weight="700">game-recommend-agent-be</text>
+<text x="1096" y="119" font-size="20" fill="#6B7280" text-anchor="end">Python 3.12</text>
+<line x1="104" y1="152" x2="1096" y2="152" stroke="#E5E7EB" stroke-width="2"/>
+
+<text x="104" y="208" font-size="20" fill="#6B7280" font-weight="600">Server</text>
+<text x="300" y="196" font-size="26" fill="#111827" font-weight="700">FastAPI</text>
+<text x="300" y="226" font-size="19" fill="#6B7280">Uvicorn</text>
+<line x1="104" y1="248" x2="1096" y2="248" stroke="#E5E7EB" stroke-width="2"/>
+
+<text x="104" y="304" font-size="20" fill="#6B7280" font-weight="600">Agent</text>
+<text x="300" y="292" font-size="26" fill="#111827" font-weight="700">LangGraph + LangChain</text>
+<text x="300" y="322" font-size="19" fill="#6B7280">create_agent tool loop as a subgraph inside StateGraph</text>
+<line x1="104" y1="344" x2="1096" y2="344" stroke="#E5E7EB" stroke-width="2"/>
+
+<text x="104" y="400" font-size="20" fill="#6B7280" font-weight="600">LLM</text>
+<text x="300" y="388" font-size="26" fill="#111827" font-weight="700">OpenAI</text>
+<text x="300" y="418" font-size="19" fill="#6B7280">gpt-4o-mini &#183; LangSmith tracing</text>
+<line x1="104" y1="440" x2="1096" y2="440" stroke="#E5E7EB" stroke-width="2"/>
+
+<text x="104" y="496" font-size="20" fill="#6B7280" font-weight="600">Streaming</text>
+<text x="300" y="484" font-size="26" fill="#111827" font-weight="700">SSE</text>
+<text x="300" y="514" font-size="19" fill="#6B7280">progress events (stage) &#8594; result</text>
+
+<!-- ===== Frontend ===== -->
+<rect x="64" y="608" width="1072" height="520" rx="24" fill="white" filter="url(#sh)"/>
+<rect x="64" y="608" width="1072" height="10" rx="5" fill="#0E9F9F"/>
+<rect x="104" y="652" width="148" height="36" rx="18" fill="#0E9F9F" fill-opacity="0.12"/>
+<text x="178" y="677" font-size="18" fill="#0E9F9F" font-weight="700" text-anchor="middle" letter-spacing="1">FRONTEND</text>
+<text x="272" y="679" font-size="26" fill="#111827" font-weight="700">game-recommend-agent-fe</text>
+<text x="1096" y="679" font-size="20" fill="#6B7280" text-anchor="end">Node 24</text>
+<line x1="104" y1="712" x2="1096" y2="712" stroke="#E5E7EB" stroke-width="2"/>
+
+<text x="104" y="768" font-size="20" fill="#6B7280" font-weight="600">Framework</text>
+<text x="300" y="756" font-size="26" fill="#111827" font-weight="700">Next.js 16</text>
+<text x="300" y="786" font-size="19" fill="#6B7280">App Router &#183; Route Handlers act as the backend proxy (BFF)</text>
+<line x1="104" y1="808" x2="1096" y2="808" stroke="#E5E7EB" stroke-width="2"/>
+
+<text x="104" y="864" font-size="20" fill="#6B7280" font-weight="600">UI</text>
+<text x="300" y="852" font-size="26" fill="#111827" font-weight="700">React 19</text>
+<text x="300" y="882" font-size="19" fill="#6B7280">No state management library</text>
+<line x1="104" y1="904" x2="1096" y2="904" stroke="#E5E7EB" stroke-width="2"/>
+
+<text x="104" y="960" font-size="20" fill="#6B7280" font-weight="600">Language</text>
+<text x="300" y="948" font-size="26" fill="#111827" font-weight="700">TypeScript</text>
+<text x="300" y="978" font-size="19" fill="#6B7280">ESLint 9 + eslint-config-next</text>
+<line x1="104" y1="1000" x2="1096" y2="1000" stroke="#E5E7EB" stroke-width="2"/>
+
+<text x="104" y="1056" font-size="20" fill="#6B7280" font-weight="600">Styling</text>
+<text x="300" y="1044" font-size="26" fill="#111827" font-weight="700">CSS Modules</text>
+<text x="300" y="1074" font-size="19" fill="#6B7280">No CSS framework &#183; design tokens + Pretendard</text>
+</svg>
