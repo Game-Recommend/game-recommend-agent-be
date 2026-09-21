@@ -1,4 +1,4 @@
-"""선택 관련성 평가의 순수 로직 검사. API를 부르지 않는다."""
+"""취향 적합도 평가의 순수 로직 검사. API를 부르지 않는다."""
 
 import json
 from pathlib import Path

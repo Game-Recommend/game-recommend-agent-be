@@ -99,7 +99,7 @@ Steam 상세 API는 앱 하나에 한 번 호출이고 IP당 5분에 약 200회 
 
 ## 분류 조건을 id로 걸고, 지어낸 분류는 키워드로 찾는다 (2026-09-20)
 
-선택 관련성 평가(`evals/relevance`)의 빈 추천 8건이 모두 검색 후보 0개였다. 원인은 둘이다.
+취향 적합도 평가(`evals/relevance`)의 빈 추천 8건이 모두 검색 후보 0개였다. 원인은 둘이다.
 
 ### 1. 같은 배열에 이름 조건을 둘 걸면 0건이다
 
@@ -131,7 +131,7 @@ IGDB 호출은 그런 분류어가 있을 때만 한 번 늘어난다.
 
 ### 결과
 
-입력을 엔드투엔드 100문항 + 관련성 평가 40문항의 조건(140문항)으로 넓혀 전후를 쟀다
+입력을 엔드투엔드 100문항 + 취향 적합도 평가 40문항의 조건(140문항)으로 넓혀 전후를 쟀다
 ([runs/before-category-fix](runs/before-category-fix), [runs/after-category-fix](runs/after-category-fix),
 Steam 조회 생략).
 
@@ -155,6 +155,6 @@ SF 세계관의 스토리 게임 {genres: [Science fiction, Story]}
 - 분류가 하나인 질문은 id로 바꿔도 결과가 같다. 136문항이 그대로인 것이 그 확인이다.
 - E056은 기록된 조건이 `genres=["Horror"]` + `excluded_genres=["Horror"]`로 모순이라 0개가 옳다. 지금의
   질문 분해는 이 모순을 내지 않는다(같은 분류가 양쪽에 있으면 제외가 이긴다).
-- 빈손이던 관련성 문항 다섯 개를 에이전트로 다시 돌리면 넷이 추천을 냈다(R037은 Undertale, Little
+- 빈손이던 취향 적합도 문항 다섯 개를 에이전트로 다시 돌리면 넷이 추천을 냈다(R037은 Undertale, Little
   Nightmares, Papers, Please, Stray). R033은 에이전트 루프 실패로 끝났는데, 같은 질문을 두 번 더 돌리면
   추천을 낸다. 검색과 무관한 도구 반복 호출 문제다(`evals/agent_e2e/REPORT.md`의 E095).

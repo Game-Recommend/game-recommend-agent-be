@@ -1,4 +1,4 @@
-# 선택 관련성 평가 문항
+# 취향 적합도 평가 문항
 
 총 40문항. [build_dataset.py](build_dataset.py)가 만들고 [dataset.json](dataset.json)이 실행 데이터다. 정답 목록은 없다.
 

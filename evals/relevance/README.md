@@ -1,4 +1,4 @@
-# 선택 관련성 평가
+# 취향 적합도 평가
 
 에이전트가 **통과 후보 중 무엇을 골랐는지**가 질문에 맞는지를 보는 평가다. 문항은
 [questions.md](questions.md), 실행 데이터는 [dataset.json](dataset.json), 원시 기록은 [runs/](runs)에 있다.
