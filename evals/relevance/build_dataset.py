@@ -1,4 +1,4 @@
-"""선택 관련성 평가 문항. 모델을 호출하지 않는다.
+"""취향 적합도 평가 문항. 모델을 호출하지 않는다.
 
 엔드투엔드 평가셋(evals/agent_e2e)은 100문항 중 60문항이 검색 조건이 없거나 장르·플랫폼 하나뿐이고,
 취향이 뽑히는 문항은 6개다. 통과 후보 중 무엇을 고르든 질문에 맞는지 가릴 기준이 없다. 이 문항들은
@@ -87,7 +87,7 @@ def main() -> None:
 
     counts = Counter(item["family"] for item in cases)
     lines = [
-        "# 선택 관련성 평가 문항",
+        "# 취향 적합도 평가 문항",
         "",
         f"총 {len(cases)}문항. [build_dataset.py](build_dataset.py)가 만들고 "
         "[dataset.json](dataset.json)이 실행 데이터다. 정답 목록은 없다.",

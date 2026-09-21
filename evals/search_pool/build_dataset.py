@@ -7,7 +7,7 @@ platforms=["노트북"])을 그대로 입력으로 써야 검색이 그 값을 �
         evals/agent_e2e/runs/<UTC timestamp> evals/relevance/runs/<UTC timestamp>
 
 실행 기록을 여러 개 줄 수 있다. 엔드투엔드 문항은 대부분 분류가 없거나 하나라, 분류가 여럿이거나
-파서가 분류를 지어내는 경우는 관련성 평가(evals/relevance)의 기록에서 가져온다.
+파서가 분류를 지어내는 경우는 취향 적합도 평가(evals/relevance)의 기록에서 가져온다.
 """
 
 import argparse

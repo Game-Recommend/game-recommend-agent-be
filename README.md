@@ -85,7 +85,7 @@ REPORT에 그대로 남겨 두었습니다.
 
 - **필수 조건 만족은 동률입니다(98 대 99).** 선택을 LLM에 맡겨도 가격·사양·개수·제외 조건의 준수가 깨지지
   않습니다. 판정과 후검증을 코드가 하기 때문입니다.
-- **선택 관련성이 구조의 이득입니다.** 같은 통과 후보에서 에이전트가 고른 목록과, 고정 파이프라인이 했을
+- **취향 적합도가 구조의 이득입니다.** 같은 통과 후보에서 에이전트가 고른 목록과, 고정 파이프라인이 했을
   선택(인기순으로 자른 목록)을 LLM 심판이 자리를 바꿔 두 번 비교했습니다. 판정 67번 중 에이전트 30승,
   인기순 2승, 비김 35입니다([evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
 - **LLM 왕복 시간이 구조의 비용입니다.** 원본은 질문 분해와 최종 답변에 3.4초, 에이전트는 질문 분해와
@@ -502,7 +502,7 @@ pyproject.toml             의존성·빌드·pytest·Ruff·Vercel 설정
 Makefile                   개발 서버·검증 명령
 TEAM.md                    역할별 담당 파일·연결 계약
 docs/game_recommend_flow.*  서비스 처리 흐름 다이어그램 (PNG 문서용 · SVG 수정용)
-docs/eval_comparison.*     구조에서 나온 차이 세 행: 조건 만족·선택 관련성·LLM 왕복 (rsvg-convert -z 2로 PNG를 만든다)
+docs/eval_comparison.*     구조에서 나온 차이 세 행: 조건 만족·취향 적합도·LLM 왕복 (rsvg-convert -z 2로 PNG를 만든다)
 docs/prompt_engineering_architecture.*  프롬프트 지도: 운영 경로와 평가·집행
 docs/tech_stack.*          백엔드·프론트 기술 구성 한 장
 app/
@@ -571,7 +571,7 @@ evals/
 ├─ agent_questions/         예상 질문 5개의 고정 파이프라인·에이전트 전후 비교 (실제 API, CI 제외)
 ├─ agent_e2e/               엔드투엔드 100문항 평가 (조건·궤적·답변 형식 + LLM 심판, 원본 저장소와 같은 코드)
 ├─ parser_conditions/       질문 분해 평가 (조건 추출 210문항)
-├─ relevance/               선택 관련성 평가 (에이전트의 선택 대 인기순 선택, 1:1 비교)
+├─ relevance/               취향 적합도 평가 (에이전트의 선택 대 인기순 선택, 1:1 비교)
 ├─ non_steam/               비Steam 폴백 실측 평가
 ├─ search_pool/             IGDB 검색 후보 풀 평가 (LLM 미사용: 연도·다양성·구매 가능성·후보 0개)
 └─ price_hardware/          가격·사양 평가셋

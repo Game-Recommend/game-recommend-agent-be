@@ -1,4 +1,4 @@
-"""선택 관련성 평가 실행기. 저장소 루트에서 실행한다. `.env`의 키를 읽는다.
+"""취향 적합도 평가 실행기. 저장소 루트에서 실행한다. `.env`의 키를 읽는다.
 
     .venv/bin/python -m evals.relevance.run_eval --limit 5     # 먼저 작게 확인한다
     .venv/bin/python -m evals.relevance.run_eval --concurrency 2
