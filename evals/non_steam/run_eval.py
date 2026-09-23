@@ -33,7 +33,7 @@ FIELDS = ("os", "cpu", "gpu", "ram_gb")
 class NoJudge:
     """LLM을 쓰지 않을 때. 요청을 받으면 실패로 기록되도록 예외를 던진다."""
 
-    async def judge(self, hardware, requests):
+    async def judge(self, hardware, requests, *, language="ko"):
         raise RuntimeError("LLM judge disabled")
 
 

@@ -155,6 +155,10 @@ Agent의 다음 동작을 정의한다.
 - Tool 실패 처리
 - 초안 거부 후 수정 규칙
 
+답변 언어를 정하는 `[Response Writing Rules]`의 첫 줄만 요청마다 다르다. `build_system_prompt(language)`가
+그 줄을 채우고, 러너의 `system_prompt_in_language` 미들웨어가 모델을 부를 때마다 넣는다.
+`AGENT_SYSTEM`은 한국어판이다. 되묻기·거부 메시지와 `RecommendationDraft` 설명은 답변 언어를 적지 않는다.
+
 Tool 이름과 구조화 출력 이름은 코드와 정확히 같아야 한다.
 
 ```text
@@ -326,7 +330,7 @@ Tool에서 더 많은 후보를 평가하더라도 `recommended_igdb_ids`에는 
 
 후보가 있는 경우 최종 답변은 다음 원칙을 따른다.
 
-- 한국어로 작성
+- 요청의 `language`로 작성(기본 `ko`, `en`이면 영어)
 - 3~6개의 간결한 문장
 - 첫 문장에서 주요 조건과 최종 추천 개수 요약
 - Tool이 반환한 게임명을 그대로 사용

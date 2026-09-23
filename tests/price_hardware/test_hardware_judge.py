@@ -1,6 +1,17 @@
 """판정기 출력 합성: 전체 판정과 이유 문장은 코드가 만들고 LLM은 부품별 status·note만 준다."""
 
-from app.clients.hardware_judge import JudgeRequest, _ComponentVerdict, _Verdict, compose_assessment
+import asyncio
+from types import SimpleNamespace
+
+from app.clients.hardware_judge import (
+    SYSTEM_PROMPT,
+    JudgeRequest,
+    OpenAISpecJudge,
+    _ComponentVerdict,
+    _JudgeOutput,
+    _Verdict,
+    compose_assessment,
+)
 from app.schemas.hardware import HardwareSpecs, RequirementSpec
 
 HARDWARE = HardwareSpecs(gpu="RTX 3060", cpu="i5", ram_gb=16)
@@ -59,3 +70,44 @@ def test_components_outside_compare_are_ignored():
     result = compose_assessment(request(["gpu"]), HARDWARE, verdict(gpu="met", cpu="unmet"))
     assert result.status == "met"
     assert "CPU" not in result.reason
+
+
+def test_reason_words_follow_the_request_language():
+    result = compose_assessment(
+        request(["gpu", "cpu"]), HARDWARE, verdict(gpu="met", cpu="unmet"), "en"
+    )
+    missing = compose_assessment(request(["gpu"]), HARDWARE, None, "en")
+
+    # note는 판정기 LLM이 요청 언어로 쓴다. 여기서는 대역의 note가 그대로 붙는다
+    assert result.reason == (
+        "GPU RTX 3060 vs minimum 'GTX 1060' → met (gpu 근거); "
+        "CPU i5 vs minimum 'i5-8400' → not met (cpu 근거)"
+    )
+    assert missing.reason == "GPU RTX 3060 vs minimum 'GTX 1060' → undetermined"
+
+
+def test_judge_asks_for_notes_in_the_request_language():
+    calls = []
+
+    class Responses:
+        async def parse(self, **kwargs):
+            calls.append(kwargs)
+            return SimpleNamespace(output_parsed=_JudgeOutput(verdicts=[verdict(gpu="met")]))
+
+    judge = OpenAISpecJudge(SimpleNamespace(responses=Responses()), "model")
+
+    english = asyncio.run(judge.judge(HARDWARE, [request(["gpu"])], language="en"))
+    korean = asyncio.run(judge.judge(HARDWARE, [request(["gpu"])]))
+
+    # 기본값은 평가 기록이 해시를 남긴 한국어 프롬프트 그대로이고, 영어는 note 줄만 다르다
+    assert calls[1]["instructions"] == SYSTEM_PROMPT
+    changed = [
+        line
+        for line, base in zip(
+            calls[0]["instructions"].splitlines(), SYSTEM_PROMPT.splitlines(), strict=True
+        )
+        if line != base
+    ]
+    assert changed == ["- note는 영어 한 구절(30자 이내)로 두 부품의 상대 등급만 적습니다."]
+    assert english[0].reason == "GPU RTX 3060 vs minimum 'GTX 1060' → met (gpu 근거)"
+    assert korean[0].reason == "GPU RTX 3060 vs 최소 'GTX 1060' → 충족 (gpu 근거)"

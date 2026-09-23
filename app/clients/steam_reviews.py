@@ -18,10 +18,18 @@ import httpx2 as httpx
 from langsmith.wrappers import wrap_openai
 from openai import AsyncOpenAI
 
+from app.schemas.common import Language
 from app.schemas.game import GameCandidate
 from app.schemas.review import ReviewSummary
 
 # `.env`는 app 패키지를 import할 때 올라온다(app/__init__.py). 여기서는 os.environ만 읽는다
+
+# 한줄평을 쓸 언어(프롬프트에 들어가는 낱말)와, 리뷰가 없을 때 한줄평 자리에 넣는 문장
+SUMMARY_LANGUAGES: dict[Language, str] = {"ko": "한국어", "en": "영어"}
+NO_REVIEWS: dict[Language, str] = {
+    "ko": "리뷰 정보를 충분히 확보하지 못했습니다.",
+    "en": "Not enough reviews were available to summarize.",
+}
 
 class SteamReviewSummaryClient:
     """steam리뷰를 우선 사용하여 게임별 한줄평을 생성한다"""
@@ -127,6 +135,7 @@ class SteamReviewSummaryClient:
     )
     #서비스 최종 출력이 한국어이기 때문에 한국어 리뷰가 충분하면
     #굳이 영어를 섞지 않는게 좋음
+    #출력 언어가 영어여도 수집 순서는 같다. 한국어 리뷰를 읽고 영어 한줄평을 써도 된다
 
     #max_reviews는 후보군의 크기이고
     #target_count = 20은 실제로 llm에 넣을 리뷰 개수
@@ -191,10 +200,11 @@ class SteamReviewSummaryClient:
     async def _summarize_reviews(
         self,
     game_name: str,
-    reviews: list[dict]
+    reviews: list[dict],
+    language: Language = "ko",
 ):
         if not reviews:
-          return "리뷰 정보를 충분히 확보하지 못했습니다."
+          return NO_REVIEWS[language]
         formatted_reviews = []
 
         for review in reviews:
@@ -222,7 +232,7 @@ class SteamReviewSummaryClient:
     게임 이름: {game_name}
 
 아래 사용자 리뷰 및 웹 리뷰를 종합해서
-한국어 한줄평을 작성하세요.
+{SUMMARY_LANGUAGES[language]} 한줄평을 작성하세요.
 
 조건:
 - 100자 정도
@@ -267,7 +277,7 @@ class SteamReviewSummaryClient:
 
 
     async def _summarize_one(
-        self, game: GameCandidate
+        self, game: GameCandidate, language: Language = "ko"
 )->ReviewSummary:
         async with self._semaphore:
             reviews = await self._collect_all_reviews(
@@ -276,7 +286,8 @@ class SteamReviewSummaryClient:
 
             summary = await self._summarize_reviews(
                 game_name = game.name,
-                reviews = reviews
+                reviews = reviews,
+                language = language
         )
 
             source_urls = []
@@ -297,10 +308,12 @@ class SteamReviewSummaryClient:
             )
 
     async def summarize(
-        self, games: list[GameCandidate]
+        self, games: list[GameCandidate], *, language: Language = "ko"
 )->list[ReviewSummary]:
         valid_games = [game for game in games if game.steam_app_id is not None]
 
         return list(
-            await asyncio.gather(*(self._summarize_one(game) for game in valid_games))
+            await asyncio.gather(
+                *(self._summarize_one(game, language) for game in valid_games)
+            )
         )

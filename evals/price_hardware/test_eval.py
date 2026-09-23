@@ -20,7 +20,7 @@ class StubJudge:
         self.error = error
         self.requests = []
 
-    async def judge(self, hardware, requests):
+    async def judge(self, hardware, requests, *, language="ko"):
         self.requests.extend(requests)
         if self.error:
             raise RuntimeError("offline failure")

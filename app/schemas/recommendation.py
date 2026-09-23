@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.pipeline.query_processing.conditions import GameConditions
+from app.schemas.common import Language
 from app.schemas.game import GameCandidate
 from app.schemas.hardware import HardwareResult
 from app.schemas.media import GameMedia
@@ -33,6 +34,13 @@ class RecommendationResponse(RecommendationEvidence):
 
 class RecommendationRequest(BaseModel):
     question: str = Field(min_length=1, max_length=5000, pattern=r"\S")
+    language: Language = Field(
+        default="ko",
+        description=(
+            "answer·리뷰 한줄평·warnings·판정 이유(check.reason)의 언어. SSE 단계 이름·detail, "
+            "오류 문장, conditions 값은 언어와 무관하게 한국어다."
+        ),
+    )
 
 
 class StageEvent(BaseModel):

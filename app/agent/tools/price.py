@@ -29,7 +29,9 @@ def compact_price(result: PriceResult) -> dict:
 
 async def fetch_prices(ctx: AgentContext, igdb_ids: list[int]) -> dict:
     games = ctx.store.resolve(igdb_ids)
-    results = await ctx.tools.price.run(games, ctx.conditions.max_price_krw)
+    results = await ctx.tools.price.run(
+        games, ctx.conditions.max_price_krw, language=ctx.language
+    )
     ctx.store.prices.update(results)
     return {
         "budget_krw": ctx.conditions.max_price_krw,

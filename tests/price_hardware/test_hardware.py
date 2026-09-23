@@ -42,3 +42,18 @@ def test_missing_assessment_is_unknown_and_failure_reason_is_preserved():
     assert result[1].check.status == "unknown"
     assert result[2].check.status == "unmet"
     assert result[2].check.reason == "메모리 부족"
+
+
+def test_reasons_follow_the_request_language():
+    games = [GameCandidate(igdb_id=i, name=str(i)) for i in (1, 2)]
+    client = FakePriceHardware(quotes=[], assessments=[])
+
+    without_specs = asyncio.run(HardwareTool(client).run(games, None, language="en"))
+    with_specs = asyncio.run(
+        HardwareTool(client).run(games, HardwareSpecs(ram_gb=16), language="en")
+    )
+
+    assert without_specs[1].check.reason == "No hardware condition"
+    assert with_specs[1].check.reason == "Compatibility unknown"
+    # 요구 사양과 비교한 이유는 클라이언트가 같은 언어로 쓴다
+    assert client.languages == ["en", "en"]

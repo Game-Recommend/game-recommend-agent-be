@@ -28,6 +28,7 @@ from pydantic import BaseModel
 
 from app.clients.hardware_assessor import GameRequirements, assess_requirements
 from app.clients.hardware_judge import SpecJudge
+from app.schemas.common import Language
 from app.schemas.game import GameCandidate
 from app.schemas.hardware import HardwareAssessment, HardwareSpecs, RequirementSpec
 from app.schemas.price import PriceQuote, PriceUnavailable
@@ -36,6 +37,20 @@ logger = logging.getLogger(__name__)
 
 APPDETAILS_URL = "https://store.steampowered.com/api/appdetails"
 STORE_PAGE_URL = "https://store.steampowered.com/app/{app_id}"
+
+# 구매 불가 이유. 가격 판정 이유(check.reason)로 그대로 나간다
+UNAVAILABLE_REASONS: dict[Language, dict[str, str]] = {
+    "ko": {
+        "not_sold": "한국 스토어 미판매",
+        "unreleased": "미출시",
+        "not_purchasable": "현재 Steam에서 구매 불가",
+    },
+    "en": {
+        "not_sold": "Not sold in the Korean store",
+        "unreleased": "Not yet released",
+        "not_purchasable": "Not currently purchasable on Steam",
+    },
+}
 
 _TAG_RE = re.compile(r"<[^>]+>")
 # 항목 라벨 → 정규 키. Steam은 OS/Processor/Memory/Graphics로 고정되지만
@@ -216,8 +231,11 @@ class SteamStoreClient:
         details = await asyncio.gather(*(self.get_app_details(g.steam_app_id) for g in targets))
         return {game.igdb_id: detail for game, detail in zip(targets, details, strict=True)}
 
-    async def fetch_prices(self, games: list[GameCandidate]) -> list[PriceQuote | PriceUnavailable]:
+    async def fetch_prices(
+        self, games: list[GameCandidate], *, language: Language = "ko"
+    ) -> list[PriceQuote | PriceUnavailable]:
         details = await self._details_for(games)
+        reasons = UNAVAILABLE_REASONS[language]
         results: list[PriceQuote | PriceUnavailable] = []
         for game in games:
             detail = details.get(game.igdb_id)
@@ -225,7 +243,7 @@ class SteamStoreClient:
                 continue
             source_url = STORE_PAGE_URL.format(app_id=detail.app_id)
             if not detail.available:
-                results.append(PriceUnavailable(igdb_id=game.igdb_id, reason="한국 스토어 미판매"))
+                results.append(PriceUnavailable(igdb_id=game.igdb_id, reason=reasons["not_sold"]))
             elif detail.is_free:
                 results.append(
                     PriceQuote(igdb_id=game.igdb_id, amount_krw=0, source_url=source_url)
@@ -237,21 +255,29 @@ class SteamStoreClient:
                     )
                 )
             elif detail.coming_soon:
-                results.append(PriceUnavailable(igdb_id=game.igdb_id, reason="미출시"))
+                results.append(
+                    PriceUnavailable(igdb_id=game.igdb_id, reason=reasons["unreleased"])
+                )
             elif detail.has_packages:
                 pass  # 번들로만 팔아 단독 가격이 없다 → unknown
             else:
                 results.append(
-                    PriceUnavailable(igdb_id=game.igdb_id, reason="현재 Steam에서 구매 불가")
+                    PriceUnavailable(igdb_id=game.igdb_id, reason=reasons["not_purchasable"])
                 )
         return results
 
     async def assess(
-        self, games: list[GameCandidate], hardware: HardwareSpecs | None
+        self,
+        games: list[GameCandidate],
+        hardware: HardwareSpecs | None,
+        *,
+        language: Language = "ko",
     ) -> list[HardwareAssessment]:
         details = await self._details_for(games)
         requirements = {
             igdb_id: GameRequirements(minimum=detail.requirements, recommended=detail.recommended)
             for igdb_id, detail in details.items()
         }
-        return await assess_requirements(games, hardware, requirements, self.judge)
+        return await assess_requirements(
+            games, hardware, requirements, self.judge, language=language
+        )

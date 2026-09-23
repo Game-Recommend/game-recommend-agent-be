@@ -22,6 +22,7 @@ import httpx2
 
 from app.clients.exchange_rate import ExchangeRateClient
 from app.clients.free_games import FREE_GAMES, normalize_title
+from app.schemas.common import Language
 from app.schemas.game import GameCandidate
 from app.schemas.price import PriceQuote, PriceUnavailable
 
@@ -48,7 +49,10 @@ class CheapSharkClient:
         self.free_games = FREE_GAMES if free_games is None else free_games
         self._semaphore = asyncio.Semaphore(max_concurrency)
 
-    async def fetch_prices(self, games: list[GameCandidate]) -> list[PriceQuote | PriceUnavailable]:
+    async def fetch_prices(
+        self, games: list[GameCandidate], *, language: Language = "ko"
+    ) -> list[PriceQuote | PriceUnavailable]:
+        # 구매 불가를 단정하지 않아(결과가 없으면 생략) 이유 문장이 없으므로 language를 쓰지 않는다
         results: list[PriceQuote | PriceUnavailable] = []
         to_lookup: list[GameCandidate] = []
         for game in games:

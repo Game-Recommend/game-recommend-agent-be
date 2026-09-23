@@ -52,7 +52,7 @@ def compact_hardware(result: HardwareResult) -> dict:
 
 async def assess(ctx: AgentContext, igdb_ids: list[int]) -> dict:
     games = ctx.store.resolve(igdb_ids)
-    results = await ctx.tools.hardware.run(games, ctx.conditions.hardware)
+    results = await ctx.tools.hardware.run(games, ctx.conditions.hardware, language=ctx.language)
     ctx.store.hardware.update(results)
     return {
         "user_hardware": ctx.conditions.hardware.model_dump(exclude_none=True)

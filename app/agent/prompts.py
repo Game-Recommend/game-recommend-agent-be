@@ -11,7 +11,11 @@ Tool 이름(
 """
 
 from app.pipeline.query_processing.conditions import GameConditions
+from app.schemas.common import Language
 from app.schemas.game import GameCandidate
+
+# 답변 언어. 요청마다 시스템 프롬프트에서 이 한 줄만 바뀐다
+ANSWER_LANGUAGES: dict[Language, str] = {"ko": "Korean", "en": "English"}
 
 CONNECTION_LABELS = {
     "online": "온라인",
@@ -25,7 +29,7 @@ PLAY_MODE_LABELS = {
 }
 
 
-AGENT_SYSTEM = """
+_AGENT_SYSTEM_TEMPLATE = """
 You are the tool-calling game recommendation agent for GameFit.
 
 The user's question has already been converted into GameConditions by LLMQueryParser.
@@ -195,7 +199,7 @@ Do not use game information that is absent from the user question and tool resul
   result contains null, unknown, unavailable, or unmet values.
 
 [Response Writing Rules]
-- Write the answer in Korean.
+- Write the answer in {answer_language}.
 - Use 3 to 6 concise sentences without Markdown headings, tables, or links.
 - In the first sentence, summarize the user's key conditions and the number of
   verified recommendations.
@@ -268,6 +272,17 @@ Do not use game information that is absent from the user question and tool resul
 - Correct both recommended_igdb_ids and answer so that they remain consistent.
 - Resubmit RecommendationDraft exactly once after correcting all listed problems.
 """.strip()
+
+
+def build_system_prompt(language: Language = "ko") -> str:
+    """요청 언어로 답변을 쓰게 하는 시스템 프롬프트. 언어 말고는 모든 요청이 같은 문장이다.
+
+    본문에 `{"error": "..."}`가 있어 str.format 대신 자리 하나만 바꾼다.
+    """
+    return _AGENT_SYSTEM_TEMPLATE.replace("{answer_language}", ANSWER_LANGUAGES[language])
+
+
+AGENT_SYSTEM = build_system_prompt("ko")
 
 
 def describe_conditions(conditions: GameConditions) -> list[str]:
@@ -524,7 +539,7 @@ def build_empty_challenge(games: list[GameCandidate], recommendation_count: int)
             "search_games, get_prices, assess_hardware, get_review_scores, "
             "summarize_reviews를 다시 호출하지 마세요.",
             "위 목록에 없는 igdb_id를 추가하지 마세요.",
-            "추천 ID를 넣으면 answer도 [Response Writing Rules]대로 한국어 3~6문장으로 "
+            "추천 ID를 넣으면 answer도 [Response Writing Rules]대로 3~6문장으로 "
             "다시 쓰세요. 추천한 게임의 이름을 Tool 결과에 나온 그대로 모두 넣고, 이유는 "
             "search_games 결과의 장르·테마와 get_prices의 amount_krw처럼 Tool 결과에 실제로 "
             "있는 값으로만 쓰세요.",

@@ -28,14 +28,19 @@
 진행 이벤트는 노드와 Tool 안(`AgentContext.run_stage`)에서 나와 `stream_progress`가 SSE로 흘린다.
 단계 이름: 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 점수, 리뷰 요약, 조건 판정,
 미디어.
+
+요청의 출력 언어(`AgentContext.language`)는 시스템 프롬프트의 답변 언어 한 줄, 리뷰 한줄평,
+판정 이유, warnings에만 닿는다. 질문 분해·검색 조건·단계 이름과 detail·오류 문장은 언어와 무관하다.
 """
 
 import asyncio
 import logging
 from collections.abc import AsyncIterator, Mapping
+from functools import partial
 from typing import Annotated, Literal, NotRequired, TypedDict
 
 from langchain.agents import create_agent
+from langchain.agents.middleware import ModelRequest, dynamic_prompt
 from langchain.agents.structured_output import ToolStrategy
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
@@ -48,10 +53,10 @@ from app.agent.context import AgentContext, ToolSet, unique
 from app.agent.limits import TOOL_CALL_LIMITS, ToolCallLimiter
 from app.agent.progress import PipelineStageError, Progress, silent, stream_progress
 from app.agent.prompts import (
-    AGENT_SYSTEM,
     build_empty_challenge,
     build_name_challenge,
     build_rejection,
+    build_system_prompt,
     build_user_input,
 )
 from app.agent.schemas import RecommendationDraft
@@ -60,6 +65,7 @@ from app.agent.tools import hardware as hardware_tool
 from app.agent.tools import price as price_tool
 from app.agent.tools import reviews as reviews_tool
 from app.pipeline.query_processing.parser import QueryParser
+from app.schemas.common import Language
 from app.schemas.recommendation import PipelineEvent, RecommendationResponse
 
 logger = logging.getLogger(__name__)
@@ -67,6 +73,26 @@ logger = logging.getLogger(__name__)
 AGENT_STAGE = "에이전트 추론"
 # ToolStrategy가 최종 출력을 이 이름의 도구 호출로 받는다
 DRAFT_TOOL_NAME = RecommendationDraft.__name__
+
+# 응답 warnings에 러너가 붙이는 문장
+WARNINGS: dict[Language, dict[str, str]] = {
+    "ko": {
+        "no_review": "{name}: 리뷰 요약 확인 불가",
+        "no_quote": "{name}: 원화 가격 확인 불가",
+        "no_passing": "모든 필수 조건을 충족한다고 확인된 후보가 없습니다.",
+    },
+    "en": {
+        "no_review": "{name}: review summary unavailable",
+        "no_quote": "{name}: KRW price unavailable",
+        "no_passing": "No candidate was confirmed to meet all required conditions.",
+    },
+}
+
+
+@dynamic_prompt
+def system_prompt_in_language(request: ModelRequest[AgentContext]) -> str:
+    """모델을 부를 때마다 요청의 출력 언어로 쓴 시스템 프롬프트를 넣는다."""
+    return build_system_prompt(request.runtime.context.language)
 
 
 class PipelineState(TypedDict):
@@ -106,7 +132,6 @@ class AgentRecommender:
         tools: ToolSet,
         model: BaseChatModel,
         *,
-        system_prompt: str = AGENT_SYSTEM,
         stage_timeout_seconds: float = 30,
         total_timeout_seconds: float = 120,
         recursion_limit: int = 20,
@@ -124,10 +149,10 @@ class AgentRecommender:
         self.agent = create_agent(
             model,
             build_tools(),
-            system_prompt=system_prompt,
             context_schema=AgentContext,
-            # 요청 하나에서 Tool마다 부를 수 있는 횟수. 프롬프트의 "at most once"를 코드로 집행한다
-            middleware=[ToolCallLimiter(tool_call_limits)],
+            # 요청 하나에서 Tool마다 부를 수 있는 횟수. 프롬프트의 "at most once"를 코드로 집행한다.
+            # 시스템 프롬프트는 답변 언어 한 줄이 요청마다 달라 모델을 부를 때 넣는다.
+            middleware=[ToolCallLimiter(tool_call_limits), system_prompt_in_language],
             # 최종 출력을 도구 호출로 받는다. 어떤 tool-calling 모델과도 같은 경로로 동작하고,
             # 모델이 자유 텍스트로 끝내지 못하게 한다.
             response_format=ToolStrategy(RecommendationDraft),
@@ -161,15 +186,19 @@ class AgentRecommender:
         builder.add_edge("respond", END)
         return builder.compile()
 
-    def stream(self, question: str) -> AsyncIterator[PipelineEvent]:
-        return stream_progress(self.run, question)
+    def stream(self, question: str, *, language: Language = "ko") -> AsyncIterator[PipelineEvent]:
+        return stream_progress(partial(self.run, language=language), question)
 
     def graph_mermaid(self) -> str:
         """발표·문서용 그래프. agent 서브그래프(model·tools)까지 펼친다."""
         return self.graph.get_graph(xray=1).draw_mermaid()
 
-    async def run(self, question: str, progress: Progress = silent) -> RecommendationResponse:
-        ctx = AgentContext.pending(self.tools, progress, self.stage_timeout_seconds)
+    async def run(
+        self, question: str, progress: Progress = silent, *, language: Language = "ko"
+    ) -> RecommendationResponse:
+        ctx = AgentContext.pending(
+            self.tools, progress, self.stage_timeout_seconds, language=language
+        )
         # 서브그래프는 같은 상한을 자기 카운터로 센다. 부모 노드 수가 상한에 걸리지 않게만 한다.
         # 루프는 첫 시도 + 거부 재시도 + 되묻기 두 종류(빈 초안, 이름)다.
         pipeline_steps = 4 * (self.max_validation_retries + 3) + 4
@@ -331,13 +360,14 @@ class AgentRecommender:
     async def _respond(self, state: PipelineState, runtime: Runtime[AgentContext]) -> dict:
         ids = state["recommended_ids"]
         evidence = runtime.context.store.build_evidence(ids)
+        warnings = WARNINGS[runtime.context.language]
         for result in evidence.games:
             if result.review is None:
-                evidence.warnings.append(f"{result.game.name}: 리뷰 요약 확인 불가")
+                evidence.warnings.append(warnings["no_review"].format(name=result.game.name))
             if result.price.quote is None:
-                evidence.warnings.append(f"{result.game.name}: 원화 가격 확인 불가")
+                evidence.warnings.append(warnings["no_quote"].format(name=result.game.name))
         if not ids:
-            evidence.warnings.append("모든 필수 조건을 충족한다고 확인된 후보가 없습니다.")
+            evidence.warnings.append(warnings["no_passing"])
         answer = state["structured_response"].answer
         return {"response": RecommendationResponse(**evidence.model_dump(), answer=answer)}
 

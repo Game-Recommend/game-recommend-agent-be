@@ -383,14 +383,16 @@ class RecordingClient(FakePriceHardware):
         self.error = error
         self.received: list[list[int]] = []
 
-    async def fetch_prices(self, games):
+    async def fetch_prices(self, games, *, language="ko"):
         self.received.append([g.igdb_id for g in games])
+        self.languages.append(language)
         if self.error:
             raise self.error
         return self.quotes
 
-    async def assess(self, games, hardware):
+    async def assess(self, games, hardware, *, language="ko"):
         self.received.append([g.igdb_id for g in games])
+        self.languages.append(language)
         if self.error:
             raise self.error
         return self.assessments
@@ -442,3 +444,27 @@ def test_routed_propagates_steam_failure():
     fallback = RecordingClient(quotes=[PriceQuote(igdb_id=2, amount_krw=0)])
     with pytest.raises(RuntimeError):
         asyncio.run(RoutedPriceClient(steam, fallback).fetch_prices(GAMES))
+
+
+def test_routed_clients_pass_the_request_language_to_both_sides():
+    steam, fallback = RecordingClient(), RecordingClient()
+
+    asyncio.run(RoutedPriceClient(steam, fallback).fetch_prices(GAMES, language="en"))
+    asyncio.run(
+        RoutedHardwareClient(steam, fallback).assess(GAMES, HardwareSpecs(ram_gb=16), language="en")
+    )
+
+    assert steam.languages == ["en", "en"] and fallback.languages == ["en", "en"]
+
+
+def test_pcgamingwiki_reasons_follow_the_request_language():
+    judge = FakeSpecJudge()
+    http, _ = wiki_http({"Alan Wake II": WIKITEXT}, redirects={"Alan Wake 2": "Alan Wake II"})
+    client = PcGamingWikiClient(http, judge)
+    games = [game(1, "Alan Wake 2")]
+
+    low_memory = asyncio.run(client.assess(games, HardwareSpecs(ram_gb=4), language="en"))
+    asyncio.run(client.assess(games, HardwareSpecs(gpu="RTX 3060", ram_gb=16), language="en"))
+
+    assert low_memory[0].reason.startswith("Not enough memory: minimum ")
+    assert judge.language == "en"

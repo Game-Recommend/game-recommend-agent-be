@@ -99,8 +99,8 @@ def test_summarize_marks_missing_reviews_as_null(context, services):
 
 
 def _only_first(summarize):
-    async def wrapper(games):
-        return await summarize(games[:1])
+    async def wrapper(games, **options):
+        return await summarize(games[:1], **options)
 
     return wrapper
 

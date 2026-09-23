@@ -38,7 +38,7 @@ class StubJudge:
     def __init__(self, status="met"):
         self.status = status
 
-    async def judge(self, hardware, requests):
+    async def judge(self, hardware, requests, *, language="ko"):
         return [
             HardwareAssessment(igdb_id=r.igdb_id, status=self.status, reason="검사")
             for r in requests

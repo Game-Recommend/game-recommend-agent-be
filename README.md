@@ -371,6 +371,11 @@ BE를 호출해야 BE 주소와 키가 노출되지 않습니다. `/health`는 �
 추천 개수는 질문 분해 결과의 `recommendation_count`로 전달되며 기본 5개, 범위 1~30개입니다.
 이 값은 상한이라 가격·사양 조건에 걸린 후보가 빠지면 그보다 적게 반환됩니다.
 
+`language`는 선택 값이며 `ko`(기본) 또는 `en`입니다. 사람이 읽는 출력인 `answer`, 리뷰
+한줄평(`review.summary`), `warnings`, 판정 이유(`price.check.reason`·`hardware.check.reason`)를 이
+언어로 씁니다. 질문 분해와 `conditions` 값, SSE 단계 이름과 `detail`, 오류 `detail`(502와 SSE `error`)은
+언어와 무관하게 한국어입니다. 그 밖의 값은 422입니다.
+
 연동을 주입한 뒤 성공하면 다음 필드를 반환합니다.
 
 | 필드 | 내용 |
@@ -379,7 +384,7 @@ BE를 호출해야 BE 주소와 키가 노출되지 않습니다. `/health`는 �
 | `games` | 추천 후보 목록. 각 항목은 `game`, `price`, `hardware`, `review`, `media`를 포함 |
 | `excluded_games` | 가격·사양 검사에서 제외한 후보 목록. `review`·`media`는 항상 `null` |
 | `warnings` | 조회 실패·정보 누락·충족 후보 없음 등의 안내 |
-| `answer` | 최종 답변 LLM이 쓴 상단 요약 문단. 마크다운 없는 짧은 한국어 문단이며 게임 카드 위에 표시한다 |
+| `answer` | 최종 답변 LLM이 쓴 상단 요약 문단. 마크다운 없는 짧은 문단을 요청의 `language`로 쓰며 게임 카드 위에 표시한다 |
 
 `excluded_games`에는 추천 개수 제한으로 선택되지 않은 충족 후보는 포함하지 않습니다.
 
@@ -414,6 +419,8 @@ data: {"event":"result","result":{ ...JSON 응답과 같은 본문... }}
 | `stage` | `stage`, `status`(`started`/`completed`/`failed`), `detail` | 단계 진행. 단계 이름은 질문 분해, 에이전트 추론, 게임 검색, 가격, 하드웨어, 리뷰 점수, 리뷰 요약, 조건 판정, 미디어. Tool 단계는 에이전트 추론 안에서 LLM이 부른 순서대로 나오며 같은 턴의 병렬 호출은 순서가 섞일 수 있다 |
 | `result` | `result` | 완료. JSON 응답(`RecommendationResponse`)과 같은 본문 |
 | `error` | `detail` | 필수 단계 실패. JSON 응답의 502 `detail`과 같은 문장. 선택 단계 실패는 `stage`의 `failed`와 `warnings`로만 나타난다 |
+
+단계 이름과 `detail`은 FE가 문자열로 대조하므로 `language`가 `en`이어도 한국어 그대로입니다.
 
 스트림이 열린 뒤에는 HTTP 상태가 항상 200이고, 15초 동안 이벤트가 없으면 `: keep-alive` 주석 줄을
 보냅니다. 인증 실패(401)·미설정(503)·검증 실패(422)는 스트림이 열리기 전에 그대로 반환합니다.

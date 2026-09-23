@@ -7,9 +7,11 @@ from langchain_core.messages import HumanMessage
 
 from app.agent.context import AgentContext
 from app.agent.progress import PipelineStageError
+from app.agent.prompts import AGENT_SYSTEM, build_system_prompt
+from app.agent.runner import AgentRecommender
 from app.schemas.price import PriceQuote
 from app.schemas.recommendation import ErrorEvent, ResultEvent, StageEvent
-from tests.agent.fakes import checks, draft, reviews, search
+from tests.agent.fakes import checks, draft, reviews, scripted, search
 
 SEARCH = dict(genres=["Adventure"])
 
@@ -307,7 +309,7 @@ def test_price_and_hardware_check_every_candidate_whatever_ids_the_model_passes(
 
 
 def test_tool_failure_becomes_warning_and_agent_continues(make_recommender, services, monkeypatch):
-    async def broken(games):
+    async def broken(games, **options):
         raise RuntimeError("steam down")
 
     monkeypatch.setattr(services.price_hardware, "fetch_prices", broken)
@@ -377,3 +379,56 @@ def test_graph_shows_whole_pipeline(make_recommender):
 
 async def _collect(stream):
     return [event async for event in stream]
+
+
+# --- 출력 언어 ---
+
+
+def test_system_prompt_follows_request_language_on_every_model_call(services, toolset):
+    # 첫 초안이 거부돼 에이전트 루프에 다시 들어가도 같은 언어로 쓰게 한다
+    model = scripted(search(**SEARCH), checks([1, 2, 3]), draft([1]), draft([3]))
+
+    asyncio.run(AgentRecommender(services.parser, toolset, model).run("q", language="en"))
+
+    assert len(model.received) == 4
+    assert all(messages[0].type == "system" for messages in model.received)
+    assert {messages[0].content for messages in model.received} == {build_system_prompt("en")}
+
+
+def test_default_language_keeps_the_korean_system_prompt(services, toolset):
+    model = scripted(search(**SEARCH), checks([1, 2, 3]), draft([3]))
+
+    asyncio.run(AgentRecommender(services.parser, toolset, model).run("q"))
+
+    assert {messages[0].content for messages in model.received} == {AGENT_SYSTEM}
+
+
+def test_english_request_writes_warnings_and_unchecked_reasons_in_english(
+    make_recommender, services, monkeypatch
+):
+    async def broken(games, **options):
+        raise RuntimeError("steam down")
+
+    monkeypatch.setattr(services.price_hardware, "fetch_prices", broken)
+    recommender = make_recommender(
+        search(**SEARCH), checks([1, 2, 3]), draft([3]), draft([], "No price was confirmed.")
+    )
+
+    response = asyncio.run(recommender.run("q", language="en"))
+
+    assert response.warnings == [
+        "Price request failed: this information could not be verified.",
+        "No candidate was confirmed to meet all required conditions.",
+    ]
+    # 가격을 받지 못한 후보의 판정 이유도 요청 언어로 쓴다
+    assert {g.price.check.reason for g in response.excluded_games} == {"Price unavailable"}
+
+
+def test_stream_carries_the_request_language(make_recommender, services):
+    recommender = make_recommender(search(**SEARCH), checks([1, 2, 3]), reviews([3]), draft([3]))
+
+    events = asyncio.run(_collect(recommender.stream("q", language="en")))
+
+    assert isinstance(events[-1], ResultEvent)
+    assert events[-1].result.games[0].price.check.reason == "Within budget"
+    assert services.reviews.languages == ["en"]

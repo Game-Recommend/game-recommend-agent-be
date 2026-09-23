@@ -6,6 +6,8 @@ Tool 파일(app/agent/tools/*.py)은 여기 정의된 규약만 쓴다.
 - Tool은 igdb_id 목록을 받고 `CandidateStore.resolve()`로 후보 객체를 되찾는다.
 - Tool은 LLM에 줄 압축 JSON(dict)을 돌려주고, 응답용 전체 pydantic 모델은 `CandidateStore`에 쌓는다.
 - Tool 본문은 `AgentContext.run_stage()`로 감싸 진행 이벤트·시간 제한·실패 처리를 공통으로 한다.
+- 사람이 읽는 출력의 언어는 `AgentContext.language`에서 읽어 팀원 도구에 넘긴다. LLM에 돌려주는
+  오류 JSON과 거부 사유는 언어와 무관하게 한국어다.
 """
 
 import asyncio
@@ -18,7 +20,7 @@ from dataclasses import dataclass, field
 from app.agent.progress import Progress, silent
 from app.agent.schemas import RecommendationDraft
 from app.pipeline.query_processing.conditions import GameConditions
-from app.schemas.common import ConditionCheck
+from app.schemas.common import ConditionCheck, Language
 from app.schemas.game import GameCandidate
 from app.schemas.hardware import HardwareResult
 from app.schemas.media import GameMedia
@@ -37,6 +39,38 @@ logger = logging.getLogger(__name__)
 # 통과 규칙: 필수 조건 판정이 met이거나 조건이 없어 skipped인 경우만 추천한다.
 PASSING = frozenset({"met", "skipped"})
 STATUS_LABELS = {"met": "충족", "unmet": "미충족", "unknown": "확인 불가", "skipped": "검사 생략"}
+
+# 응답에 나가는 안내 문구: 조회하지 않은 후보의 판정 이유와 단계 실패 경고
+MESSAGES: dict[Language, dict[str, str]] = {
+    "ko": {
+        "price_unchecked": "가격 확인 불가",
+        "hardware_unchecked": "사양 확인 불가",
+        "stage_failed": "{stage} 호출 실패: 해당 정보를 확인할 수 없습니다.",
+    },
+    "en": {
+        "price_unchecked": "Price unavailable",
+        "hardware_unchecked": "Specs unavailable",
+        "stage_failed": "{stage} request failed: this information could not be verified.",
+    },
+}
+# 경고 문장에 넣는 단계 이름. 진행 이벤트의 단계 이름은 FE가 대조하는 키라 언어와 무관하게 한국어다
+STAGE_NAMES: dict[Language, dict[str, str]] = {
+    "ko": {},
+    "en": {
+        "게임 검색": "Game search",
+        "가격": "Price",
+        "하드웨어": "Hardware",
+        "리뷰 점수": "Review score",
+        "리뷰 요약": "Review summary",
+        "미디어": "Media",
+    },
+}
+
+
+def stage_failed(stage: str, language: Language) -> str:
+    """단계 실패 경고. 모르는 단계 이름은 그대로 쓴다."""
+    name = STAGE_NAMES[language].get(stage, stage)
+    return MESSAGES[language]["stage_failed"].format(stage=name)
 
 
 def unique(igdb_ids: list[int]) -> list[int]:
@@ -68,8 +102,9 @@ class UnknownCandidateError(ValueError):
 class CandidateStore:
     """요청 하나 동안 후보와 도구 결과를 igdb_id로 모은다. 후보는 검색 순서를 유지한다."""
 
-    def __init__(self, conditions: GameConditions):
+    def __init__(self, conditions: GameConditions, language: Language = "ko"):
         self.conditions = conditions
+        self.language = language  # 조회하지 않은 후보의 판정 이유를 쓰는 언어
         self.candidates: dict[int, GameCandidate] = {}
         self.prices: dict[int, PriceResult] = {}
         self.hardware: dict[int, HardwareResult] = {}
@@ -122,18 +157,19 @@ class CandidateStore:
         조회하지 않은 항목은 조건이 있으면 unknown, 없으면 skipped다.
         """
         conditions = self.conditions
+        messages = MESSAGES[self.language]
         price = self.prices.get(igdb_id) or PriceResult(
             igdb_id=igdb_id,
             check=ConditionCheck(
                 status="unknown" if conditions.max_price_krw is not None else "skipped",
-                reason="가격 확인 불가",
+                reason=messages["price_unchecked"],
             ),
         )
         hardware = self.hardware.get(igdb_id) or HardwareResult(
             igdb_id=igdb_id,
             check=ConditionCheck(
                 status="unknown" if conditions.hardware is not None else "skipped",
-                reason="사양 확인 불가",
+                reason=messages["hardware_unchecked"],
             ),
         )
         return EvaluatedGame(
@@ -232,6 +268,8 @@ class AgentContext:
     tools: ToolSet
     progress: Progress = silent
     stage_timeout_seconds: float = 30
+    # 답변·리뷰 한줄평·warnings·판정 이유의 언어. 요청 본문의 language다
+    language: Language = "ko"
     stages: list[str] = field(default_factory=list)  # run_stage로 실행한 단계 이름 (테스트·진단용)
     # LLM이 부른 Tool별 호출 수(상한을 넘겨 거부한 호출 포함). 요청 하나 동안 재시도·되묻기 루프를
     # 건너 이어 센다. 러너가 직접 부르는 안전망·리뷰 요약은 세지 않는다 (app/agent/limits.py)
@@ -239,7 +277,12 @@ class AgentContext:
 
     @classmethod
     def pending(
-        cls, tools: ToolSet, progress: Progress = silent, stage_timeout_seconds: float = 30
+        cls,
+        tools: ToolSet,
+        progress: Progress = silent,
+        stage_timeout_seconds: float = 30,
+        *,
+        language: Language = "ko",
     ) -> "AgentContext":
         """질문 분해 전의 컨텍스트.
 
@@ -249,16 +292,17 @@ class AgentContext:
         conditions = GameConditions()
         return cls(
             conditions=conditions,
-            store=CandidateStore(conditions),
+            store=CandidateStore(conditions, language),
             tools=tools,
             progress=progress,
             stage_timeout_seconds=stage_timeout_seconds,
+            language=language,
         )
 
     def begin(self, conditions: GameConditions) -> None:
         """질문 분해 결과로 조건과 후보 저장소를 연다. Tool은 이 뒤에만 실행된다."""
         self.conditions = conditions
-        self.store = CandidateStore(conditions)
+        self.store = CandidateStore(conditions, self.language)
 
     async def run_stage(
         self,
@@ -285,7 +329,7 @@ class AgentContext:
             return dumps({"error": str(exc)})
         except Exception as exc:
             logger.warning("Agent tool stage failed: %s (%s)", stage, type(exc).__name__)
-            self.store.warn(f"{stage} 호출 실패: 해당 정보를 확인할 수 없습니다.")
+            self.store.warn(stage_failed(stage, self.language))
             self.progress(stage, "failed", None)
             return dumps({"error": f"{stage} 조회에 실패했습니다. 이 정보 없이 진행하세요."})
         self.progress(stage, "completed", detail(payload) if detail is not None else None)
@@ -299,7 +343,7 @@ class AgentContext:
             result = await asyncio.wait_for(call, timeout=self.stage_timeout_seconds)
         except Exception as exc:
             logger.warning("Agent post stage failed: %s (%s)", stage, type(exc).__name__)
-            self.store.warn(f"{stage} 호출 실패: 해당 정보를 확인할 수 없습니다.")
+            self.store.warn(stage_failed(stage, self.language))
             self.progress(stage, "failed", None)
             return None
         self.progress(stage, "completed", None)
