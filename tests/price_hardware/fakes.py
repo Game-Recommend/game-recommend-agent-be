@@ -1,4 +1,5 @@
 from app.clients.hardware_judge import JudgeRequest
+from app.schemas.common import Language
 from app.schemas.game import GameCandidate
 from app.schemas.hardware import HardwareAssessment, HardwareSpecs
 from app.schemas.price import PriceQuote, PriceUnavailable
@@ -14,15 +15,24 @@ class FakePriceHardware:
         self.quotes = quotes
         self.assessments = assessments
         self.calls = calls if calls is not None else []
+        self.languages: list[Language] = []  # 호출마다 받은 language
 
-    async def fetch_prices(self, games: list[GameCandidate]) -> list[PriceQuote | PriceUnavailable]:
+    async def fetch_prices(
+        self, games: list[GameCandidate], *, language: Language = "ko"
+    ) -> list[PriceQuote | PriceUnavailable]:
         self.calls.append("price")
+        self.languages.append(language)
         return self.quotes
 
     async def assess(
-        self, games: list[GameCandidate], hardware: HardwareSpecs | None
+        self,
+        games: list[GameCandidate],
+        hardware: HardwareSpecs | None,
+        *,
+        language: Language = "ko",
     ) -> list[HardwareAssessment]:
         self.calls.append("hardware")
+        self.languages.append(language)
         return self.assessments
 
 
@@ -36,11 +46,17 @@ class FakeSpecJudge:
         self.error = error
         self.requests: list[JudgeRequest] = []
         self.hardware: HardwareSpecs | None = None
+        self.language: Language | None = None
 
     async def judge(
-        self, hardware: HardwareSpecs, requests: list[JudgeRequest]
+        self,
+        hardware: HardwareSpecs,
+        requests: list[JudgeRequest],
+        *,
+        language: Language = "ko",
     ) -> list[HardwareAssessment]:
         self.hardware = hardware
+        self.language = language
         self.requests.extend(requests)
         if self.error is not None:
             raise self.error

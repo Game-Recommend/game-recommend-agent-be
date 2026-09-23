@@ -34,6 +34,7 @@ import httpx2
 from app.clients.free_games import normalize_title
 from app.clients.hardware_assessor import GameRequirements, assess_requirements
 from app.clients.hardware_judge import SpecJudge
+from app.schemas.common import Language
 from app.schemas.game import GameCandidate
 from app.schemas.hardware import HardwareAssessment, HardwareSpecs, RequirementSpec
 
@@ -166,10 +167,16 @@ class PcGamingWikiClient:
         self._cache: dict[str, tuple[float, GameRequirements | None]] = {}
 
     async def assess(
-        self, games: list[GameCandidate], hardware: HardwareSpecs | None
+        self,
+        games: list[GameCandidate],
+        hardware: HardwareSpecs | None,
+        *,
+        language: Language = "ko",
     ) -> list[HardwareAssessment]:
         requirements = await self.fetch_requirements(games)
-        return await assess_requirements(games, hardware, requirements, self.judge)
+        return await assess_requirements(
+            games, hardware, requirements, self.judge, language=language
+        )
 
     async def fetch_requirements(self, games: list[GameCandidate]) -> dict[int, GameRequirements]:
         """igdb_id → 요구 사양. 페이지를 못 찾은 게임은 키 자체를 넣지 않는다."""

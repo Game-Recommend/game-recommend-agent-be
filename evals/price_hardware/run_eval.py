@@ -66,11 +66,11 @@ class RecordingJudge:
         self.verdicts = []
         self.requested_ids = []
 
-    async def judge_specs(self, hardware, requests):
+    async def judge_specs(self, hardware, requests, **options):
         self.calls += 1
         self.requested_ids.extend(request.igdb_id for request in requests)
         try:
-            result = await self.judge.judge(hardware, requests)
+            result = await self.judge.judge(hardware, requests, **options)
             self.verdicts = [v.model_dump() for v in result]
             return result
         except Exception as exc:
@@ -86,8 +86,9 @@ class JudgeAdapter:
     def __init__(self, recorder):
         self.recorder = recorder
 
-    async def judge(self, hardware, requests):
-        return await self.recorder.judge_specs(hardware, requests)
+    async def judge(self, hardware, requests, **options):
+        # 판정기 계약의 선택 인자(language 등)는 그대로 넘긴다
+        return await self.recorder.judge_specs(hardware, requests, **options)
 
 
 async def evaluate(case, repeat, judge):

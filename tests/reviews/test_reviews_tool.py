@@ -22,6 +22,7 @@ def test_summarize_returns_compressed_reviews():
 
     context = SimpleNamespace(
         store=store,
+        language="ko",
         tools=SimpleNamespace(
             review_summary=ReviewSummaryTool(fake_reviews)
         ),
@@ -57,11 +58,12 @@ def test_summarize_returns_null_when_steam_app_id_is_missing():
     )
 
     class FakeReviewsWithoutSteam:
-        async def summarize(self, games):
+        async def summarize(self, games, *, language="ko"):
             return []
 
     context = SimpleNamespace(
         store=store,
+        language="ko",
         tools=SimpleNamespace(
             review_summary=ReviewSummaryTool(FakeReviewsWithoutSteam())
         ),
@@ -86,7 +88,7 @@ def test_summarize_reviews_returns_error_json_on_failure():
     )
 
     class FailingReviews:
-        async def summarize(self, games):
+        async def summarize(self, games, *, language="ko"):
             raise ConnectionError("Steam API failure")
 
     review_summary = ReviewSummaryTool(FailingReviews())

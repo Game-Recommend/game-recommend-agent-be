@@ -5,7 +5,8 @@
 > **This file is a translation.** [README.md](README.md) (Korean) is the source of truth; where the two
 > disagree, the Korean one is right. `evals/agent_questions/bench.py` also reads the example questions
 > directly out of `README.md`, so edit the Korean file first and mirror the change here.
-> The service itself is Korean-only: questions are parsed and answers are written in Korean.
+> Questions are parsed as Korean. Answers, review summaries, warnings and verdict reasons are written in
+> the request's `language` (`ko` by default, or `en`).
 
 Paths and commands are relative to the repository root.
 The frontend is developed in [game-recommend-agent-fe](https://github.com/Game-Recommend/game-recommend-agent-fe),
@@ -431,6 +432,12 @@ The recommendation count is carried in the parsed conditions as `recommendation_
 with a range of 1–30. It is an upper bound, so fewer may come back once candidates are dropped by the
 price and spec conditions.
 
+`language` is optional and is either `ko` (the default) or `en`. The human-readable output is written in
+it: `answer`, the review summary (`review.summary`), `warnings`, and the verdict reasons
+(`price.check.reason`, `hardware.check.reason`). Question parsing and the `conditions` values, SSE stage
+names and `detail`, and error `detail` (the 502 and the SSE `error`) stay Korean whatever the language.
+Any other value returns 422.
+
 With the integrations injected, a successful call returns these fields.
 
 | Field | Contents |
@@ -439,7 +446,7 @@ With the integrations injected, a successful call returns these fields.
 | `games` | Recommended candidates. Each item contains `game`, `price`, `hardware`, `review` and `media` |
 | `excluded_games` | Candidates dropped by the price and spec checks. `review` and `media` are always `null` |
 | `warnings` | Notices such as lookup failures, missing information, or no passing candidates |
-| `answer` | The summary paragraph written by the final-answer LLM. A short Korean paragraph with no markdown, shown above the game cards |
+| `answer` | The summary paragraph written by the final-answer LLM. A short paragraph with no markdown in the request's `language`, shown above the game cards |
 
 `excluded_games` does not include passing candidates that merely lost out to the recommendation-count cap.
 
@@ -469,7 +476,8 @@ event: result
 data: {"event":"result","result":{ ...same body as the JSON response... }}
 ```
 
-**Stage names are Korean on the wire.** They are literal values, so do not translate them in client code:
+**Stage names are Korean on the wire, even when `language` is `en`.** They are literal values, so do not
+translate them in client code:
 `질문 분해` (question parsing), `에이전트 추론` (agent reasoning), `게임 검색` (game search), `가격` (price),
 `하드웨어` (hardware), `리뷰 점수` (review score), `리뷰 요약` (review summary), `조건 판정` (condition
 verdict), `미디어` (media). `detail` strings are Korean too — for example `후보 30개` ("30 candidates") and

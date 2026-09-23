@@ -16,7 +16,7 @@ STAGE = "리뷰 요약"
 
 async def summarize(ctx: AgentContext, igdb_ids: list[int]) -> dict:
     games = ctx.store.resolve(igdb_ids)
-    results = await ctx.tools.review_summary.run(games)
+    results = await ctx.tools.review_summary.run(games, language=ctx.language)
     ctx.store.reviews.update(results)
     return {
         "reviews": [
@@ -32,7 +32,7 @@ async def summarize(ctx: AgentContext, igdb_ids: list[int]) -> dict:
 
 @tool("summarize_reviews")
 async def summarize_reviews(igdb_ids: list[int], runtime: ToolRuntime[AgentContext]) -> str:
-    """최종 추천 후보의 Steam 사용자 리뷰를 수집해 한국어 한줄평으로 요약한다.
+    """최종 추천 후보의 Steam 사용자 리뷰를 수집해 한줄평으로 요약한다.
 
     가격과 사양 등 필수 조건을 확인한 뒤 최종 추천을 결정하는 단계에서만 호출한다.
     리뷰 수집과 LLM 요약에 시간이 걸리고 비용이 발생하므로 검색된 전체 후보에는 호출하지 않는다.
@@ -44,7 +44,7 @@ async def summarize_reviews(igdb_ids: list[int], runtime: ToolRuntime[AgentConte
     결과:
     - igdb_id: 게임의 IGDB ID
     - name: 게임 이름
-    - summary: Steam 사용자 리뷰를 바탕으로 만든 약 100자 한국어 한줄평
+    - summary: Steam 사용자 리뷰를 바탕으로 만든 약 100자 한줄평
     - summary가 null이면 Steam 리뷰를 확보하지 못한 것이므로 내용을 추측하지 않는다.
     """
     ctx = runtime.context

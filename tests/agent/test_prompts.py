@@ -5,9 +5,12 @@ from app.agent.prompts import (
     build_empty_challenge,
     build_name_challenge,
     build_rejection,
+    build_system_prompt,
     build_user_input,
     describe_conditions,
 )
+from app.agent.schemas import RecommendationDraft
+from app.agent.tools.reviews import summarize_reviews
 from app.pipeline.query_processing.conditions import GameConditions
 from app.schemas.game import GameCandidate
 from app.schemas.hardware import HardwareSpecs
@@ -470,3 +473,26 @@ def test_build_user_input_explains_mandatory_free_price():
     assert "quote.amount_krw=0" in message
     assert "price status=met" in message
     assert "get_prices를 다시 호출하지 말고" in message
+
+
+def test_system_prompt_differs_by_language_in_the_answer_language_line_only():
+    korean, english = build_system_prompt("ko"), build_system_prompt("en")
+
+    assert korean == AGENT_SYSTEM
+    lines = zip(korean.splitlines(), english.splitlines(), strict=True)
+    changed = [(ko, en) for ko, en in lines if ko != en]
+    assert changed == [("- Write the answer in Korean.", "- Write the answer in English.")]
+
+
+def test_only_the_system_prompt_sets_the_answer_language():
+    # 되묻기·거부 메시지나 출력·Tool 설명이 "한국어"를 요구하면 영어 요청도 한국어 답변으로 돌아온다
+    games = [GameCandidate(igdb_id=7, name="Game 7")]
+    texts = [
+        build_empty_challenge(games, recommendation_count=1),
+        build_name_challenge(games, games),
+        build_rejection(["추천 개수는 1개 이하여야 합니다 (현재 2개)"]),
+        RecommendationDraft.model_fields["answer"].description,
+        summarize_reviews.description,
+    ]
+    for text in texts:
+        assert "한국어" not in text and "Korean" not in text

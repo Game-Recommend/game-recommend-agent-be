@@ -81,7 +81,7 @@ def test_stream_reports_required_stage_failure_as_error_event(client, services, 
 
 
 def test_optional_stage_failure_is_a_stage_event_not_an_error(client, services, monkeypatch):
-    async def fail(games):
+    async def fail(games, **options):
         raise ConnectionError("down")
 
     monkeypatch.setattr(services.reviews, "summarize", fail)
@@ -122,3 +122,25 @@ def test_encoder_sends_heartbeat_while_stage_is_slow():
     frames = asyncio.run(collect())
     assert frames[0] == ": keep-alive\n\n"
     assert frames[-1].startswith("event: stage\ndata: ")
+
+
+def test_english_stream_keeps_korean_stage_names_and_details(client, services, monkeypatch):
+    # 단계 이름과 detail은 FE가 문자열로 대조하는 키라 요청 언어와 무관하게 한국어다
+    async def fail(games, **options):
+        raise ConnectionError("down")
+
+    monkeypatch.setattr(services.reviews, "summarize", fail)
+    body = {"question": "게임 추천", "language": "en"}
+    with client.stream("POST", "/recommend", json=body, headers=HEADERS) as r:
+        events = parse_sse(r.read().decode())
+
+    details = {(d["stage"], d["status"]): d["detail"] for e, d in events if e == "stage"}
+    assert details[("게임 검색", "completed")] == "후보 3개"
+    assert details[("조건 판정", "completed")] == "통과 1개 중 1개 추천, 제외 2개"
+    assert ("리뷰 요약", "failed") in details
+    result = events[-1][1]["result"]
+    assert result["warnings"] == [
+        "Review summary request failed: this information could not be verified.",
+        "Game 3: review summary unavailable",
+    ]
+    assert result["games"][0]["price"]["check"]["reason"] == "Within budget"

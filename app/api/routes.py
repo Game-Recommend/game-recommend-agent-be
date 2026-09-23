@@ -50,12 +50,12 @@ async def recommend(
 ):
     if accept and SSE_MEDIA_TYPE in accept:
         return StreamingResponse(
-            encode_sse(recommender.stream(body.question)),
+            encode_sse(recommender.stream(body.question, language=body.language)),
             media_type=SSE_MEDIA_TYPE,
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
     try:
-        return await recommender.run(body.question)
+        return await recommender.run(body.question, language=body.language)
     except PipelineStageError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 

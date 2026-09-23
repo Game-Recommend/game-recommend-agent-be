@@ -275,3 +275,34 @@ def test_parse_requirements_accepts_alternate_labels():
     assert (spec.cpu, spec.ram_gb, spec.gpu) == ("Ryzen 5 3600", 16, "RTX 2060")
     # "macOS:"처럼 다른 단어에 붙은 "OS"는 라벨로 보지 않는다
     assert parse_requirements("Notes: macOS: not supported") is None
+
+
+def test_reasons_follow_the_request_language():
+    judge = FakeSpecJudge()
+    client, _ = make_client(
+        {
+            1: app_data(),
+            3: {"success": False},
+            4: app_data(price_overview=None, release_date={"coming_soon": True}),
+            5: app_data(price_overview=None, packages=[]),
+        },
+        judge=judge,
+    )
+
+    prices = asyncio.run(client.fetch_prices([game(i, i) for i in (3, 4, 5)], language="en"))
+    low_ram = asyncio.run(
+        client.assess([game(1, 1)], HardwareSpecs(gpu="RTX 3060", ram_gb=4), language="en")
+    )
+    judged = asyncio.run(
+        client.assess([game(1, 1)], HardwareSpecs(gpu="RTX 3060", ram_gb=16), language="en")
+    )
+
+    assert [p.reason for p in prices] == [
+        "Not sold in the Korean store",
+        "Not yet released",
+        "Not currently purchasable on Steam",
+    ]
+    assert low_ram[0].reason == "Not enough memory: minimum 8 GB, you have 4 GB"
+    assert judged[0].reason == "GPU/CPU check failed"  # 대역 판정기가 결과를 내지 않았다
+    # GPU·CPU 판정기는 note를 같은 언어로 쓰도록 language를 받는다
+    assert judge.language == "en"

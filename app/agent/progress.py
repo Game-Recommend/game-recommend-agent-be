@@ -5,6 +5,7 @@ import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Protocol
 
+from app.schemas.common import Language
 from app.schemas.recommendation import (
     ErrorEvent,
     PipelineEvent,
@@ -28,11 +29,18 @@ class PipelineStageError(Exception):
 
 
 class Recommender(Protocol):
-    """`/recommend`가 기대하는 추천기 계약. `AgentRecommender`가 구현한다."""
+    """`/recommend`가 기대하는 추천기 계약. `AgentRecommender`가 구현한다.
 
-    async def run(self, question: str, progress: Progress = silent) -> RecommendationResponse: ...
+    language는 사람이 읽는 출력의 언어다(`app.schemas.common.Language`).
+    """
 
-    def stream(self, question: str) -> AsyncIterator[PipelineEvent]: ...
+    async def run(
+        self, question: str, progress: Progress = silent, *, language: Language = "ko"
+    ) -> RecommendationResponse: ...
+
+    def stream(
+        self, question: str, *, language: Language = "ko"
+    ) -> AsyncIterator[PipelineEvent]: ...
 
 
 async def stream_progress(

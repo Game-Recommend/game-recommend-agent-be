@@ -40,3 +40,23 @@ def test_unavailable_price_is_unmet_even_without_budget():
     with_budget = asyncio.run(PriceTool(client).run(games, max_price_krw=100))
     assert with_budget[1].check.status == "unmet"
     assert with_budget[2].check.status == "unknown"
+
+
+def test_reasons_follow_the_request_language():
+    games = [GameCandidate(igdb_id=i, name=str(i)) for i in (1, 2, 3)]
+    client = FakePriceHardware(
+        quotes=[PriceQuote(igdb_id=1, amount_krw=100), PriceQuote(igdb_id=2, amount_krw=101)],
+        assessments=[],
+    )
+
+    with_budget = asyncio.run(PriceTool(client).run(games, max_price_krw=100, language="en"))
+    without_budget = asyncio.run(PriceTool(client).run(games, max_price_krw=None, language="en"))
+
+    assert [with_budget[i].check.reason for i in (1, 2, 3)] == [
+        "Within budget",
+        "Over budget",
+        "KRW price unavailable",
+    ]
+    assert without_budget[3].check.reason == "No budget condition"
+    # 구매 불가 이유(PriceUnavailable.reason)는 클라이언트가 같은 언어로 쓴다
+    assert client.languages == ["en", "en"]

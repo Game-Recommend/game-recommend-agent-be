@@ -90,3 +90,33 @@ def test_search_failure_leaves_agent_unable_to_confirm(client, services, monkeyp
     response = client.post("/recommend", json={"question": "게임 추천"})
     assert response.status_code == 502
     assert "secret-provider-message" not in response.text
+
+
+def price_reasons(body: dict) -> dict[int, str]:
+    return {
+        item["game"]["igdb_id"]: item["price"]["check"]["reason"]
+        for item in [*body["games"], *body["excluded_games"]]
+    }
+
+
+def test_language_defaults_to_korean(client, services):
+    body = client.post("/recommend", json={"question": "게임 추천"}).json()
+
+    assert price_reasons(body) == {3: "예산 이하", 1: "예산 초과", 2: "예산 이하"}
+    assert services.price_hardware.languages == ["ko", "ko"]  # 가격·사양
+    assert services.reviews.languages == ["ko"]
+
+
+def test_english_request_reaches_tools_and_reasons(client, services):
+    body = client.post("/recommend", json={"question": "게임 추천", "language": "en"}).json()
+
+    assert price_reasons(body) == {3: "Within budget", 1: "Over budget", 2: "Within budget"}
+    assert services.price_hardware.languages == ["en", "en"]
+    assert services.reviews.languages == ["en"]
+    # 조건 값은 번역하지 않는다. preferences 같은 값은 코드가 문자열로 대조하는 키다
+    assert body["conditions"] == services.parser.conditions.model_dump(mode="json")
+
+
+def test_unsupported_language_is_rejected(client):
+    response = client.post("/recommend", json={"question": "게임 추천", "language": "ja"})
+    assert response.status_code == 422

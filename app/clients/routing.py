@@ -15,6 +15,7 @@ from collections.abc import Awaitable, Callable
 
 from app.clients.contracts.hardware import HardwareClient
 from app.clients.contracts.price import PriceClient
+from app.schemas.common import Language
 from app.schemas.game import GameCandidate
 from app.schemas.hardware import HardwareAssessment, HardwareSpecs
 from app.schemas.price import PriceQuote, PriceUnavailable
@@ -58,8 +59,15 @@ class RoutedPriceClient:
         self.steam = steam
         self.fallback = fallback
 
-    async def fetch_prices(self, games: list[GameCandidate]) -> list[PriceQuote | PriceUnavailable]:
-        return await _merged(games, "price", self.steam.fetch_prices, self.fallback.fetch_prices)
+    async def fetch_prices(
+        self, games: list[GameCandidate], *, language: Language = "ko"
+    ) -> list[PriceQuote | PriceUnavailable]:
+        return await _merged(
+            games,
+            "price",
+            lambda subset: self.steam.fetch_prices(subset, language=language),
+            lambda subset: self.fallback.fetch_prices(subset, language=language),
+        )
 
 
 class RoutedHardwareClient:
@@ -68,11 +76,15 @@ class RoutedHardwareClient:
         self.fallback = fallback
 
     async def assess(
-        self, games: list[GameCandidate], hardware: HardwareSpecs | None
+        self,
+        games: list[GameCandidate],
+        hardware: HardwareSpecs | None,
+        *,
+        language: Language = "ko",
     ) -> list[HardwareAssessment]:
         return await _merged(
             games,
             "hardware",
-            lambda subset: self.steam.assess(subset, hardware),
-            lambda subset: self.fallback.assess(subset, hardware),
+            lambda subset: self.steam.assess(subset, hardware, language=language),
+            lambda subset: self.fallback.assess(subset, hardware, language=language),
         )
