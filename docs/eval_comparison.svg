@@ -42,6 +42,6 @@
 <text x="1096" y="420" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+2.8초</text>
 <text x="1096" y="447" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">원본 우세</text>
 <line x1="56" y1="462" x2="1260" y2="462" stroke="#E5E7EB"/>
-<text x="80" y="489" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">필수 조건 · LLM 왕복: 같은 100문항(원본 2026-09-17, 에이전트 2026-09-20). 취향 적합도: 40문항(취향·상황) × 2회의 1:1 판정.</text>
+<text x="80" y="489" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">필수 조건 · LLM 왕복: 같은 100문항(원본 2026-09-17, 에이전트 2026-09-20). 취향 적합도: 40문항(취향·상황) × 2회 실행 중 같은 목록 5·빈 추천 8을 뺀 67번의 1:1 판정.</text>
 <rect x="56.5" y="172.5" width="1203" height="329" rx="13.5" fill="none" stroke="#D1D5DB"/>
 </svg>

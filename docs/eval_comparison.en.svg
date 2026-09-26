@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1204" height="330" viewBox="56 172 1204 330" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
-<rect x="56" y="172" width="1204" height="330" rx="14" fill="white"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1204" height="354" viewBox="56 172 1204 354" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
+<rect x="56" y="172" width="1204" height="354" rx="14" fill="white"/>
 <path d="M56 228 V186 Q56 172 70 172 H1246 Q1260 172 1260 186 V228 Z" fill="#EEF0F6"/>
 <text x="80" y="209" font-size="22" fill="#6B7280" font-weight="600" text-anchor="start">Metric</text>
 <circle cx="528" cy="201" r="8" fill="#0E9F9F"/>
@@ -42,6 +42,7 @@
 <text x="1096" y="420" font-size="28" fill="#111827" font-weight="700" text-anchor="start">+2.8 s</text>
 <text x="1096" y="447" font-size="19" fill="#6B7280" font-weight="400" text-anchor="start">Original ahead</text>
 <line x1="56" y1="462" x2="1260" y2="462" stroke="#E5E7EB"/>
-<text x="80" y="489" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">Hard constraints &#183; LLM round trip: same 100 items (original 2026-09-17, agent 2026-09-20). Taste fit: 40 items (taste, situation) &#215; 2 head-to-head judgements.</text>
-<rect x="56.5" y="172.5" width="1203" height="329" rx="13.5" fill="none" stroke="#D1D5DB"/>
+<text x="80" y="489" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">Hard constraints &#183; LLM round trip: same 100 items (original 2026-09-17, agent 2026-09-20).</text>
+<text x="80" y="513" font-size="17" fill="#6B7280" font-weight="400" text-anchor="start">Taste fit: 67 head-to-head judgements from 40 items (taste, situation) &#215; 2 runs, excluding 5 identical lists and 8 empty recommendations.</text>
+<rect x="56.5" y="172.5" width="1203" height="353" rx="13.5" fill="none" stroke="#D1D5DB"/>
 </svg>
