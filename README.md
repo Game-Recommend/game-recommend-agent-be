@@ -145,7 +145,8 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 - 에이전트 모델은 `OPENAI_AGENT_MODEL`(비어 있으면 `OPENAI_MODEL`)입니다.
 - 위 흐름 전체가 LangGraph `StateGraph` 하나입니다(`parse → agent → safety_net → validate ⇄ retry → judge →
   reviews·media → respond`). `create_agent` 루프는 `agent` 서브그래프 노드이고, 후검증 재시도는 조건부
-  엣지입니다. `make graph`가 서브그래프까지 펼친 Mermaid를 출력합니다.
+  엣지입니다. `make graph`가 서브그래프까지 펼친 Mermaid를 출력하고, `make studio`로 같은 그래프를
+  [LangGraph Studio](#langgraph-studio)에서 질문을 넣어 돌려 볼 수 있습니다.
 - 설계 원칙과 역할별 할 일은 [TEAM.md](TEAM.md), 프롬프트는 [app/agent/prompts.py](app/agent/prompts.py)입니다.
 
 ## 프롬프트 엔지니어링
@@ -329,6 +330,7 @@ make run                # http://127.0.0.1:8000/health
 | `make test-agent` | 에이전트 계층 테스트 (대본 모델로 OpenAI 없이 루프·후검증·안전망 검증) |
 | `make test-evals` | 평가 채점기·실행기의 오프라인 검사 (실제 API를 부르지 않는다) |
 | `make graph` | 추천 파이프라인 그래프(에이전트 서브그래프 포함)를 Mermaid로 출력 |
+| `make studio` | LangGraph Studio로 추천 그래프를 띄운다. 실행마다 실제 API를 부른다([아래](#langgraph-studio)) |
 
 테스트 옵션은 `make test ARGS="-q"`처럼 전달합니다. `make test-llm`은
 `make test-query-processing`의 호환용 별칭입니다. 테스트는 역할별 가짜 연동을
@@ -342,6 +344,33 @@ make run                # http://127.0.0.1:8000/health
 `.env`에 `LANGSMITH_TRACING=true`를 두면 테스트에서도 추적이 켜지고, LangSmith가 실행 입력을 직렬화하며
 대본 모델(`ScriptedChatModel`)의 메시지 iterator를 모델 호출 전에 소진해 에이전트·통합 테스트가
 실패합니다. 로컬에서는 `LANGSMITH_TRACING=false make test`로 돌립니다(CI는 `.env`가 없어 영향이 없습니다).
+
+### LangGraph Studio
+
+[LangGraph Studio](https://docs.langchain.com/langsmith/studio)에서 추천 그래프에 질문을 넣고 노드별
+진행과 state를 볼 수 있습니다. 로컬 개발 서버(`langgraph dev`)를 띄우면 브라우저의 Studio 화면
+(smith.langchain.com)이 이 서버에 붙습니다. LangSmith 로그인이 필요합니다.
+
+```bash
+.venv/bin/pip install -e ".[studio]"
+make studio             # http://127.0.0.1:2024, 브라우저에 Studio가 열린다
+```
+
+- 입력란의 `question`에 질문을 넣고 실행합니다. 답변 언어는 어시스턴트의 context에서
+  `language`(`ko`·`en`, 기본 `ko`)로 정합니다.
+- 한 번 실행이 `/recommend` 한 건과 같습니다. OpenAI·IGDB·Steam을 실제로 부르므로 OpenAI 요금이 나갑니다.
+- 그래프·프롬프트·도구·반복 상한(20)은 운영과 같습니다. [app/studio.py](app/studio.py)가 `.env` 설정으로
+  추천기를 조립하고 `AgentRecommender.studio_graph()`를 내보냅니다. 다른 점은 컨텍스트를 `run()` 대신
+  서버가 만든다는 것뿐입니다.
+- 처음부터 끝까지 한 번에 돌려 보는 용도입니다. 후보와 도구 결과가 state가 아니라 컨텍스트
+  (`CandidateStore`)에 쌓여서, 중단점에서 이어 가거나 특정 노드부터 다시 돌리면 조건과 후보가 빈 채로
+  이어집니다.
+- `make studio`는 서버를 띄우기 전에 `.env`를 올리고, 이미 있는 환경 변수는 덮어쓰지 않습니다. `.env`에서
+  LangSmith 추적을 켜 두면 Studio 실행도 트레이스로 남고, `LANGSMITH_TRACING=false make studio`로 끕니다.
+  `LANGSMITH_API_KEY`가 있으면 개발 서버가 실행 수·노드 수 같은 사용량 집계를 LangSmith에 보냅니다
+  (질문·답변 내용은 보내지 않습니다).
+- localhost 연결을 막는 브라우저(Safari 등)에서는 `make studio ARGS="--tunnel"`로 띄웁니다.
+- 스레드와 체크포인트는 `.langgraph_api/`에 저장됩니다(git 제외).
 
 ## HTTP API
 
@@ -509,6 +538,7 @@ HTTP 서버 없이 전체 흐름을 확인하려면 저장소 루트에서 실�
 .env.example               외부 연동용 환경 변수 예시
 pyproject.toml             의존성·빌드·pytest·Ruff·Vercel 설정
 Makefile                   개발 서버·검증 명령
+langgraph.json             LangGraph Studio 개발 서버 설정 (make studio)
 TEAM.md                    역할별 담당 파일·연결 계약
 docs/game_recommend_flow.*  서비스 처리 흐름 다이어그램 (PNG 문서용 · SVG 수정용)
 docs/eval_comparison.*     구조에서 나온 차이 세 행: 조건 만족·취향 적합도·LLM 왕복 (rsvg-convert -z 2로 PNG를 만든다)
@@ -518,6 +548,7 @@ docs/*.en.*                위 네 그림의 영문판. 그림을 고치면 한�
 app/
 ├─ main.py                  FastAPI 앱. 시작 시 조립, 종료 시 클라이언트 정리
 ├─ assembly.py              .env 설정으로 ToolSet을 만들고 에이전트 추천기를 조립
+├─ studio.py                LangGraph Studio 진입점. 조립한 추천기의 studio_graph()를 내보낸다
 ├─ config.py                .env 설정 (OPENAI_AGENT_MODEL 포함)
 ├─ agent/                   에이전트 계층 (통합 담당이 뼈대, Tool 파일은 도메인 담당)
 │  ├─ context.py            공통 계약: ToolSet · AgentContext(run_stage) · CandidateStore

@@ -105,7 +105,7 @@ def test_rejection_message_lists_problems(make_recommender):
     )
     state = asyncio.run(
         recommender.graph.ainvoke(
-            {"question": "q", "messages": []}, context=AgentContext.pending(recommender.tools)
+            {"question": "q"}, context=AgentContext.pending(recommender.tools)
         )
     )
     for message in state["messages"]:
@@ -135,7 +135,7 @@ def _challenges(recommender) -> list[str]:
     """그래프를 끝까지 돌려 러너가 붙인 빈 초안 되묻기 메시지를 모은다."""
     state = asyncio.run(
         recommender.graph.ainvoke(
-            {"question": "q", "messages": []}, context=AgentContext.pending(recommender.tools)
+            {"question": "q"}, context=AgentContext.pending(recommender.tools)
         )
     )
     return [

@@ -31,11 +31,15 @@
 
 요청의 출력 언어(`AgentContext.language`)는 시스템 프롬프트의 답변 언어 한 줄, 리뷰 한줄평,
 판정 이유, warnings에만 닿는다. 질문 분해·검색 조건·단계 이름과 detail·오류 문장은 언어와 무관하다.
+
+LangGraph Studio(`make studio`)는 같은 그래프를 `studio_graph()`로 띄운다. 컨텍스트를 만드는 곳만
+다르다(`run()` 대신 서버가 만든다).
 """
 
 import asyncio
 import logging
 from collections.abc import AsyncIterator, Mapping
+from dataclasses import dataclass
 from functools import partial
 from typing import Annotated, Literal, NotRequired, TypedDict
 
@@ -93,6 +97,13 @@ WARNINGS: dict[Language, dict[str, str]] = {
 def system_prompt_in_language(request: ModelRequest[AgentContext]) -> str:
     """모델을 부를 때마다 요청의 출력 언어로 쓴 시스템 프롬프트를 넣는다."""
     return build_system_prompt(request.runtime.context.language)
+
+
+# Studio는 입력 스키마로 입력란을 그린다. docstring이 입력란 설명으로 보인다
+class PipelineInput(TypedDict):
+    """추천을 받을 자연어 질문."""
+
+    question: str
 
 
 class PipelineState(TypedDict):
@@ -160,7 +171,7 @@ class AgentRecommender:
         self.graph = self._build_graph()
 
     def _build_graph(self) -> CompiledStateGraph:
-        builder = StateGraph(PipelineState, context_schema=AgentContext)
+        builder = StateGraph(PipelineState, context_schema=AgentContext, input_schema=PipelineInput)
         builder.add_node("parse", self._parse)
         # 컴파일된 에이전트를 그대로 노드로 붙인다. messages·structured_response 키와 컨텍스트를
         # 부모와 공유한다. timeout은 루프 한 번(재시도마다 새로)의 상한이다.
@@ -193,20 +204,57 @@ class AgentRecommender:
         """발표·문서용 그래프. agent 서브그래프(model·tools)까지 펼친다."""
         return self.graph.get_graph(xray=1).draw_mermaid()
 
+    def studio_graph(self) -> CompiledStateGraph:
+        """LangGraph Studio에 띄울 그래프. 운영 그래프와 같고 실행 준비만 서버에 맞춘다.
+
+        - 컨텍스트: Studio는 컨텍스트를 JSON으로만 보내고, 서버는 실행마다 `context_schema(**json)`
+          으로 컨텍스트를 만든다. 도구와 후보 저장소는 JSON에 담을 수 없어 `run()`과 같은
+          `AgentContext.pending`으로 만든다. 서버는 이 클래스의 필드로 컨텍스트 입력란을 그리고
+          필드에 없는 키는 버리므로, 필드는 요청 본문에서 오는 language 하나만 둔다.
+        - 반복 상한: 서버는 실행 설정에 반복 상한을 넣지 않는다. `run()`이 넘기는 상한을 그래프에
+          묶어 둔다. 부모가 기본값과 다른 상한을 받아야 agent 서브그래프까지 전해진다
+          (`create_agent`는 자기 그래프에 상한 9999를 묶어 둔다).
+        """
+        recommender = self
+
+        @dataclass
+        class StudioContext:
+            """답변·리뷰 한줄평·판정 이유·warnings를 쓰는 언어 (요청 본문의 language)."""
+
+            language: Language = "ko"
+
+            # 이 클래스가 아니라 AgentContext를 돌려주므로 __init__은 불리지 않는다
+            def __new__(cls, language: Language = "ko") -> AgentContext:
+                return AgentContext.pending(
+                    recommender.tools,
+                    stage_timeout_seconds=recommender.stage_timeout_seconds,
+                    language=language,
+                )
+
+        graph = self.graph.copy(update={"context_schema": StudioContext})
+        return graph.with_config(recursion_limit=self.run_recursion_limit)
+
+    @property
+    def run_recursion_limit(self) -> int:
+        """요청 하나의 반복 상한. `studio_graph()`도 이 값을 쓴다.
+
+        서브그래프는 같은 상한을 자기 카운터로 센다. 부모 노드 수가 상한에 걸리지 않게만 한다.
+        루프는 첫 시도 + 거부 재시도 + 되묻기 두 종류(빈 초안, 이름)다.
+        """
+        pipeline_steps = 4 * (self.max_validation_retries + 3) + 4
+        return max(self.recursion_limit, pipeline_steps)
+
     async def run(
         self, question: str, progress: Progress = silent, *, language: Language = "ko"
     ) -> RecommendationResponse:
         ctx = AgentContext.pending(
             self.tools, progress, self.stage_timeout_seconds, language=language
         )
-        # 서브그래프는 같은 상한을 자기 카운터로 센다. 부모 노드 수가 상한에 걸리지 않게만 한다.
-        # 루프는 첫 시도 + 거부 재시도 + 되묻기 두 종류(빈 초안, 이름)다.
-        pipeline_steps = 4 * (self.max_validation_retries + 3) + 4
         try:
             result = await self.graph.ainvoke(
-                {"question": question, "messages": []},
+                {"question": question},
                 context=ctx,
-                config={"recursion_limit": max(self.recursion_limit, pipeline_steps)},
+                config={"recursion_limit": self.run_recursion_limit},
             )
         except PipelineStageError:
             raise  # 실패 이벤트는 노드가 이미 냈다

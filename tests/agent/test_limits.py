@@ -16,7 +16,7 @@ SEARCH = dict(genres=["Adventure"])
 
 def run_graph(recommender, ctx=None) -> dict:
     ctx = ctx or AgentContext.pending(recommender.tools)
-    return asyncio.run(recommender.graph.ainvoke({"question": "q", "messages": []}, context=ctx))
+    return asyncio.run(recommender.graph.ainvoke({"question": "q"}, context=ctx))
 
 
 def refusals(state: dict) -> list[str]:

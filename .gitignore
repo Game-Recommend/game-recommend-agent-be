@@ -15,6 +15,9 @@ dist/
 tmp/
 output/
 
+# LangGraph Studio 개발 서버(make studio)가 스레드·체크포인트를 저장하는 곳
+.langgraph_api/
+
 # ide/os
 .idea/
 .vscode/

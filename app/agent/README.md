@@ -421,6 +421,19 @@ LLM 호출은 네 이름으로 구분된다. 에이전트 루프(Tool 선택·�
 
 LangSmith의 평면 목록에서 Tool이 순서대로 보이더라도 같은 AIMessage의 `tool_calls`에 포함돼 있으면 병렬 호출이다.
 
+## LangGraph Studio로 보기
+
+`make studio`로 추천 그래프를 LangGraph Studio에 띄우면 질문 하나를 넣고 `parse → agent(model ⇄ tools)
+→ safety_net → validate ⇄ retry → judge → reviews·media → respond`가 노드별로 진행되는 모습과 단계마다의
+state를 볼 수 있다. 설치와 비용은 루트 [README](../../README.md#langgraph-studio)에 있다.
+
+- Studio 그래프는 `AgentRecommender.studio_graph()`다. 운영 그래프를 그대로 쓰고, 컨텍스트만 서버가
+  JSON(`{"language": ...}`)을 받아 `AgentContext.pending`으로 만든다. 반복 상한도 `run()`과 같다.
+- state에는 메시지·초안·재시도 횟수만 있다. 후보와 도구 결과(`CandidateStore`)는 컨텍스트에 있어 Studio의
+  state 화면에 보이지 않는다. 최종 `response`와 Tool 메시지(LLM에 돌려준 압축 JSON)로 확인한다.
+- 중단점에서 이어 가기와 특정 노드부터 다시 돌리기는 쓰지 않는다. 새 실행마다 컨텍스트가 새로 만들어져
+  조건과 후보가 빈 채로 이어진다.
+
 ## Tool 호출 상한
 
 프롬프트에는 완료된 Tool 재호출 금지와 배치 호출 규칙이 정의돼 있지만 모델은 가끔 어긴다.

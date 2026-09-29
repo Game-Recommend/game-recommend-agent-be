@@ -73,6 +73,7 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 | 완료 | Vercel 프로젝트·자동 배포 | GitHub 연동이라 저장소에 `vercel.json`이 없다. `main`에 머지하면 프로덕션이 자동 배포된다 |
 | 완료 | 패키지 크기 확인 | dev 의존성(37MB)을 뺀 약 84MB로 서버리스 250MB 제한에 여유. 큰 순서로 `openai` 24MB, `langsmith` 9.9MB, `langchain_core` 5.8MB. 로컬(macOS·3.14) 측정이라 Vercel(Linux·3.12)과 컴파일 휠 크기가 다를 수 있다 |
 | 완료 | Vercel 환경 변수 확인 | 필수는 `API_KEY`·`OPENAI_API_KEY`·`IGDB_CLIENT_ID`·`IGDB_CLIENT_SECRET` 네 개이고, 하나라도 비면 `/recommend`가 503이다. `STEAMGRIDDB_API_KEY`는 없어도 동작하며 로고·배너만 빠진다. `OPENAI_MODEL`·`OPENAI_AGENT_MODEL`은 기본값(`gpt-4o-mini`)이 있어 등록하지 않는다. 빈 값으로 등록하면 기본값을 덮어써 모델명 없이 호출되므로, `.env.example`을 통째로 붙여넣지 않는다. 배포 URL은 배포 보호(302)라 외부에서 `/health`를 확인할 수 없고, 함수 로그의 `missing settings` 경고로 본다 |
+| 완료 | `app/studio.py`, `langgraph.json` | LangGraph Studio(`make studio`). 운영 그래프를 `AgentRecommender.studio_graph()`로 띄운다. 컨텍스트는 서버가 JSON(`language`)을 받아 `AgentContext.pending`으로 만들고, 반복 상한은 `run()`과 같다. 개발 서버는 `studio` extra라 CI·배포 패키지에 들어가지 않는다 |
 
 ### 질문 가공 담당
 
