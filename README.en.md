@@ -182,7 +182,8 @@ media post-processing (logo, hero, trailer) → RecommendationResponse (same res
 - The agent model is `OPENAI_AGENT_MODEL` (falling back to `OPENAI_MODEL` when empty).
 - The whole flow above is a single LangGraph `StateGraph` (`parse → agent → safety_net → validate ⇄ retry
   → judge → reviews·media → respond`). The `create_agent` loop is the `agent` subgraph node, and the
-  post-validation retry is a conditional edge. `make graph` prints Mermaid with the subgraph expanded.
+  post-validation retry is a conditional edge. `make graph` prints Mermaid with the subgraph expanded, and
+  `make studio` lets you run the same graph on a question in [LangGraph Studio](#langgraph-studio).
 - Design principles and per-role tasks are in [TEAM.md](TEAM.md); the prompts are in
   [app/agent/prompts.py](app/agent/prompts.py).
 
@@ -385,6 +386,7 @@ locally you should run from the repository root.
 | `make test-agent` | Agent layer tests (loop, post-validation and safety net verified with a scripted model, no OpenAI) |
 | `make test-evals` | Offline checks of the eval scorers and runners (no real API calls) |
 | `make graph` | Prints the recommendation pipeline graph (including the agent subgraph) as Mermaid |
+| `make studio` | Opens the recommendation graph in LangGraph Studio. Every run calls the real APIs ([below](#langgraph-studio)) |
 
 Test options are passed like `make test ARGS="-q"`. `make test-llm` is a compatibility alias for
 `make test-query-processing`. The tests use per-role fake integrations and verify neither real external
@@ -399,6 +401,37 @@ Setting `LANGSMITH_TRACING=true` in `.env` also turns tracing on during tests, a
 the run input — which drains the message iterator of the scripted model (`ScriptedChatModel`) before the
 model is called and makes the agent and integration tests fail. Locally, run
 `LANGSMITH_TRACING=false make test` (CI is unaffected because it has no `.env`).
+
+### LangGraph Studio
+
+In [LangGraph Studio](https://docs.langchain.com/langsmith/studio) you can put a question into the
+recommendation graph and watch each node's progress and state. Start the local dev server
+(`langgraph dev`) and the Studio page in your browser (smith.langchain.com) connects to it. A LangSmith
+login is required.
+
+```bash
+.venv/bin/pip install -e ".[studio]"
+make studio             # http://127.0.0.1:2024; Studio opens in the browser
+```
+
+- Type the question into the `question` input and run it. The answer language is set by `language`
+  (`ko` or `en`, default `ko`) in the assistant's context.
+- One run equals one `/recommend` request. It calls OpenAI, IGDB and Steam for real, so it costs OpenAI
+  usage.
+- The graph, prompts, tools and recursion limit (20) are the same as in production.
+  [app/studio.py](app/studio.py) assembles the recommender from `.env` settings and exports
+  `AgentRecommender.studio_graph()`. The only difference is that the server builds the context instead of
+  `run()`.
+- It is meant for running a question from start to finish. Candidates and tool results accumulate in the
+  context (`CandidateStore`), not in the state, so resuming from a breakpoint or re-running from a given
+  node continues with empty conditions and candidates.
+- `make studio` loads `.env` before starting the server and does not overwrite variables that are already
+  set. If `.env` turns LangSmith tracing on, Studio runs are traced too; turn it off with
+  `LANGSMITH_TRACING=false make studio`. When `LANGSMITH_API_KEY` is set, the dev server sends usage counts
+  such as the number of runs and nodes to LangSmith (not the questions or answers).
+- In browsers that block localhost connections (such as Safari), start it with
+  `make studio ARGS="--tunnel"`.
+- Threads and checkpoints are stored in `.langgraph_api/` (ignored by git).
 
 ## HTTP API
 
@@ -584,6 +617,7 @@ lifespan does not overwrite an already-injected recommender. Per-role test doubl
 .env.example               Example environment variables for the external integrations
 pyproject.toml             Dependencies, build, pytest, Ruff and Vercel configuration
 Makefile                   Dev server and verification commands
+langgraph.json             LangGraph Studio dev server configuration (make studio)
 TEAM.md                    Per-role owning files and connection contracts
 docs/game_recommend_flow.*  Service flow diagram (PNG for docs, SVG for editing)
 docs/eval_comparison.*     The three rows that come from the structure: constraint satisfaction, taste fit, LLM round trip (PNG made with rsvg-convert -z 2)
@@ -593,6 +627,7 @@ docs/*.en.*                English twins of the four diagrams above; change both
 app/
 ├─ main.py                  FastAPI app. Assembles on startup, cleans up clients on shutdown
 ├─ assembly.py              Builds the ToolSet from .env settings and assembles the agent recommender
+├─ studio.py                LangGraph Studio entry point. Exports studio_graph() of the assembled recommender
 ├─ config.py                .env settings (including OPENAI_AGENT_MODEL)
 ├─ agent/                   Agent layer (integration owner builds the skeleton, tool files belong to the domain owners)
 │  ├─ context.py            Shared contracts: ToolSet · AgentContext(run_stage) · CandidateStore

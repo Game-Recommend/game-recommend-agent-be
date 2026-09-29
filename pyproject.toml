@@ -25,6 +25,10 @@ dev = [
     "pytest>=8",
     "ruff>=0.6",
 ]
+# LangGraph Studio(make studio)용 로컬 개발 서버. CI·배포에는 필요 없다
+studio = [
+    "langgraph-cli[inmem]>=0.4.32",
+]
 
 [build-system]
 requires = ["hatchling"]

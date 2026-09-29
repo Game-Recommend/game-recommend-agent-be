@@ -4,7 +4,7 @@
 PY ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 
 .PHONY: run lint test test-query-processing test-igdb test-price-hardware
-.PHONY: test-reviews test-media test-integration test-llm test-agent test-evals graph
+.PHONY: test-reviews test-media test-integration test-llm test-agent test-evals graph studio
 
 run:
 	$(PY) -m uvicorn app.main:app --reload
@@ -47,3 +47,10 @@ test-evals:
 # 발표·문서용 에이전트 그래프(Mermaid)
 graph:
 	$(PY) -m app.agent.runner
+
+# LangGraph Studio: 추천 그래프를 브라우저에서 노드별로 본다. 먼저 pip install -e ".[studio]".
+# 한 번 돌리면 /recommend 한 건과 같이 OpenAI·IGDB·Steam을 실제로 부른다.
+# .env는 서버를 띄우기 전에 올린다(이미 있는 환경 변수는 덮어쓰지 않는다). langsmith는 서버가 시작할 때
+# 환경 변수를 읽어 캐시하므로, 그래프를 import할 때 올리면 LangSmith 추적이 켜지지 않는다
+studio:
+	$(if $(wildcard .env),$(PY) -m dotenv run --no-override --) $(PY) -m langgraph_cli dev $(ARGS)
