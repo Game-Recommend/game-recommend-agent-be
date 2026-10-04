@@ -117,7 +117,7 @@ agent). Edit the [SVG](docs/eval_comparison.en.svg), not the PNG.
   agent, 2 for popularity, 28 ties (2026-10-05, [evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
   We also ran the original repository on the same 40 items and compared its actual lists: out of 70
   judgements, 40 wins for the agent, 6 for the original, 24 ties, and the original returned nothing 10
-  times. That number also carries the search fixes, so it is not in the chart.
+  times. That number also carries the search fixes, so the chart shows it only as a footnote.
 - **LLM round-trip time is what the structure costs.** The original spends 3.4 s on question parsing plus
   the final answer; the agent spends 6.1 s on question parsing plus the tool-picking reasoning (median
   over the items that produced recommendations,
