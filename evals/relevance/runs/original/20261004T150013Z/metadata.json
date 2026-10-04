@@ -1,0 +1,10 @@
+{
+  "started_at": "20261004T150014Z",
+  "repository": "game-recommend-be",
+  "commit": "d257f86c6b85630fe1de28df4bac55f87095f2f1",
+  "app_dirty": false,
+  "model": "gpt-4o-mini",
+  "cases": 40,
+  "concurrency": 2,
+  "dataset_sha256": "a723e63f4dc268c0bc21d5d0834b7c13867fbc3dd4bd39332a54fe006dfe2f01"
+}

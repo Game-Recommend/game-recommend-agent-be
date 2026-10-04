@@ -112,9 +112,12 @@ agent). Edit the [SVG](docs/eval_comparison.en.svg), not the PNG.
   compliance with price, spec, count and exclusion conditions, because code — not the prompt — does the
   judging and the post-validation.
 - **Taste fit is what the structure buys.** From the same set of passing candidates, an LLM judge
-  compared the agent's picks against what the fixed pipeline would have picked (the list truncated by
-  popularity), twice per pair with the positions swapped. Out of 67 judgements: 30 wins for the agent,
-  2 for popularity, 35 ties ([evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
+  compared the agent's picks against the fixed pipeline's selection rule (passing candidates truncated in
+  popularity order), twice per pair with the positions swapped. Out of 71 judgements: 41 wins for the
+  agent, 2 for popularity, 28 ties (2026-10-05, [evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
+  We also ran the original repository on the same 40 items and compared its actual lists: out of 70
+  judgements, 40 wins for the agent, 6 for the original, 24 ties, and the original returned nothing 10
+  times. That number also carries the search fixes, so it is not in the chart.
 - **LLM round-trip time is what the structure costs.** The original spends 3.4 s on question parsing plus
   the final answer; the agent spends 6.1 s on question parsing plus the tool-picking reasoning (median
   over the items that produced recommendations,
@@ -691,7 +694,7 @@ evals/
 ├─ agent_questions/         Before/after comparison of the 5 example questions, fixed pipeline vs agent (real APIs, excluded from CI)
 ├─ agent_e2e/               End-to-end 100-item evaluation (conditions, trajectory, answer format + LLM judge; same code as the original repository)
 ├─ parser_conditions/       Question-parsing evaluation (210 condition-extraction items)
-├─ relevance/               Taste-fit evaluation (the agent's picks vs popularity-ordered picks, head-to-head)
+├─ relevance/               Taste-fit evaluation (the agent's picks vs popularity-ordered picks and the actual original, head-to-head)
 ├─ non_steam/               Field evaluation of the non-Steam fallbacks
 ├─ search_pool/             IGDB search candidate-pool evaluation (no LLM: release year, diversity, purchasability, empty results)
 └─ price_hardware/          Price and hardware evaluation set
