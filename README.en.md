@@ -113,8 +113,10 @@ agent). Edit the [SVG](docs/eval_comparison.en.svg), not the PNG.
   judging and the post-validation.
 - **Taste fit is what the structure buys.** From the same set of passing candidates, an LLM judge
   compared the agent's picks against the fixed pipeline's selection rule (passing candidates truncated in
-  popularity order), twice per pair with the positions swapped. Out of 71 judgements: 41 wins for the
-  agent, 2 for popularity, 28 ties (2026-10-05, [evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
+  popularity order), twice per pair with the positions swapped. Out of 80 comparisons: 41 wins for the
+  agent, 2 for popularity, 37 ties (2026-10-05, [evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
+  Nine of the ties are identical lists that never went to the judge (28 ties out of 71 if you count only
+  judged pairs).
   We also ran the original repository on the same 40 items and compared its actual lists: out of 70
   judgements, 40 wins for the agent, 6 for the original, 24 ties, and the original returned nothing 10
   times. That number also carries the search fixes, so the chart shows it only as a footnote.
