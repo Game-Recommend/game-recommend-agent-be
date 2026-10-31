@@ -57,6 +57,8 @@ def test_full_settings_wire_each_role_implementation():
         assert isinstance(tools.price.client.steam, SteamStoreClient)
         # 가격·사양이 같은 Steam 인스턴스를 써야 appdetails 조회를 공유한다
         assert tools.hardware.client.steam is tools.price.client.steam
+        # Steam 앱이 여럿인 후보도 같은 인스턴스로 골라, 그 조회가 가격·사양 캐시로 남는다
+        assert tools.game_search.client.steam is tools.price.client.steam
         assert isinstance(tools.review_summary.client, SteamReviewSummaryClient)
         assert isinstance(tools.media.client, MediaResolver)
         assert tools.media.client.steamgriddb is not None

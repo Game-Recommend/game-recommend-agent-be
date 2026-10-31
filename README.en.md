@@ -248,6 +248,12 @@ Owning files and per-role test commands are collected in the [4-person developme
   Steam lookups. Candidates additionally carry IGDB `summary`, classification (`genres`, `themes`) and
   time-to-beat (`playtime_hours`) as material for the final answer, but the price, hardware and review
   tools do not use those fields in their verdicts.
+- When IGDB links a game to more than one Steam app (61 of the 1,000 most-rated PC games), the Korean
+  Steam store is asked and one is chosen (`choose_app_id` in `steam_store.py`): demos and DLC are
+  skipped, a purchasable app comes first, and an id that is not forwarded to another app comes first
+  (Mass Effect 2 gets 2362420, not the old app 24980 that has no price). These lookups stay in the
+  price/hardware cache. Previously such games had no `steam_app_id`, so Portal and Borderlands 2 were
+  treated as games that are not on Steam.
 - Only candidates without a `steam_app_id` take the fallback path (`app/clients/routing.py`). For price
   that is the free-games table (`free_games.py`) → CheapShark's lowest USD price × the Frankfurter rate;
   for specs it is PCGamingWiki. Both fallbacks accept only an exact match on the normalised game name,

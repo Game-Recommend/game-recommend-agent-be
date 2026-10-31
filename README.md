@@ -204,6 +204,11 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 - 후보와 결과는 `igdb_id`로 연결합니다. Steam 연결용 `steam_app_id`도 후보에 보관합니다.
   후보에는 최종 답변 재료로 IGDB 소개(`summary`)·분류(`genres`, `themes`)·전체 완료 시간
   (`playtime_hours`)도 담지만, 가격·사양·리뷰 도구는 이 필드를 판정에 쓰지 않습니다.
+- IGDB가 Steam 앱을 여럿 연결한 게임(인기 PC 게임 1,000개 중 61개)은 Steam 한국 스토어에 물어
+  하나를 고릅니다(`steam_store.py`의 `choose_app_id`). 데모·DLC는 빼고, 살 수 있는 앱을 먼저,
+  다른 앱으로 넘어가지 않는 id를 먼저 씁니다(Mass Effect 2는 가격이 없는 옛 앱 24980이 아니라
+  2362420). 이 조회는 가격·사양 캐시에 남습니다. 전에는 이런 게임의 `steam_app_id`를 비워 Portal·
+  Borderlands 2 같은 게임이 Steam에 없는 게임으로 취급됐습니다.
 - `steam_app_id`가 없는 후보만 폴백을 탑니다 (`app/clients/routing.py`). 가격은 무료 게임 표
   (`free_games.py`) → CheapShark USD 최저가 × Frankfurter 환율 순서이고, 사양은 PCGamingWiki입니다.
   두 폴백 모두 정규화한 게임명이 정확히 같은 결과만 인정하며, 못 찾으면 `unknown`입니다.
