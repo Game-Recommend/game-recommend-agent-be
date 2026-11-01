@@ -153,7 +153,7 @@ question-parsing LLM → GameConditions ───────── budget, user
   ↓
 agent loop (LangChain create_agent, app/agent/runner.py)
   The LLM calls the tools it picks, reads the results and decides what to do next. Calls made in the same turn run in parallel.
-  ├─ search_games      search IGDB for candidates matching the conditions (most-rated first, up to 30)
+  ├─ search_games      search IGDB for candidates matching the conditions (most-rated first, up to 30); for candidates with several Steam apps, asks the Korean Steam store to pick one
   ├─ get_prices        every searched candidate → KRW price and budget verdict (the LLM does not have to pass ids)
   ├─ assess_hardware   every searched candidate → minimum-spec and compatibility verdict
   ├─ get_review_scores list of candidate igdb_ids → Steam review statistics (recommend ratio, Wilson lower bound, review wording)

@@ -122,7 +122,7 @@ REPORT에 그대로 남겨 두었습니다.
   ↓
 에이전트 루프 (LangChain create_agent, app/agent/runner.py)
   LLM이 고른 Tool을 호출하고 결과를 읽어 다음 행동을 정한다. 같은 턴의 여러 호출은 병렬이다.
-  ├─ search_games      조건으로 IGDB 후보 검색 (많이 평가된 순, 최대 30개)
+  ├─ search_games      조건으로 IGDB 후보 검색 (많이 평가된 순, 최대 30개). Steam 앱이 여럿인 후보는 Steam 한국 스토어에 물어 하나를 고른다
   ├─ get_prices        검색된 후보 전체 → 원화 가격·예산 판정 (LLM이 id를 넘기지 않아도 된다)
   ├─ assess_hardware   검색된 후보 전체 → 최소 사양·호환 판정
   ├─ get_review_scores 후보 igdb_id 목록 → Steam 리뷰 통계 (추천 비율·Wilson 하한·평가 문구)
