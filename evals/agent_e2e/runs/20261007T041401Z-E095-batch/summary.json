@@ -1,0 +1,64 @@
+{
+  "attempted": 10,
+  "scored": 10,
+  "passed": 5,
+  "accuracy": 0.5,
+  "errors": 0,
+  "error_kinds": {},
+  "axes": {
+    "constraints": 10,
+    "trajectory": 5,
+    "answer_format": 10
+  },
+  "empty_recommendations": 0,
+  "overlooked_empty": 0,
+  "with_recommendations": {
+    "scored": 10,
+    "passed": 5,
+    "latency_median": 14.58,
+    "grounded_mean": null,
+    "linked_mean": null
+  },
+  "latency_seconds": {
+    "median": 14.58,
+    "max": 22.98
+  },
+  "judge": null,
+  "review_calls": {
+    "cases_with_calls": 10,
+    "called_twice_or_more": [
+      "E095",
+      "E095",
+      "E095",
+      "E095",
+      "E095"
+    ],
+    "ids_per_call": {
+      "3": 1,
+      "4": 1,
+      "5": 2,
+      "8": 1,
+      "9": 3,
+      "10": 1,
+      "12": 1,
+      "13": 2,
+      "16": 3
+    }
+  },
+  "by_family": {
+    "combined": {
+      "attempted": 10,
+      "scored": 10,
+      "passed": 5,
+      "errors": 0,
+      "failed_ids": [
+        "E095",
+        "E095",
+        "E095",
+        "E095",
+        "E095"
+      ],
+      "accuracy": 0.5
+    }
+  }
+}
