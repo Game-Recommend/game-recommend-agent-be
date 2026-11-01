@@ -111,15 +111,22 @@ agent). Edit the [SVG](docs/eval_comparison.en.svg), not the PNG.
 - **Hard-constraint satisfaction is a tie (98 vs 99).** Handing the selection to an LLM does not break
   compliance with price, spec, count and exclusion conditions, because code — not the prompt — does the
   judging and the post-validation.
-- **Taste fit is what the structure buys.** From the same set of passing candidates, an LLM judge
-  compared the agent's picks against the fixed pipeline's selection rule (passing candidates truncated in
-  popularity order), twice per pair with the positions swapped. Out of 80 comparisons: 41 wins for the
-  agent, 2 for popularity, 37 ties (2026-10-05, [evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
-  Nine of the ties are identical lists that never went to the judge (28 ties out of 71 if you count only
-  judged pairs).
-  We also ran the original repository on the same 40 items and compared its actual lists: out of 70
-  judgements, 40 wins for the agent, 6 for the original, 24 ties, and the original returned nothing 10
-  times. That number also carries the search fixes, so the chart shows it only as a footnote.
+- **Taste fit leans toward the agent, but the gap is small.** From the same set of passing candidates, an
+  LLM judge compared the agent's picks against the fixed pipeline's selection rule (passing candidates
+  truncated in popularity order), twice per pair with the positions swapped. Out of 80 comparisons: 20 wins
+  for the agent, 1 for popularity, 59 ties (2026-11-01, [evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
+  Eight of the ties are identical lists that never went to the judge (51 ties out of 72 if you count only
+  judged pairs). The agent wins on items where the popularity order includes games that clash with the
+  question. On taste-only items with no search conditions, the candidates are always the same 30 popular
+  games, and the agent returns almost the same list whatever the question says, so those end in ties.
+  The previous 41 wins and 2 losses (2026-10-05) were measured while games with several Steam apps
+  (Portal, GTA: San Andreas and others) were shown as not being on Steam. The agent avoided those games and
+  put in RDR2 and God of War instead, and many of its wins came from that (18 of the 41). The numbers above
+  were measured after fixing that.
+  We also ran the original repository on the same 40 items and compared its actual lists (2026-10-05,
+  before the fix): out of 70 judgements, 40 wins for the agent, 6 for the original, 24 ties, and the
+  original returned nothing 10 times. That number also carries the search fixes, so the chart shows it only
+  as a footnote.
 - **LLM round-trip time is what the structure costs.** The original spends 3.4 s on question parsing plus
   the final answer; the agent spends 6.1 s on question parsing plus the tool-picking reasoning (median
   over the items that produced recommendations,

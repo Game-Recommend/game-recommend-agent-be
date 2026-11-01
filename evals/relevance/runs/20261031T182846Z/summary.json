@@ -1,0 +1,39 @@
+{
+  "attempted": 40,
+  "scored": 40,
+  "errors": 0,
+  "outcomes": {
+    "agent": 11,
+    "baseline": 0,
+    "tie": 26,
+    "same": 3,
+    "empty": 0
+  },
+  "agent_win_rate": 1.0,
+  "changed_rate": 0.925,
+  "overlap_mean": 0.5053,
+  "pool_mismatches": 0,
+  "by_family": {
+    "mixed": {
+      "agent": 4,
+      "baseline": 0,
+      "tie": 5,
+      "same": 3,
+      "empty": 0
+    },
+    "situation": {
+      "agent": 2,
+      "baseline": 0,
+      "tie": 10,
+      "same": 0,
+      "empty": 0
+    },
+    "taste": {
+      "agent": 5,
+      "baseline": 0,
+      "tie": 11,
+      "same": 0,
+      "empty": 0
+    }
+  }
+}

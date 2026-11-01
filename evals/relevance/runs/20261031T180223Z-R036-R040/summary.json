@@ -1,0 +1,25 @@
+{
+  "attempted": 5,
+  "scored": 5,
+  "errors": 0,
+  "outcomes": {
+    "agent": 2,
+    "baseline": 0,
+    "tie": 1,
+    "same": 2,
+    "empty": 0
+  },
+  "agent_win_rate": 1.0,
+  "changed_rate": 0.6,
+  "overlap_mean": 0.5873,
+  "pool_mismatches": 0,
+  "by_family": {
+    "mixed": {
+      "agent": 2,
+      "baseline": 0,
+      "tie": 1,
+      "same": 2,
+      "empty": 0
+    }
+  }
+}
