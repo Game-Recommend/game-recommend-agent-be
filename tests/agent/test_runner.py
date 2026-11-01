@@ -363,16 +363,25 @@ def test_model_without_draft_fails_cleanly(make_recommender):
         run(make_recommender(search(**SEARCH)))
 
 
+def declares_node(mermaid: str, node: str) -> bool:
+    """Mermaid에 `node(node)` 노드가 있는지. 라벨 형식은 langgraph 버전마다 다르다.
+
+    langgraph 1.2.19는 노드 메타데이터를 라벨 뒤에 붙인다:
+    `tools(tools<hr/><small><em>__tools = search_games, …</em></small>)`
+    """
+    return f"{node}({node})" in mermaid or f"{node}({node}<hr/>" in mermaid
+
+
 def test_graph_has_model_and_tools_nodes(make_recommender):
     mermaid = make_recommender(draft([])).graph_mermaid()
-    assert "model(model)" in mermaid and "tools(tools)" in mermaid
+    assert declares_node(mermaid, "model") and declares_node(mermaid, "tools")
 
 
 def test_graph_shows_whole_pipeline(make_recommender):
     mermaid = make_recommender(draft([])).graph_mermaid()
     nodes = ("parse", "safety_net", "validate", "retry", "judge", "reviews", "media", "respond")
     for node in nodes:
-        assert f"{node}({node})" in mermaid
+        assert declares_node(mermaid, node)
     assert "subgraph agent" in mermaid
     assert "validate -.-> retry" in mermaid and "retry --> agent" in mermaid
 

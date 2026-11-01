@@ -111,15 +111,22 @@ agent). Edit the [SVG](docs/eval_comparison.en.svg), not the PNG.
 - **Hard-constraint satisfaction is a tie (98 vs 99).** Handing the selection to an LLM does not break
   compliance with price, spec, count and exclusion conditions, because code — not the prompt — does the
   judging and the post-validation.
-- **Taste fit is what the structure buys.** From the same set of passing candidates, an LLM judge
-  compared the agent's picks against the fixed pipeline's selection rule (passing candidates truncated in
-  popularity order), twice per pair with the positions swapped. Out of 80 comparisons: 41 wins for the
-  agent, 2 for popularity, 37 ties (2026-10-05, [evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
-  Nine of the ties are identical lists that never went to the judge (28 ties out of 71 if you count only
-  judged pairs).
-  We also ran the original repository on the same 40 items and compared its actual lists: out of 70
-  judgements, 40 wins for the agent, 6 for the original, 24 ties, and the original returned nothing 10
-  times. That number also carries the search fixes, so the chart shows it only as a footnote.
+- **Taste fit leans toward the agent, but the gap is small.** From the same set of passing candidates, an
+  LLM judge compared the agent's picks against the fixed pipeline's selection rule (passing candidates
+  truncated in popularity order), twice per pair with the positions swapped. Out of 80 comparisons: 20 wins
+  for the agent, 1 for popularity, 59 ties (2026-11-01, [evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
+  Eight of the ties are identical lists that never went to the judge (51 ties out of 72 if you count only
+  judged pairs). The agent wins on items where the popularity order includes games that clash with the
+  question. On taste-only items with no search conditions, the candidates are always the same 30 popular
+  games, and the agent returns almost the same list whatever the question says, so those end in ties.
+  The previous 41 wins and 2 losses (2026-10-05) were measured while games with several Steam apps
+  (Portal, GTA: San Andreas and others) were shown as not being on Steam. The agent avoided those games and
+  put in RDR2 and God of War instead, and many of its wins came from that (18 of the 41). The numbers above
+  were measured after fixing that.
+  We also ran the original repository on the same 40 items and compared its actual lists (2026-10-05,
+  before the fix): out of 70 judgements, 40 wins for the agent, 6 for the original, 24 ties, and the
+  original returned nothing 10 times. That number also carries the search fixes, so the chart shows it only
+  as a footnote.
 - **LLM round-trip time is what the structure costs.** The original spends 3.4 s on question parsing plus
   the final answer; the agent spends 6.1 s on question parsing plus the tool-picking reasoning (median
   over the items that produced recommendations,
@@ -146,7 +153,7 @@ question-parsing LLM → GameConditions ───────── budget, user
   ↓
 agent loop (LangChain create_agent, app/agent/runner.py)
   The LLM calls the tools it picks, reads the results and decides what to do next. Calls made in the same turn run in parallel.
-  ├─ search_games      search IGDB for candidates matching the conditions (most-rated first, up to 30)
+  ├─ search_games      search IGDB for candidates matching the conditions (most-rated first, up to 30); for candidates with several Steam apps, asks the Korean Steam store to pick one
   ├─ get_prices        every searched candidate → KRW price and budget verdict (the LLM does not have to pass ids)
   ├─ assess_hardware   every searched candidate → minimum-spec and compatibility verdict
   ├─ get_review_scores list of candidate igdb_ids → Steam review statistics (recommend ratio, Wilson lower bound, review wording)
@@ -248,6 +255,12 @@ Owning files and per-role test commands are collected in the [4-person developme
   Steam lookups. Candidates additionally carry IGDB `summary`, classification (`genres`, `themes`) and
   time-to-beat (`playtime_hours`) as material for the final answer, but the price, hardware and review
   tools do not use those fields in their verdicts.
+- When IGDB links a game to more than one Steam app (61 of the 1,000 most-rated PC games), the Korean
+  Steam store is asked and one is chosen (`choose_app_id` in `steam_store.py`): demos and DLC are
+  skipped, a purchasable app comes first, and an id that is not forwarded to another app comes first
+  (Mass Effect 2 gets 2362420, not the old app 24980 that has no price). These lookups stay in the
+  price/hardware cache. Previously such games had no `steam_app_id`, so Portal and Borderlands 2 were
+  treated as games that are not on Steam.
 - Only candidates without a `steam_app_id` take the fallback path (`app/clients/routing.py`). For price
   that is the free-games table (`free_games.py`) → CheapShark's lowest USD price × the Frankfurter rate;
   for specs it is PCGamingWiki. Both fallbacks accept only an exact match on the normalised game name,
@@ -594,7 +607,7 @@ constructor arguments.
 | Stage | Implementation | Owning module |
 | --- | --- | --- |
 | Question parsing | `LLMQueryParser` | `app/pipeline/query_processing/llm_parser.py` |
-| Game search | `IgdbCatalogClient` → `search()` | `app/clients/igdb.py` |
+| Game search | `IgdbCatalogClient(SteamStoreClient)` → `search()` (candidates with several Steam apps are resolved with the same Steam instance as price and hardware) | `app/clients/igdb.py`, `steam_store.py` |
 | Price | `RoutedPriceClient(SteamStoreClient, CheapSharkClient)` | `app/clients/steam_store.py`, `routing.py`, `cheapshark.py` |
 | Hardware | `RoutedHardwareClient(SteamStoreClient, PcGamingWikiClient)` + `OpenAISpecJudge` | `app/clients/steam_store.py`, `pcgamingwiki.py`, `hardware_judge.py` |
 | Review summary | `SteamReviewSummaryClient` | `app/clients/steam_reviews.py` |
@@ -661,8 +674,8 @@ app/
 │  └─ media.py              Card media (optional)
 ├─ clients/
 │  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py · review_score.py · media.py
-│  ├─ igdb.py               IGDB owner: candidate search `search()` and the `IgdbCatalogClient` adapter (reuses the Twitch app token)
-│  ├─ steam_store.py        Price/hardware owner: Steam appdetails API client (price and specs)
+│  ├─ igdb.py               IGDB owner: candidate search `search()` and the `IgdbCatalogClient` adapter (reuses the Twitch app token; asks Steam when there are several Steam apps)
+│  ├─ steam_store.py        Price/hardware owner: Steam appdetails API client (price and specs; picks the Steam app with `choose_app_id`)
 │  ├─ hardware_assessor.py  Price/hardware owner: spec verdict rules shared by Steam and the fallback
 │  ├─ hardware_judge.py     Price/hardware owner: GPU/CPU judge contract and its OpenAI implementation
 │  ├─ routing.py            Price/hardware owner: splits Steam vs fallback on the presence of steam_app_id

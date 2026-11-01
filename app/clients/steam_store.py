@@ -10,7 +10,9 @@ appid당 한 번만 호출하고, 가격·사양 병렬 실행 중 겹치는 요
     `l=korean`이면 라벨이 번역되어 파싱이 흔들린다.
   - `pc_requirements`는 dict(`minimum`/`recommended` HTML) 또는 빈 list다.
   - 한국 미판매·삭제된 앱은 `success: false`가 온다. 이때는 사양도 받을 수 없다.
+  - 옛 앱·중복 앱 id를 물으면 다른 앱의 정보가 온다(`data.steam_appid`가 물은 id와 다르다).
 - 키가 없고 IP당 5분에 약 200회 제한이 있다. 동시 요청 수를 제한한다.
+- IGDB가 Steam 앱을 여럿 연결한 게임은 `pick_app_id`가 한국 스토어 응답을 보고 하나를 고른다.
 
 Steam에 있는 게임은 여기서 끝난다. 가격이 없는 경우도 이유를 확인할 수 있다(무료·미출시·구매 불가).
 `steam_app_id`가 없는 후보는 routing.py가 cheapshark.py·pcgamingwiki.py 폴백으로 보낸다.
@@ -109,6 +111,8 @@ class AppDetails(BaseModel):
 
     app_id: int
     available: bool  # success:false면 False (한국 미판매·삭제)
+    app_type: str | None = None  # game·demo·dlc 등. success:false면 None
+    forwarded_to: int | None = None  # 물은 id 대신 다른 앱의 정보가 왔을 때 그 앱의 id
     is_free: bool = False
     coming_soon: bool = False
     price_krw: int | None = None
@@ -169,9 +173,13 @@ def parse_app_details(app_id: int, payload: dict) -> AppDetails:
             requirements = parse_requirements(pc_requirements["minimum"], source_url=source_url)
         if pc_requirements.get("recommended"):
             recommended = parse_requirements(pc_requirements["recommended"], source_url=source_url)
+    steam_appid = data.get("steam_appid")
+    forwarded = isinstance(steam_appid, int) and steam_appid != app_id
     return AppDetails(
         app_id=app_id,
         available=True,
+        app_type=data.get("type"),
+        forwarded_to=steam_appid if forwarded else None,
         is_free=bool(data.get("is_free")),
         coming_soon=bool((data.get("release_date") or {}).get("coming_soon")),
         price_krw=price_krw,
@@ -179,6 +187,34 @@ def parse_app_details(app_id: int, payload: dict) -> AppDetails:
         requirements=requirements,
         recommended=recommended,
     )
+
+
+def choose_app_id(details: list[AppDetails | None]) -> int | None:
+    """IGDB가 Steam 앱을 여럿 연결한 게임에서 가격·사양·리뷰 조회에 쓸 앱 하나를 고른다.
+
+    `details`는 IGDB의 Steam 항목별 appdetails이고, 조회에 실패한 항목은 None이다.
+    IGDB 인기 PC 게임 1,000개 중 61개가 Steam 항목을 둘 이상 갖는다(2026-11-01 조회). 대부분은
+    Steam이 본편으로 넘기는 중복 id다(Borderlands 2: 379880을 물으면 49520의 정보가 온다).
+    나머지는 데모·DLC·플레이테스트·지역판과, 판매를 새 앱으로 옮긴 옛 앱이다(Mass Effect 2:
+    24980은 가격이 없고 2362420이 ₩33,000에 팔린다). 그래서 id 크기나 이름만으로는 고를 수 없다.
+
+    1. 데모·DLC처럼 본편(type game)이 아닌 앱은 고르지 않는다.
+    2. 한국에서 살 수 있는(가격이 있거나 무료인) 앱을 먼저 고른다.
+    3. 같은 조건이면 다른 앱으로 넘어가지 않는 앱, 그다음 작은 id를 고른다.
+    4. 살 수 있는 앱이 없으면 같은 순서로 고른다. 가격 판정이 구매 불가·미판매를 그대로 낸다.
+       단, 조회에 실패한 항목이 있으면 그 앱이 팔리는 앱일 수 있으므로 고르지 않는다(None).
+    """
+    games = [d for d in details if d is not None and d.app_type in (None, "game")]
+
+    def order(d: AppDetails) -> tuple[bool, bool, int]:
+        return (not d.available, d.forwarded_to is not None, d.app_id)
+
+    purchasable = [d for d in games if d.available and (d.is_free or d.price_krw is not None)]
+    if purchasable:
+        return min(purchasable, key=order).app_id
+    if not games or any(d is None for d in details):
+        return None
+    return min(games, key=order).app_id
 
 
 class SteamStoreClient:
@@ -215,6 +251,22 @@ class SteamStoreClient:
             self._inflight.pop(app_id, None)
         self._cache[app_id] = (time.monotonic(), details)
         return details
+
+    async def pick_app_id(self, app_ids: list[int]) -> int | None:
+        """Steam 앱이 여럿인 게임의 앱 하나를 고른다(`choose_app_id`). 실패한 조회는 None으로 둔다.
+
+        응답은 캐시에 남으므로, 고른 앱의 가격·사양은 다시 요청하지 않는다.
+        """
+        return choose_app_id(
+            await asyncio.gather(*(self._details_or_none(app_id) for app_id in app_ids))
+        )
+
+    async def _details_or_none(self, app_id: int) -> AppDetails | None:
+        try:
+            return await self.get_app_details(app_id)
+        except Exception as exc:
+            logger.warning("Steam appdetails failed for app %s (%s)", app_id, type(exc).__name__)
+            return None
 
     async def _fetch(self, app_id: int) -> AppDetails:
         async with self._semaphore:

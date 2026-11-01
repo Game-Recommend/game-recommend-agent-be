@@ -74,7 +74,7 @@
 <rect x="832" y="580" width="570" height="260" rx="16" fill="#F8FAFC" stroke="#E5E7EB"/>
 <circle cx="852" cy="605" r="5" fill="#0E9F9F"/>
 <text x="870" y="612" font-size="20" fill="#111827" font-weight="600">search_games</text>
-<text x="1090" y="612" font-size="18" fill="#6B7280">IGDB candidate search (max 30)</text>
+<text x="1090" y="612" font-size="18" fill="#6B7280">IGDB max 30 &#183; Steam app check</text>
 <circle cx="852" cy="655" r="5" fill="#0E9F9F"/>
 <text x="870" y="662" font-size="20" fill="#111827" font-weight="600">get_prices</text>
 <text x="1090" y="662" font-size="18" fill="#6B7280">KRW price &#183; budget verdict</text>

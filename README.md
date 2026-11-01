@@ -87,13 +87,18 @@ REPORT에 그대로 남겨 두었습니다.
 
 - **필수 조건 만족은 동률입니다(98 대 99).** 선택을 LLM에 맡겨도 가격·사양·개수·제외 조건의 준수가 깨지지
   않습니다. 판정과 후검증을 코드가 하기 때문입니다.
-- **취향 적합도가 구조의 이득입니다.** 같은 통과 후보에서 에이전트가 고른 목록과, 고정 파이프라인의 선택
-  규칙(통과 후보를 인기순으로 자른 목록)을 LLM 심판이 자리를 바꿔 두 번 비교했습니다. 비교 80번 중 에이전트
-  41승, 인기순 2승, 비김 37입니다(2026-10-05, [evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
-  비김 37에는 두 목록이 같아 심판을 거치지 않은 9번이 들어 있습니다(심판 판정만 세면 비김 28, 판정 71번).
-  원본 저장소를 같은 40문항으로 실제로 돌린 목록과도 비교했습니다. 판정 70번 중 에이전트 40승, 원본 6승,
-  비김 24이고, 원본은 10번 추천을 내지 못했습니다. 이 수치에는 검색 수정의 효과가 섞여 있어 그림에는
-  행이 아니라 각주로만 적었습니다.
+- **취향 적합도는 에이전트 쪽이지만 차이가 작습니다.** 같은 통과 후보에서 에이전트가 고른 목록과, 고정
+  파이프라인의 선택 규칙(통과 후보를 인기순으로 자른 목록)을 LLM 심판이 자리를 바꿔 두 번 비교했습니다.
+  비교 80번 중 에이전트 20승, 인기순 1승, 비김 59입니다(2026-11-01, [evals/relevance/REPORT.md](evals/relevance/REPORT.md)).
+  비김 59에는 두 목록이 같아 심판을 거치지 않은 8번이 들어 있습니다(심판 판정만 세면 비김 51, 판정 72번).
+  에이전트는 인기순에 질문과 어긋나는 게임이 섞인 문항에서 이깁니다. 검색 조건이 없는 취향 질문에서는
+  후보가 늘 같은 인기 게임 30개라, 질문과 상관없이 거의 같은 목록을 내고 비깁니다.
+  지난 측정(2026-10-05)의 41승 2패는 Steam 앱이 여럿인 게임(Portal, GTA: San Andreas 등)이 Steam에 없는
+  게임으로 표시되던 때의 수치입니다. 에이전트가 그 게임들을 피해 RDR2·God of War를 넣은 목록이 이긴 경우가
+  많았습니다(41승 중 18승). 이 표시를 고친 뒤 다시 잰 것이 위 수치입니다.
+  원본 저장소를 같은 40문항으로 실제로 돌린 목록과도 비교했습니다(2026-10-05, 수정 전). 판정 70번 중
+  에이전트 40승, 원본 6승, 비김 24이고, 원본은 10번 추천을 내지 못했습니다. 이 수치에는 검색 수정의 효과가
+  섞여 있어 그림에는 행이 아니라 각주로만 적었습니다.
 - **LLM 왕복 시간이 구조의 비용입니다.** 원본은 질문 분해와 최종 답변에 3.4초, 에이전트는 질문 분해와
   Tool을 고르는 추론에 6.1초를 씁니다(추천을 낸 문항의 중앙값,
   [latency_breakdown.py](evals/agent_e2e/latency_breakdown.py)).
@@ -117,7 +122,7 @@ REPORT에 그대로 남겨 두었습니다.
   ↓
 에이전트 루프 (LangChain create_agent, app/agent/runner.py)
   LLM이 고른 Tool을 호출하고 결과를 읽어 다음 행동을 정한다. 같은 턴의 여러 호출은 병렬이다.
-  ├─ search_games      조건으로 IGDB 후보 검색 (많이 평가된 순, 최대 30개)
+  ├─ search_games      조건으로 IGDB 후보 검색 (많이 평가된 순, 최대 30개). Steam 앱이 여럿인 후보는 Steam 한국 스토어에 물어 하나를 고른다
   ├─ get_prices        검색된 후보 전체 → 원화 가격·예산 판정 (LLM이 id를 넘기지 않아도 된다)
   ├─ assess_hardware   검색된 후보 전체 → 최소 사양·호환 판정
   ├─ get_review_scores 후보 igdb_id 목록 → Steam 리뷰 통계 (추천 비율·Wilson 하한·평가 문구)
@@ -204,6 +209,11 @@ RecommendationDraft (추천 igdb_id 목록 + 상단 요약 문단) ← 구조화
 - 후보와 결과는 `igdb_id`로 연결합니다. Steam 연결용 `steam_app_id`도 후보에 보관합니다.
   후보에는 최종 답변 재료로 IGDB 소개(`summary`)·분류(`genres`, `themes`)·전체 완료 시간
   (`playtime_hours`)도 담지만, 가격·사양·리뷰 도구는 이 필드를 판정에 쓰지 않습니다.
+- IGDB가 Steam 앱을 여럿 연결한 게임(인기 PC 게임 1,000개 중 61개)은 Steam 한국 스토어에 물어
+  하나를 고릅니다(`steam_store.py`의 `choose_app_id`). 데모·DLC는 빼고, 살 수 있는 앱을 먼저,
+  다른 앱으로 넘어가지 않는 id를 먼저 씁니다(Mass Effect 2는 가격이 없는 옛 앱 24980이 아니라
+  2362420). 이 조회는 가격·사양 캐시에 남습니다. 전에는 이런 게임의 `steam_app_id`를 비워 Portal·
+  Borderlands 2 같은 게임이 Steam에 없는 게임으로 취급됐습니다.
 - `steam_app_id`가 없는 후보만 폴백을 탑니다 (`app/clients/routing.py`). 가격은 무료 게임 표
   (`free_games.py`) → CheapShark USD 최저가 × Frankfurter 환율 순서이고, 사양은 PCGamingWiki입니다.
   두 폴백 모두 정규화한 게임명이 정확히 같은 결과만 인정하며, 못 찾으면 `unknown`입니다.
@@ -514,7 +524,7 @@ CI 성공을 머지 조건으로 사용하려면 GitHub 브랜치 규칙을 설�
 | 단계 | 구현체 | 담당 모듈 |
 | --- | --- | --- |
 | 질문 분해 | `LLMQueryParser` | `app/pipeline/query_processing/llm_parser.py` |
-| 게임 검색 | `IgdbCatalogClient` → `search()` | `app/clients/igdb.py` |
+| 게임 검색 | `IgdbCatalogClient(SteamStoreClient)` → `search()` (Steam 앱이 여럿인 후보는 가격·사양과 같은 Steam 인스턴스로 고름) | `app/clients/igdb.py`, `steam_store.py` |
 | 가격 | `RoutedPriceClient(SteamStoreClient, CheapSharkClient)` | `app/clients/steam_store.py`, `routing.py`, `cheapshark.py` |
 | 사양 | `RoutedHardwareClient(SteamStoreClient, PcGamingWikiClient)` + `OpenAISpecJudge` | `app/clients/steam_store.py`, `pcgamingwiki.py`, `hardware_judge.py` |
 | 리뷰 요약 | `SteamReviewSummaryClient` | `app/clients/steam_reviews.py` |
@@ -581,8 +591,8 @@ app/
 │  └─ media.py              카드 미디어 (선택)
 ├─ clients/
 │  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py · review_score.py · media.py
-│  ├─ igdb.py               IGDB 담당: 후보 검색 `search()`와 어댑터 `IgdbCatalogClient` (Twitch 앱 토큰 재사용)
-│  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API 클라이언트 (가격·사양)
+│  ├─ igdb.py               IGDB 담당: 후보 검색 `search()`와 어댑터 `IgdbCatalogClient` (Twitch 앱 토큰 재사용, Steam 앱이 여럿이면 Steam에 물어 고름)
+│  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API 클라이언트 (가격·사양, Steam 앱 고르기 `choose_app_id`)
 │  ├─ hardware_assessor.py  가격·하드웨어 담당: Steam·폴백 공통 사양 판정 규칙
 │  ├─ hardware_judge.py     가격·하드웨어 담당: GPU·CPU 판정기 계약과 OpenAI 구현
 │  ├─ routing.py            가격·하드웨어 담당: steam_app_id 유무로 Steam·폴백 분기
