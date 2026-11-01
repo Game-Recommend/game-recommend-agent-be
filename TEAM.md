@@ -114,7 +114,7 @@ MediaTool (에이전트 밖 후처리) → RecommendationResponse (기존과 같
 | `app/agent/tools/review_score.py` | 완료. `get_review_scores`(Steam 리뷰 통계)는 후보 선별용 수치, `summarize_reviews`는 카드용 문장으로 쓰임을 나눴다. 결과는 `CandidateStore`에 담지 않아 응답 본문에 나오지 않는다 |
 | `app/agent/tools/reviews.py` | `summarize_reviews` docstring 다듬기. "최종 추천 후보에만" 원칙과 비용 안내 유지 |
 | `app/agent/tools/review_score.py` | 완료. "평가 좋은 게임" 조건은 `ReviewSummary`를 넓히는 대신 별도 Tool로 나눴다(긍정 비율·Wilson 하한·`review_score_desc`) |
-| `app/clients/steam_reviews.py` | 완료. `asyncio.gather`와 동시성 8로 게임별 병렬 처리한다. 리뷰 요약이 5.8~13.7초에서 1.8~2.4초가 됐다 |
+| `app/clients/steam_reviews.py` | 완료. `asyncio.gather`와 동시성 8로 게임별 병렬 처리한다. 리뷰 요약이 5.8\~13.7초에서 1.8\~2.4초가 됐다 |
 | `tests/reviews/test_reviews_tool.py` (신규) | `FakeReviews`로 압축 출력, `steam_app_id` 없는 게임의 `summary: null`, 실패 시 오류 JSON 검증 |
 
 ## Tool 정의 규약
