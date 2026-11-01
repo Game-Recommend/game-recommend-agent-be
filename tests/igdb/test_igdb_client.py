@@ -315,3 +315,59 @@ def test_search_refetches_token_after_expiry(monkeypatch):
     clock[0] += 2
     asyncio.run(igdb.search({}))
     assert token_requests(calls) == 2
+
+
+# ---------- Steam 앱이 여럿인 게임 ----------
+
+
+def _steam(*uids):
+    return [{"uid": uid, "external_game_source": {"name": "Steam"}} for uid in uids]
+
+
+def test_search_lists_every_steam_app_and_leaves_several_unpicked(monkeypatch):
+    gog = {"uid": "1207664663", "external_game_source": {"name": "GOG"}}
+    games = [
+        {**_game(1), "external_games": [*_steam("292030"), gog]},
+        # Portal: 본편 400과 Mac판 52003. 같은 id 중복과 쓸 수 없는 uid는 버린다
+        {**_game(2), "external_games": _steam("52003", "400", "400", "0", "abc")},
+        _game(3),
+    ]
+    igdb_http(monkeypatch, games=games)
+
+    rows = {row["igdb_id"]: row for row in asyncio.run(igdb.search({}))}
+
+    assert (rows[1]["steam_app_id"], rows[1]["steam_app_ids"]) == (292030, [292030])
+    assert (rows[2]["steam_app_id"], rows[2]["steam_app_ids"]) == (None, [400, 52003])
+    assert (rows[3]["steam_app_id"], rows[3]["steam_app_ids"]) == (None, [])
+
+
+class FakeSteamPicker:
+    def __init__(self, picks: dict[tuple[int, ...], int | None]):
+        self.picks = picks
+        self.asked: list[list[int]] = []
+
+    async def pick_app_id(self, app_ids: list[int]) -> int | None:
+        self.asked.append(app_ids)
+        return self.picks.get(tuple(app_ids))
+
+
+def test_catalog_asks_steam_only_for_games_with_several_apps(monkeypatch):
+    rows = [
+        {**ROW, "igdb_id": 1, "steam_app_id": 292030, "steam_app_ids": [292030]},
+        {**ROW, "igdb_id": 2, "steam_app_id": None, "steam_app_ids": [24980, 2362420]},
+        {**ROW, "igdb_id": 3, "steam_app_id": None, "steam_app_ids": []},
+    ]
+
+    async def fake_search(conditions: dict) -> list[dict]:
+        return [dict(row) for row in rows]
+
+    monkeypatch.setattr(igdb, "search", fake_search)
+    picker = FakeSteamPicker({(24980, 2362420): 2362420})
+
+    picked = asyncio.run(IgdbCatalogClient(picker).search(GameConditions()))
+    unpicked = asyncio.run(IgdbCatalogClient().search(GameConditions()))
+
+    assert [game.steam_app_id for game in picked] == [292030, 2362420, None]
+    assert picker.asked == [[24980, 2362420]]
+    # Steam 없이 만들면 고르지 않는다. steam_app_id가 비어 폴백으로 간다
+    assert [game.steam_app_id for game in unpicked] == [292030, None, None]

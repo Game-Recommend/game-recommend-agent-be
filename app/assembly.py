@@ -98,7 +98,8 @@ def build_toolset(settings: Settings, http: httpx2.AsyncClient, openai: AsyncOpe
         steamgriddb, IgdbMediaClient(settings.igdb_client_id, settings.igdb_client_secret)
     )
     return ToolSet(
-        game_search=GameSearchTool(IgdbCatalogClient()),
+        # Steam 앱이 여럿인 후보는 같은 Steam 인스턴스로 고른다. 그 조회가 가격·사양 캐시로 남는다
+        game_search=GameSearchTool(IgdbCatalogClient(steam)),
         price=PriceTool(prices),
         hardware=HardwareTool(hardware),
         review_summary=ReviewSummaryTool(SteamReviewSummaryClient()),

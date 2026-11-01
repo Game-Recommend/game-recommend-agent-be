@@ -6,6 +6,11 @@ IGDB id는 등록 순서라 1번 Thief II, 2번 Thief: The Dark Project, 5번 Ba
 보고, 플랫폼을 말하지 않으면 PC로 본다. 가격·사양 판정이 PC(Steam·PCGamingWiki) 기준이기 때문이다.
 Steam에 없는 PC 게임(LoL 등)은 비Steam 폴백이 다루므로 Steam 연결을 요구하지는 않는다.
 
+IGDB가 Steam 앱을 둘 이상 연결한 게임(Portal: 400과 Mac판 52003)은 여기서 고르지 않고
+`steam_app_ids`로 모두 넘긴다. `IgdbCatalogClient`가 Steam 한국 스토어에 물어 하나를 고른다.
+전에는 이런 게임의 `steam_app_id`를 비워서, Portal·Mass Effect 2·Borderlands 2가 Steam에 없는
+게임으로 취급됐다.
+
 IGDB 인증은 Twitch 앱 토큰(client credentials)이다. 토큰은 약 60일 유효하므로 검색마다 새로 받지
 않고 프로세스 안에서 만료 전까지 재사용한다(`TwitchAppToken`, igdb_media.py와 같은 방식). 검색마다
 토큰 요청 왕복(0.3~0.5초)을 없앤다. IGDB가 토큰을 거부하면(401) 버리고 한 번 다시 받는다.
@@ -15,6 +20,7 @@ import asyncio
 import json
 import time
 from pathlib import Path
+from typing import Protocol
 
 import httpx2 as httpx
 
@@ -269,6 +275,16 @@ async def _keyword_ids(
     return matching_keyword_ids(rows, stems)
 
 
+def steam_app_ids(game: dict) -> list[int]:
+    """IGDB가 게임에 연결한 Steam 앱 id(작은 순). 본편 말고 Mac판·지역판·데모가 함께 올 수 있다."""
+    return sorted({
+        int(item["uid"]) for item in game.get("external_games", [])
+        if item.get("external_game_source", {}).get("name") == "Steam"
+        and str(item.get("uid", "")).isascii()
+        and str(item.get("uid", "")).isdigit() and int(item["uid"]) > 0
+    })
+
+
 async def search(conditions: dict) -> list[dict]:
     conditions = conditions or {}
     excluded = {normalize(name) for name in conditions.get("excluded_genres") or []}
@@ -336,13 +352,12 @@ async def search(conditions: dict) -> list[dict]:
         playtime = hours.get(game["id"])
         if max_hours is not None and (playtime is None or playtime > max_hours):
             continue
-        steam_ids = {int(item["uid"]) for item in game.get("external_games", [])
-                     if item.get("external_game_source", {}).get("name") == "Steam"
-                     and str(item.get("uid", "")).isascii()
-                     and str(item.get("uid", "")).isdigit() and int(item["uid"]) > 0}
+        steam_ids = steam_app_ids(game)
         result.append({
             "igdb_id": game["id"], "name": game["name"],
-            "steam_app_id": next(iter(steam_ids)) if len(steam_ids) == 1 else None,
+            # 둘 이상이면 여기서 고르지 않는다. IgdbCatalogClient가 Steam에 물어 고른다
+            "steam_app_id": steam_ids[0] if len(steam_ids) == 1 else None,
+            "steam_app_ids": steam_ids,
             "genres": genres, "themes": themes,
             "platforms": [item["name"] for item in game.get("platforms", [])],
             "summary": game.get("summary"), "source_url": game.get("url"),
@@ -368,11 +383,32 @@ def to_candidate(row: dict) -> GameCandidate:
     )
 
 
+class SteamAppPicker(Protocol):
+    """Steam 앱이 여럿인 게임의 앱 하나를 고른다. 실제 구현은 `SteamStoreClient.pick_app_id`다."""
+
+    async def pick_app_id(self, app_ids: list[int]) -> int | None: ...
+
+
 class IgdbCatalogClient:
-    """`GameCatalogClient` 구현. 오케스트레이터에 주입할 때 이 클래스를 쓴다."""
+    """`GameCatalogClient` 구현. 오케스트레이터에 주입할 때 이 클래스를 쓴다.
+
+    Steam 앱이 여럿인 후보는 `steam`에 물어 하나를 고른다. `steam`이 없거나 고르지 못하면
+    `steam_app_id`가 비어 Steam에 없는 게임처럼 폴백(CheapShark·PCGamingWiki)으로 간다.
+    """
+
+    def __init__(self, steam: SteamAppPicker | None = None):
+        self.steam = steam
 
     async def search(self, conditions: GameConditions) -> list[GameCandidate]:
-        return [to_candidate(row) for row in await search(conditions.model_dump())]
+        rows = await search(conditions.model_dump())
+        if self.steam is not None:
+            several = [row for row in rows if len(row.get("steam_app_ids") or []) > 1]
+            picked = await asyncio.gather(
+                *(self.steam.pick_app_id(row["steam_app_ids"]) for row in several)
+            )
+            for row, app_id in zip(several, picked, strict=True):
+                row["steam_app_id"] = app_id
+        return [to_candidate(row) for row in rows]
 
 
 if __name__ == "__main__":

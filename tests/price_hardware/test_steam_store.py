@@ -6,7 +6,13 @@ import json
 import httpx2
 import pytest
 
-from app.clients.steam_store import SteamStoreClient, parse_requirements
+from app.clients.steam_store import (
+    AppDetails,
+    SteamStoreClient,
+    choose_app_id,
+    parse_app_details,
+    parse_requirements,
+)
 from app.schemas.game import GameCandidate
 from app.schemas.hardware import HardwareAssessment, HardwareSpecs
 from app.schemas.price import PriceQuote, PriceUnavailable
@@ -306,3 +312,93 @@ def test_reasons_follow_the_request_language():
     assert judged[0].reason == "GPU/CPU check failed"  # 대역 판정기가 결과를 내지 않았다
     # GPU·CPU 판정기는 note를 같은 언어로 쓰도록 language를 받는다
     assert judge.language == "en"
+
+
+# ---------- IGDB가 Steam 앱을 여럿 연결한 게임 ----------
+# 값은 2026-11-01 한국 스토어 실제 응답을 줄인 것이다.
+
+
+def details(app_id, *, price=None, free=False, forwarded_to=None, app_type="game"):
+    return AppDetails(
+        app_id=app_id,
+        available=True,
+        app_type=app_type,
+        forwarded_to=forwarded_to,
+        is_free=free,
+        price_krw=price,
+    )
+
+
+def missing(app_id):
+    return AppDetails(app_id=app_id, available=False)
+
+
+def test_parse_keeps_app_type_and_forwarded_app():
+    forwarded = parse_app_details(379880, {"379880": app_data(steam_appid=49520)})
+    own = parse_app_details(49520, {"49520": app_data(steam_appid=49520)})
+    absent = parse_app_details(1, {"1": {"success": False}})
+
+    assert (forwarded.app_type, forwarded.forwarded_to) == ("game", 49520)
+    assert (own.app_type, own.forwarded_to) == ("game", None)
+    assert (absent.app_type, absent.forwarded_to) == (None, None)
+
+
+def test_choose_app_id_follows_what_the_korean_store_sells():
+    # Borderlands 2: 379880을 물으면 49520의 정보가 온다
+    borderlands = [details(379880, price=21000, forwarded_to=49520), details(49520, price=21000)]
+    assert choose_app_id(borderlands) == 49520
+    # Mass Effect 2: 옛 앱은 가격이 없고 새 앱이 팔린다. 작은 id를 고르면 살 수 없는 게임이 된다
+    assert choose_app_id([details(24980), details(2362420, price=33000)]) == 2362420
+    # 무료 데모·유료 DLC가 아니라 본편
+    stanley = [details(221910, price=16000), details(247750, free=True, app_type="demo")]
+    assert choose_app_id(stanley) == 221910
+    halo = [details(1240440, free=True), details(1708091, price=67000, app_type="dlc")]
+    assert choose_app_id(halo) == 1240440
+    # Black Ops 6: 작은 id는 가격 없는 다른 앱으로 넘어간다
+    black_ops = [details(2933620, forwarded_to=1938090), details(4384550, price=97900)]
+    assert choose_app_id(black_ops) == 4384550
+    # Shogun 2: 본편 id에는 가격이 없고 넘어가는 id에만 있다 → 가격이 나오는 id
+    shogun = [details(34330), details(201270, price=30000, forwarded_to=34330)]
+    assert choose_app_id(shogun) == 201270
+
+
+def test_choose_app_id_when_no_app_is_purchasable():
+    # 둘 다 판매 중단(GTA: San Andreas) → 작은 id. 가격 판정이 '구매 불가'를 낸다
+    assert choose_app_id([details(12250), details(12120)]) == 12120
+    # 둘 다 한국 미판매(Final Fantasy XIV) → 작은 id. 가격 판정이 '한국 스토어 미판매'를 낸다
+    assert choose_app_id([missing(262341), missing(39210)]) == 39210
+    # 조회에 실패한 앱이 팔리는 앱일 수 있다 → 고르지 않고 폴백으로 보낸다
+    assert choose_app_id([details(24980), None]) is None
+    assert choose_app_id([None, details(2362420, price=33000)]) == 2362420
+    # 본편이 없다
+    assert choose_app_id([details(247890, free=True, app_type="demo")]) is None
+
+
+def test_client_pick_reuses_the_response_for_price_lookup():
+    client, calls = make_client(
+        {49520: app_data(steam_appid=49520), 379880: app_data(steam_appid=49520)}
+    )
+
+    async def pick_then_price():
+        app_id = await client.pick_app_id([49520, 379880])
+        return app_id, await client.fetch_prices([game(1, app_id)])
+
+    app_id, prices = asyncio.run(pick_then_price())
+
+    assert app_id == 49520
+    assert prices[0].amount_krw == 27000
+    assert sorted(app_id for app_id, _, _ in calls) == [49520, 379880]  # 가격은 다시 묻지 않는다
+
+
+def test_client_pick_does_not_guess_when_a_lookup_fails():
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        app_id = int(request.url.params["appids"])
+        if app_id == 2362420:
+            return httpx2.Response(429)
+        payload = {str(app_id): app_data(price_overview=None, packages=[])}
+        return httpx2.Response(200, content=json.dumps(payload))
+
+    http = httpx2.AsyncClient(transport=httpx2.MockTransport(handler))
+    client = SteamStoreClient(http, FakeSpecJudge())
+
+    assert asyncio.run(client.pick_app_id([24980, 2362420])) is None
