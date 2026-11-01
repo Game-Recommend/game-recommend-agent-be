@@ -607,7 +607,7 @@ constructor arguments.
 | Stage | Implementation | Owning module |
 | --- | --- | --- |
 | Question parsing | `LLMQueryParser` | `app/pipeline/query_processing/llm_parser.py` |
-| Game search | `IgdbCatalogClient` → `search()` | `app/clients/igdb.py` |
+| Game search | `IgdbCatalogClient(SteamStoreClient)` → `search()` (candidates with several Steam apps are resolved with the same Steam instance as price and hardware) | `app/clients/igdb.py`, `steam_store.py` |
 | Price | `RoutedPriceClient(SteamStoreClient, CheapSharkClient)` | `app/clients/steam_store.py`, `routing.py`, `cheapshark.py` |
 | Hardware | `RoutedHardwareClient(SteamStoreClient, PcGamingWikiClient)` + `OpenAISpecJudge` | `app/clients/steam_store.py`, `pcgamingwiki.py`, `hardware_judge.py` |
 | Review summary | `SteamReviewSummaryClient` | `app/clients/steam_reviews.py` |
@@ -674,8 +674,8 @@ app/
 │  └─ media.py              Card media (optional)
 ├─ clients/
 │  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py · review_score.py · media.py
-│  ├─ igdb.py               IGDB owner: candidate search `search()` and the `IgdbCatalogClient` adapter (reuses the Twitch app token)
-│  ├─ steam_store.py        Price/hardware owner: Steam appdetails API client (price and specs)
+│  ├─ igdb.py               IGDB owner: candidate search `search()` and the `IgdbCatalogClient` adapter (reuses the Twitch app token; asks Steam when there are several Steam apps)
+│  ├─ steam_store.py        Price/hardware owner: Steam appdetails API client (price and specs; picks the Steam app with `choose_app_id`)
 │  ├─ hardware_assessor.py  Price/hardware owner: spec verdict rules shared by Steam and the fallback
 │  ├─ hardware_judge.py     Price/hardware owner: GPU/CPU judge contract and its OpenAI implementation
 │  ├─ routing.py            Price/hardware owner: splits Steam vs fallback on the presence of steam_app_id

@@ -33,7 +33,7 @@ IGDB 검색(`app/clients/igdb.py`)이 문항별로 **어떤 후보를 내는지*
 | `release_year_median` | 후보의 출시 연도 중앙값 |
 | `most_common_head5` | 같은 게임이 몇 문항의 앞쪽 후보 5개에 드는가. 질문과 무관하게 같은 게임이 나오는 정도 |
 | `distinct_games`, `distinct_games_head5` | 100문항에 걸쳐 나온 서로 다른 게임 수 |
-| `on_steam` | Steam 앱 id가 연결된 후보 비율. 없으면 가격·사양이 비Steam 폴백으로 간다 |
+| `on_steam` | IGDB 검색 행에 Steam 앱 id가 하나로 정해진 후보 비율. Steam 항목이 여럿인 후보(인기 PC 게임의 약 6%)는 이 단계에서 비어 있고, 서비스에서는 `IgdbCatalogClient`가 Steam 한국 스토어에 물어 채운다(PR #49). 그래서 서비스가 Steam으로 조회하는 비율보다 낮게 나온다. 끝까지 비어 있는 후보만 가격·사양이 비Steam 폴백으로 간다 |
 | `steam_top10.kr_available` | 문항별 상위 10개 중 한국 스토어에서 조회되는 비율 |
 | `steam_top10.has_requirements` | 최소 사양을 읽을 수 있는 비율. 낮으면 사양 판정이 `unknown`이 된다 |
 | `steam_top10.price_le_10000` · `price_le_30000` · `free` | 예산 질문에서 살아남을 후보의 비율 |

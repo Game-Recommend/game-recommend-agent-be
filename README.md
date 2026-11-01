@@ -524,7 +524,7 @@ CI 성공을 머지 조건으로 사용하려면 GitHub 브랜치 규칙을 설�
 | 단계 | 구현체 | 담당 모듈 |
 | --- | --- | --- |
 | 질문 분해 | `LLMQueryParser` | `app/pipeline/query_processing/llm_parser.py` |
-| 게임 검색 | `IgdbCatalogClient` → `search()` | `app/clients/igdb.py` |
+| 게임 검색 | `IgdbCatalogClient(SteamStoreClient)` → `search()` (Steam 앱이 여럿인 후보는 가격·사양과 같은 Steam 인스턴스로 고름) | `app/clients/igdb.py`, `steam_store.py` |
 | 가격 | `RoutedPriceClient(SteamStoreClient, CheapSharkClient)` | `app/clients/steam_store.py`, `routing.py`, `cheapshark.py` |
 | 사양 | `RoutedHardwareClient(SteamStoreClient, PcGamingWikiClient)` + `OpenAISpecJudge` | `app/clients/steam_store.py`, `pcgamingwiki.py`, `hardware_judge.py` |
 | 리뷰 요약 | `SteamReviewSummaryClient` | `app/clients/steam_reviews.py` |
@@ -591,8 +591,8 @@ app/
 │  └─ media.py              카드 미디어 (선택)
 ├─ clients/
 │  ├─ contracts/            catalog.py · price.py · hardware.py · reviews.py · review_score.py · media.py
-│  ├─ igdb.py               IGDB 담당: 후보 검색 `search()`와 어댑터 `IgdbCatalogClient` (Twitch 앱 토큰 재사용)
-│  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API 클라이언트 (가격·사양)
+│  ├─ igdb.py               IGDB 담당: 후보 검색 `search()`와 어댑터 `IgdbCatalogClient` (Twitch 앱 토큰 재사용, Steam 앱이 여럿이면 Steam에 물어 고름)
+│  ├─ steam_store.py        가격·하드웨어 담당: Steam 상세 API 클라이언트 (가격·사양, Steam 앱 고르기 `choose_app_id`)
 │  ├─ hardware_assessor.py  가격·하드웨어 담당: Steam·폴백 공통 사양 판정 규칙
 │  ├─ hardware_judge.py     가격·하드웨어 담당: GPU·CPU 판정기 계약과 OpenAI 구현
 │  ├─ routing.py            가격·하드웨어 담당: steam_app_id 유무로 Steam·폴백 분기
